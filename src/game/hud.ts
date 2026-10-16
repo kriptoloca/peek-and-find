@@ -92,10 +92,26 @@ export class Hud {
       if (!it) return;
       it.count.setText(`×${String(c.remaining)}`);
       const done = c.remaining === 0;
+      // A "×1" badge is noise: the badge only appears when there is something to count.
+      const showBadge = c.total > 1;
       it.icon.setAlpha(done ? 0.35 : 1);
-      it.badge.setAlpha(done ? 0.35 : 1);
-      it.count.setAlpha(done ? 0.35 : 1);
+      it.badge.setVisible(showBadge).setAlpha(done ? 0.35 : 1);
+      it.count.setVisible(showBadge).setAlpha(done ? 0.35 : 1);
     });
+  }
+
+  /** Teaching levels: the prompt icon breathes a few times so the eye lands on "find this". */
+  teachPulse(repeats = 2): void {
+    for (const it of this.items) {
+      this.scene.tweens.add({
+        targets: [it.icon],
+        scale: '*=1.18',
+        yoyo: true,
+        repeat: repeats,
+        duration: 260,
+        ease: 'Sine.easeInOut',
+      });
+    }
   }
 
   /** Pop the badge of the prompt item that just decremented. */

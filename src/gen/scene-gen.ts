@@ -17,6 +17,8 @@ import {
   SCENE_MARGIN,
   SPACING_RELAX_FACTOR,
   TARGET_SPREAD_STEPS,
+  TEACH_FRONT_BAND_UNTIL_LEVEL,
+  TEACH_TARGET_BOOST,
 } from './constants';
 import { hitRadiusFor, params } from './difficulty';
 import { dist2, visibleFraction } from './geometry';
@@ -250,6 +252,7 @@ function place(
       BAND_MULT[band] *
       jitter *
       (b.isTarget || b.decoyKind === 'color' || b.decoyKind === 'mirror' ? p.targetScale : 1) *
+      (b.isTarget ? (TEACH_TARGET_BOOST[p.level - 1] ?? 1) : 1) *
       b.extraScale,
   );
   const placed: Placed = {
@@ -288,6 +291,13 @@ function tryFind(seed: number, regen: number, o: GenerateOptions): Scene | null 
   }
   if (pts.length < p.objectCount) return null;
   rng.shuffle(pts);
+  if (p.level <= TEACH_FRONT_BAND_UNTIL_LEVEL) {
+    // Teaching levels: front-band slots first so targets come out large and unoccluded.
+    pts = [
+      ...pts.filter((q) => bandOf(q.y, playable) === 2),
+      ...pts.filter((q) => bandOf(q.y, playable) !== 2),
+    ];
+  }
 
   // 2. Target plan and spread-out target slots.
   const plan = chooseFindTargets(rng, o.theme, o.level, p.targetCount);
@@ -322,8 +332,17 @@ function tryFind(seed: number, regen: number, o: GenerateOptions): Scene | null 
   // 4. Slot assignment: targets to their slots, the rest in shuffled order; leftovers are free.
   const targetSet = new Set(slots.targets);
   const otherSlots: number[] = [];
-  for (let i = 0; i < pts.length && otherSlots.length < p.objectCount - p.targetCount; i++) {
-    if (!targetSet.has(i)) otherSlots.push(i);
+  const others = p.objectCount - p.targetCount;
+  if (p.level <= TEACH_FRONT_BAND_UNTIL_LEVEL) {
+    // Teaching levels: fillers take the back of the (front-first) list so that the free slots
+    // left for occlusion repair are still front-band ones and a moved target stays large.
+    for (let i = pts.length - 1; i >= 0 && otherSlots.length < others; i--) {
+      if (!targetSet.has(i)) otherSlots.push(i);
+    }
+  } else {
+    for (let i = 0; i < pts.length && otherSlots.length < others; i++) {
+      if (!targetSet.has(i)) otherSlots.push(i);
+    }
   }
   const usedSet = new Set([...slots.targets, ...otherSlots]);
   const free: Point[] = [];

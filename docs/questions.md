@@ -31,3 +31,9 @@ Format: date · question · decision taken (simplest reading) · needs confirmat
 - **Overlay timing uses the Phaser clock.** Auto-advance (1.2 s + star reveal) is a `delayedCall`; Phaser clamps per-frame delta at 200 ms, so under the headless software renderer (≈1–2 fps) the overlay stayed ≈ 10 s instead of 1.6 s. On a phone at 60 fps this is exact. Not changed; noted so nobody chases it as a bug in headless runs.
 - **Hit circles are independent of sprite size.** A level-80 target of 50 px still has an 80 px tap diameter (CLAUDE.md rule); the placeholder sprites show the circle only on the `#gen` page.
 - **Placeholder art.** Shapes are generated at runtime from `previewColor` with hue shifts of ±25° for `_c1`/`_c2`, the same shift the real recolor pipeline will use, so the color-decoy difficulty can already be judged on the phone.
+
+## 2026-10-16 (Epic 3b, after the first desktop look)
+
+- **"×1" badge.** Shown only when the prompt count is ≥ 2; a lone ×1 was visual noise. GDD §3 says "icon + count badge"; reading: the count is implied when it is one.
+- **Teaching.** Levels 1–5 put targets in the front band; levels 1–3 add a ×1.3/×1.2/×1.1 size boost; the prompt icon breathes three times after pop-in on levels 1–3. No text, per GDD.
+- **`?level=N`** starts at that level in dev builds only, so the curve can be judged without replaying 40 scenes.

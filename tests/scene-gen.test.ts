@@ -35,14 +35,30 @@ describe('generateScene (find)', () => {
     }
   });
 
-  it('level 1 is a single, big, unoccluded target with no decoys', () => {
+  it('level 1 is a single, big, front-band, unoccluded target with no decoys', () => {
     for (let s = 0; s < 20; s++) {
       const scene = generateScene({ seed: 1000 + s, level: 1, mode: 'find', theme: KITCHEN });
       expect(scene.targets.length).toBe(1);
       expect(scene.objects.filter((o) => o.isDecoy).length).toBe(0);
       expect(scene.params.maxOcclusion).toBe(0);
-      expect(scene.targets[0]!.scale).toBeGreaterThanOrEqual(0.8 * 0.9);
+      const t = scene.targets[0]!;
+      expect(t.band).toBe(2);
+      // front band 1.15 × jitter ≥ 0.9 × teach boost 1.3, minus the edge cap on the largest families
+      expect(t.scale).toBeGreaterThanOrEqual(1.15);
     }
+  });
+
+  it('teaching levels put targets in the front band; later levels use all bands', () => {
+    for (let s = 0; s < 15; s++) {
+      const scene = generateScene({ seed: 2000 + s, level: 5, mode: 'find', theme: KITCHEN });
+      for (const t of scene.targets) expect(t.band).toBe(2);
+    }
+    const bands = new Set<number>();
+    for (let s = 0; s < 30; s++) {
+      const scene = generateScene({ seed: 3000 + s, level: 30, mode: 'find', theme: KITCHEN });
+      for (const t of scene.targets) bands.add(t.band);
+    }
+    expect(bands.size).toBe(3);
   });
 
   it('rarely needs relaxation or regeneration', () => {

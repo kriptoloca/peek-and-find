@@ -28,6 +28,8 @@ const AUTO_ADVANCE_MS = 1200;
 const DEPTH_WORLD = 10;
 const DEPTH_FX = 15;
 const DEPTH_OVERLAY = 30;
+/** Prompt icon breathes at round start on these first levels (GDD §2 teaching). */
+const TEACH_PULSE_UNTIL_LEVEL = 3;
 
 /**
  * Find mode end to end (Epic 3): generate → pop in → taps → hearts/stars → complete or fail.
@@ -61,6 +63,7 @@ export class GameScene extends Phaser.Scene {
       this.scale.off(Phaser.Scale.Events.RESIZE, this.relayout);
     });
     this.relayout();
+    if (import.meta.env.DEV) this.applyDevParams();
     this.startLevel();
     if (import.meta.env.DEV) this.installDebugHooks();
   }
@@ -122,7 +125,9 @@ export class GameScene extends Phaser.Scene {
     });
     const total = POP_IN_MS + stagger * sorted.length;
     this.time.delayedCall(total, () => {
-      if (this.round?.scene === gen) startRound(this.round, this.time.now);
+      if (this.round?.scene !== gen) return;
+      startRound(this.round, this.time.now);
+      if (level <= TEACH_PULSE_UNTIL_LEVEL) this.hud.teachPulse();
     });
   }
 
@@ -272,6 +277,12 @@ export class GameScene extends Phaser.Scene {
   }
 
   // ---- dev ----------------------------------------------------------------------------------
+
+  /** Dev builds only: `?level=40` starts at that level. */
+  private applyDevParams(): void {
+    const level = Number(new URLSearchParams(window.location.search).get('level'));
+    if (Number.isFinite(level) && level >= 1) progress.level = Math.floor(level);
+  }
 
   private installDebugHooks(): void {
     const toScreen = (o: Placed): { id: string; x: number; y: number } => {

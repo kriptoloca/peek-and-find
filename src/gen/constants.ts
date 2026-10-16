@@ -47,3 +47,10 @@ export const FILLER_COLOR_WEIGHTS: readonly number[] = [60, 20, 20];
 export const FLIP_CHANCE = 0.5;
 
 export const FLIPPABLE_TAG = 'flippable';
+
+/**
+ * Teaching levels (GDD §2 "first scene teaches itself"): targets are placed in the front band
+ * and, for the first three levels, scaled up on top of the table value.
+ */
+export const TEACH_FRONT_BAND_UNTIL_LEVEL = 5;
+export const TEACH_TARGET_BOOST: readonly number[] = [1.3, 1.2, 1.1]; // levels 1, 2, 3

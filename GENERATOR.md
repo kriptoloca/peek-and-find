@@ -23,6 +23,8 @@ Piecewise-linear curves between the columns, plateau at level 80. All values are
 
 Invariant: `minSpacing ≥ 2 × hitRadius` for the mode (80 for Find/Odd, 120 for Spot), so hit circles never overlap.
 
+Teaching levels: for levels 1–5 target slots are taken from the front band first (large, unoccluded); for levels 1–3 targets are additionally scaled ×1.3 / ×1.2 / ×1.1.
+
 Mode weights by level: L1–5 Find 100%; L6–10 Find 80 / Odd 20; L11+ Find 60 / Odd 20 / Spot 20. If the layout cannot host Spot (see §11), Spot's weight goes to Find. "Big scene" every 25th level: objectCount ×1.3 (cap 80), targetCount 7, thresholds ×2.
 
 Theme: `themes[floor((level-1)/3) % unlockedThemes]`, `unlockedThemes = min(5, 1 + floor(level/10))`. The atlas for the theme that unlocks at level 10k is preloaded from level 10k−3.
