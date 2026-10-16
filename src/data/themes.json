@@ -1,0 +1,125 @@
+{
+  "$comment": "Single source of truth for the five launch themes (ASSETS.md). Read by src/data/themes.ts (game) and scripts/assets.mjs (pipeline). size = longest side in design px at band scale 1.0.",
+  "themes": [
+    {
+      "id": "kitchen",
+      "paletteShift": 0,
+      "families": [
+        { "id": "mug", "size": 110, "tags": ["flippable"] },
+        { "id": "pan", "size": 170, "tags": ["flippable", "round"] },
+        { "id": "spoon", "size": 140, "tags": ["tall", "flippable"] },
+        { "id": "apple", "size": 100, "tags": ["round"] },
+        { "id": "egg", "size": 90, "tags": ["round"] },
+        { "id": "bread", "size": 150, "tags": ["flippable"] },
+        { "id": "cheese", "size": 120, "tags": ["flippable"] },
+        { "id": "teapot", "size": 160, "tags": ["tall", "flippable"] },
+        { "id": "cup", "size": 100, "tags": ["flippable"] },
+        { "id": "bottle", "size": 160, "tags": ["tall"] },
+        { "id": "bowl", "size": 150, "tags": ["round"] },
+        { "id": "knife", "size": 150, "tags": ["tall", "flippable"] }
+      ],
+      "singletons": [
+        { "id": "toaster", "size": 170, "tags": ["flippable"] },
+        { "id": "kettle", "size": 150, "tags": ["tall", "flippable"] },
+        { "id": "plant", "size": 170, "tags": ["tall"] },
+        { "id": "clock", "size": 120, "tags": ["round"] }
+      ]
+    },
+    {
+      "id": "beach",
+      "paletteShift": 3,
+      "families": [
+        { "id": "crab", "size": 140, "tags": ["animal", "flippable"] },
+        { "id": "shell", "size": 110, "tags": ["round"] },
+        { "id": "starfish", "size": 130, "tags": ["round"] },
+        { "id": "ball", "size": 110, "tags": ["round"] },
+        { "id": "bucket", "size": 150, "tags": ["tall", "flippable"] },
+        { "id": "fish", "size": 140, "tags": ["animal", "flippable"] },
+        { "id": "icecream", "size": 140, "tags": ["tall", "flippable"] },
+        { "id": "flipflop", "size": 130, "tags": ["flippable"] },
+        { "id": "umbrella", "size": 170, "tags": ["tall"] },
+        { "id": "sunglasses", "size": 140, "tags": ["flippable"] },
+        { "id": "coconut", "size": 110, "tags": ["round"] },
+        { "id": "bottle", "size": 160, "tags": ["tall"] }
+      ],
+      "singletons": [
+        { "id": "towel", "size": 170, "tags": ["flippable"] },
+        { "id": "surfboard", "size": 170, "tags": ["tall", "flippable"] },
+        { "id": "seagull", "size": 140, "tags": ["animal", "flippable"] },
+        { "id": "sandcastle", "size": 160, "tags": [] }
+      ]
+    },
+    {
+      "id": "city",
+      "paletteShift": 6,
+      "families": [
+        { "id": "car", "size": 170, "tags": ["flippable"] },
+        { "id": "dog", "size": 140, "tags": ["animal", "flippable"] },
+        { "id": "cat", "size": 130, "tags": ["animal", "flippable"] },
+        { "id": "bike", "size": 160, "tags": ["flippable"] },
+        { "id": "pigeon", "size": 110, "tags": ["animal", "flippable"] },
+        { "id": "cone", "size": 120, "tags": ["tall"] },
+        { "id": "mailbox", "size": 150, "tags": ["tall"] },
+        { "id": "balloon", "size": 120, "tags": ["round", "tall"] },
+        { "id": "hat", "size": 120, "tags": ["flippable"] },
+        { "id": "bag", "size": 130, "tags": ["flippable"] },
+        { "id": "lamp", "size": 170, "tags": ["tall"] },
+        { "id": "trashcan", "size": 140, "tags": ["tall"] }
+      ],
+      "singletons": [
+        { "id": "bench", "size": 170, "tags": ["flippable"] },
+        { "id": "hydrant", "size": 140, "tags": ["tall"] },
+        { "id": "scooter", "size": 160, "tags": ["flippable"] },
+        { "id": "sign", "size": 150, "tags": ["tall"] }
+      ]
+    },
+    {
+      "id": "forest",
+      "paletteShift": 9,
+      "families": [
+        { "id": "mushroom", "size": 120, "tags": ["tall"] },
+        { "id": "acorn", "size": 100, "tags": ["round"] },
+        { "id": "fox", "size": 150, "tags": ["animal", "flippable"] },
+        { "id": "owl", "size": 130, "tags": ["animal", "flippable"] },
+        { "id": "rabbit", "size": 130, "tags": ["animal", "flippable"] },
+        { "id": "leaf", "size": 120, "tags": ["flippable"] },
+        { "id": "berry", "size": 90, "tags": ["round"] },
+        { "id": "log", "size": 160, "tags": ["flippable"] },
+        { "id": "flower", "size": 120, "tags": ["tall"] },
+        { "id": "butterfly", "size": 120, "tags": ["animal"] },
+        { "id": "snail", "size": 120, "tags": ["animal", "flippable"] },
+        { "id": "pinecone", "size": 110, "tags": ["round"] }
+      ],
+      "singletons": [
+        { "id": "tent", "size": 170, "tags": [] },
+        { "id": "campfire", "size": 140, "tags": [] },
+        { "id": "backpack", "size": 150, "tags": ["flippable"] },
+        { "id": "stone", "size": 120, "tags": ["round"] }
+      ]
+    },
+    {
+      "id": "space",
+      "paletteShift": 12,
+      "families": [
+        { "id": "planet", "size": 140, "tags": ["round"] },
+        { "id": "star", "size": 110, "tags": ["round"] },
+        { "id": "rocket", "size": 160, "tags": ["tall", "flippable"] },
+        { "id": "alien", "size": 130, "tags": ["animal", "flippable"] },
+        { "id": "satellite", "size": 150, "tags": ["flippable"] },
+        { "id": "moon", "size": 120, "tags": ["round"] },
+        { "id": "comet", "size": 140, "tags": ["flippable"] },
+        { "id": "helmet", "size": 120, "tags": ["round"] },
+        { "id": "robot", "size": 150, "tags": ["flippable"] },
+        { "id": "crystal", "size": 120, "tags": ["tall"] },
+        { "id": "ufo", "size": 150, "tags": [] },
+        { "id": "asteroid", "size": 120, "tags": ["round"] }
+      ],
+      "singletons": [
+        { "id": "telescope", "size": 160, "tags": ["tall", "flippable"] },
+        { "id": "flag", "size": 140, "tags": ["tall", "flippable"] },
+        { "id": "capsule", "size": 150, "tags": ["tall"] },
+        { "id": "lander", "size": 160, "tags": [] }
+      ]
+    }
+  ]
+}

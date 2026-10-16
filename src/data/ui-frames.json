@@ -1,0 +1,26 @@
+{
+  "$comment": "UI atlas frame names without the ui_ prefix. Must match src/game/ui-keys.ts (a test checks it). Read by scripts/assets.mjs; SVG sources live in assets/svg/ui/<name>.svg, placeholders are generated when a file is missing.",
+  "frames": [
+    "heart",
+    "heart_empty",
+    "star",
+    "star_empty",
+    "retry",
+    "spark",
+    "confetti",
+    "badge",
+    "ring",
+    "odd",
+    "spot",
+    "play",
+    "daily",
+    "flame",
+    "check",
+    "sound_on",
+    "sound_off",
+    "music_on",
+    "music_off",
+    "home",
+    "hint"
+  ]
+}

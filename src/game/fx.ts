@@ -1,5 +1,6 @@
 import type Phaser from 'phaser';
 import type { Rect } from './layout';
+import { addImage } from './assets';
 import { UI } from './textures/placeholders';
 
 const SPARK_COUNT = 10;
@@ -25,8 +26,7 @@ export function popCorrect(
       sprite.setScale(sx, sy).setAlpha(0.45);
     },
   });
-  const ring = scene.add
-    .image(sprite.x, sprite.y, UI.ring)
+  const ring = addImage(scene, sprite.x, sprite.y, UI.ring)
     .setDisplaySize(sprite.displayWidth * 0.9, sprite.displayWidth * 0.9)
     .setAlpha(0.9);
   layer.add(ring);
@@ -66,7 +66,7 @@ export function sparkle(
   for (let i = 0; i < SPARK_COUNT; i++) {
     const a = (i / SPARK_COUNT) * Math.PI * 2;
     const d = 60 + (i % 3) * 25;
-    const s = scene.add.image(x, y, UI.spark).setScale(0.6).setTint(0xffe9a0);
+    const s = addImage(scene, x, y, UI.spark).setScale(0.6).setTint(0xffe9a0);
     layer.add(s);
     scene.tweens.add({
       targets: s,
@@ -91,8 +91,7 @@ export function confetti(
 ): void {
   for (let i = 0; i < CONFETTI_COUNT; i++) {
     const x = area.x + ((i * 97) % area.w);
-    const c = scene.add
-      .image(x, area.y - 20 - (i % 6) * 30, UI.confetti)
+    const c = addImage(scene, x, area.y - 20 - (i % 6) * 30, UI.confetti)
       .setTint(CONFETTI_COLORS[i % CONFETTI_COLORS.length])
       .setAngle((i * 37) % 360);
     layer.add(c);

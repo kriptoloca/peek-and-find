@@ -4,7 +4,8 @@ import { dailyStatus, todayKey } from '../daily';
 import { computeLayout } from '../layout';
 import { getPlatform } from '../../platform/bridge';
 import { persistProgress, progress } from '../state';
-import { UI, ensureUiTextures } from '../textures/placeholders';
+import { addImage, setImageFrame } from '../assets';
+import { UI } from '../textures/placeholders';
 
 const COLOR_BG = 0x1b1f2a;
 const COLOR_PLAY = 0x3b7dd8;
@@ -28,7 +29,6 @@ export class TitleScene extends Phaser.Scene {
   }
 
   create(): void {
-    ensureUiTextures(this);
     this.root = this.add.container(0, 0);
     this.scale.on(Phaser.Scale.Events.RESIZE, this.build);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
@@ -87,9 +87,10 @@ export class TitleScene extends Phaser.Scene {
       },
     );
     if (status.done && status.streak > 0) {
-      const flame = this.add
-        .image(cx + DAILY_W / 2 - 40, dailyY, UI.flame)
-        .setDisplaySize(TOGGLE, TOGGLE);
+      const flame = addImage(this, cx + DAILY_W / 2 - 40, dailyY, UI.flame).setDisplaySize(
+        TOGGLE,
+        TOGGLE,
+      );
       const n = this.add
         .text(cx + DAILY_W / 2 - 40, dailyY + 4, String(status.streak), {
           fontFamily: 'Arial, Helvetica, sans-serif',
@@ -133,7 +134,7 @@ export class TitleScene extends Phaser.Scene {
     onTap: () => void,
   ): void {
     const bg = this.add.rectangle(x, y, w, h, color).setInteractive({ useHandCursor: true });
-    const ic = this.add.image(x - w / 2 + 90, y, icon).setDisplaySize(h * 0.6, h * 0.6);
+    const ic = addImage(this, x - w / 2 + 90, y, icon).setDisplaySize(h * 0.6, h * 0.6);
     const txt = this.add
       .text(x + 30, y, label, {
         fontFamily: 'Arial, Helvetica, sans-serif',
@@ -144,7 +145,7 @@ export class TitleScene extends Phaser.Scene {
       .setOrigin(0.5);
     this.root.add([bg, ic, txt]);
     if (badge) {
-      const flame = this.add.image(x + w / 2 - 40, y, UI.flame).setDisplaySize(TOGGLE, TOGGLE);
+      const flame = addImage(this, x + w / 2 - 40, y, UI.flame).setDisplaySize(TOGGLE, TOGGLE);
       const n = this.add
         .text(x + w / 2 - 40, y + 4, badge, {
           fontFamily: 'Arial, Helvetica, sans-serif',
@@ -174,13 +175,12 @@ export class TitleScene extends Phaser.Scene {
     on: string,
     off: string,
   ): void {
-    const img = this.add
-      .image(x, y, get() ? on : off)
+    const img = addImage(this, x, y, get() ? on : off)
       .setDisplaySize(TOGGLE, TOGGLE)
       .setInteractive({ useHandCursor: true });
     img.on(Phaser.Input.Events.POINTER_UP, () => {
       set(!get());
-      img.setTexture(get() ? on : off);
+      setImageFrame(img, get() ? on : off);
       persistProgress();
     });
     this.root.add(img);

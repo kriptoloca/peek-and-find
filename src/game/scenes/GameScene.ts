@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { THEMES, themeForLevel } from '../../data/themes';
+import { THEMES, backgroundKey, themeForLevel } from '../../data/themes';
 import { themeToPreload } from '../../gen/difficulty';
 import { installDebug } from '../../dev/debug';
 import { Rng, hashSeed, sceneSeed } from '../../gen/rng';
@@ -27,7 +27,9 @@ import {
   type Round,
 } from '../rules';
 import { persistProgress, progress, resetProgress } from '../state';
-import { UI, ensureThemeTextures, ensureUiTextures } from '../textures/placeholders';
+import { UI } from '../textures/placeholders';
+import { addImage, ensureThemes, fitImage, loadedAtlases } from '../assets';
+import { SCENE_SIZE, SPOT_H, SPOT_W } from '../../config';
 
 const COLOR_BG = 0x1b1f2a;
 const COLOR_SCENE = 0x2e3650;
@@ -91,6 +93,8 @@ export class GameScene extends Phaser.Scene {
   private pauseOverlay: Phaser.GameObjects.Container | null = null;
   private paused = false;
   private adInProgress = false;
+  /** Incremented by every startLevel(); an awaited load belongs to the latest one only. */
+  private levelGen = 0;
   private adsShown = 0;
   private hintUses = 0;
   private continueUses = 0;
@@ -108,7 +112,6 @@ export class GameScene extends Phaser.Scene {
   }
 
   create(): void {
-    ensureUiTextures(this);
     this.bg = this.add.graphics().setDepth(0);
     this.world = this.add.container(0, 0).setDepth(DEPTH_WORLD);
     this.worldB = this.add.container(0, 0).setDepth(DEPTH_WORLD).setVisible(false);
@@ -132,7 +135,7 @@ export class GameScene extends Phaser.Scene {
     });
     this.relayout();
     if (import.meta.env.DEV) this.applyDevParams();
-    this.startLevel();
+    void this.startLevel();
     if (import.meta.env.DEV) this.installDebugHooks();
   }
 
@@ -224,8 +227,9 @@ export class GameScene extends Phaser.Scene {
 
   // ---- level lifecycle ----------------------------------------------------------------------
 
-  private startLevel(): void {
+  private async startLevel(): Promise<void> {
     this.clearOverlay();
+    this.round = null;
     clearFx(this, this.fx);
     this.world.removeAll(true);
     this.worldB.removeAll(true);
@@ -249,12 +253,13 @@ export class GameScene extends Phaser.Scene {
       seed = sceneSeed(mode, level, progress.attempt, progress.seedSalt);
     }
     this.theme = themeForLevel(level);
-    ensureThemeTextures(this, this.theme);
-    // GDD §5: the theme that unlocks within three levels is prepared ahead so the chain never
-    // stalls. With placeholders this is texture generation; with atlases it becomes a loader job.
+    // GDD §5: the theme that unlocks within three levels is loaded ahead so the chain never
+    // stalls on a loader round trip. A newer startLevel() or a scene shutdown cancels this one.
     const pre = themeToPreload(level);
-    if (pre !== null) ensureThemeTextures(this, THEMES[pre] as Theme);
+    const gen0 = ++this.levelGen;
     this.platform.sendMessage('in_game_loading_started');
+    await ensureThemes(this, pre === null ? [this.theme] : [this.theme, THEMES[pre] as Theme]);
+    if (gen0 !== this.levelGen || !this.sys.isActive()) return;
     const gen: GenScene = generateScene({
       seed,
       level,
@@ -264,6 +269,7 @@ export class GameScene extends Phaser.Scene {
     });
     this.platform.sendMessage('in_game_loading_stopped');
     this.round = newRound(gen);
+    this.addBackground(gen.mode);
     this.relayout();
     this.hud.setLevel(this.dailyIndex === null ? level : this.dailyIndex + 1);
     this.hud.setHearts(this.round.hearts);
@@ -277,8 +283,7 @@ export class GameScene extends Phaser.Scene {
       map: SpriteMap,
     ): void => {
       list.forEach((o, i) => {
-        const img = this.add.image(o.x, o.y, o.frame).setFlipX(o.flipX);
-        img.setDisplaySize(o.size, o.size);
+        const img = fitImage(addImage(this, o.x, o.y, o.frame), o.size).setFlipX(o.flipX);
         const sx = img.scaleX;
         const sy = img.scaleY;
         img.setScale(0);
@@ -312,6 +317,16 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  /** Theme background inside the world containers; without an atlas the flat fill stays. */
+  private addBackground(mode: Mode): void {
+    const key = backgroundKey(this.theme, mode === 'spot');
+    if (!this.textures.exists(key)) return;
+    const w = mode === 'spot' ? SPOT_W : SCENE_SIZE;
+    const h = mode === 'spot' ? SPOT_H : SCENE_SIZE;
+    this.world.add(this.add.image(w / 2, h / 2, key).setDisplaySize(w, h));
+    if (mode === 'spot') this.worldB.add(this.add.image(w / 2, h / 2, key).setDisplaySize(w, h));
+  }
+
   /** Scene complete → maybe an interstitial (gate + platform support) → next level. */
   private advance(): void {
     if (this.adInProgress) return;
@@ -336,7 +351,7 @@ export class GameScene extends Phaser.Scene {
         this.dailyIndex += 1;
         progress.attempt = 0;
         persistProgress();
-        this.startLevel();
+        void this.startLevel();
       } else {
         Object.assign(progress, completeDaily(progress, this.dailyKey));
         persistProgress();
@@ -347,7 +362,7 @@ export class GameScene extends Phaser.Scene {
     progress.level += 1;
     progress.attempt = 0;
     persistProgress();
-    this.startLevel();
+    void this.startLevel();
   }
 
   /** GDD §9 screen 6: badge, streak, back to title on tap. */
@@ -355,8 +370,8 @@ export class GameScene extends Phaser.Scene {
     this.clearOverlay();
     clearFx(this, this.fx);
     const ov = this.makeOverlay(0.7);
-    const badge = this.add.image(0, -120, UI.daily).setDisplaySize(220, 220);
-    const flame = this.add.image(-40, 90, UI.flame).setDisplaySize(140, 140);
+    const badge = addImage(this, 0, -120, UI.daily).setDisplaySize(220, 220);
+    const flame = addImage(this, -40, 90, UI.flame).setDisplaySize(140, 140);
     const n = this.add
       .text(60, 96, String(progress.streak), {
         fontFamily: 'Arial, Helvetica, sans-serif',
@@ -381,7 +396,7 @@ export class GameScene extends Phaser.Scene {
     progress.attempt += 1;
     progress.scenesPlayed += 1;
     persistProgress();
-    this.startLevel();
+    void this.startLevel();
   }
 
   // ---- input --------------------------------------------------------------------------------
@@ -421,8 +436,7 @@ export class GameScene extends Phaser.Scene {
       for (const image of ['a', 'b'] as const) {
         const c = this.toCanvas(target.x, target.y, image);
         const d = target.hitRadius * 2 * this.world.scaleX;
-        const ring = this.add
-          .image(c.x, c.y, UI.ring)
+        const ring = addImage(this, c.x, c.y, UI.ring)
           .setDisplaySize(d, d)
           .setTint(COLOR_SPOT_RING);
         this.fx.add(ring);
@@ -467,8 +481,7 @@ export class GameScene extends Phaser.Scene {
     if (r.scene.params.bigScene) confetti(this, this.mainRect(), this.fx); // GDD §5 bonus confetti
     const ov = this.makeOverlay(0.35);
     for (let i = 0; i < 3; i++) {
-      const star = this.add
-        .image((i - 1) * 190, 0, i < stars ? UI.star : UI.starEmpty)
+      const star = addImage(this, (i - 1) * 190, 0, i < stars ? UI.star : UI.starEmpty)
         .setDisplaySize(160, 160)
         .setScale(0);
       ov.add(star);
@@ -490,15 +503,14 @@ export class GameScene extends Phaser.Scene {
     this.platform.sendMessage('gameplay_stopped');
     const ov = this.makeOverlay(0.6);
     for (let i = 0; i < 3; i++) {
-      ov.add(this.add.image((i - 1) * 110, -170, UI.heartEmpty).setDisplaySize(90, 90));
+      ov.add(addImage(this, (i - 1) * 110, -170, UI.heartEmpty).setDisplaySize(90, 90));
     }
     const withContinue = this.platform.rewardedSupported;
     const retryX = withContinue ? FAIL_BUTTON_DX : 0;
-    const btn = this.add
-      .image(retryX, RETRY_OFFSET_Y, UI.badge)
+    const btn = addImage(this, retryX, RETRY_OFFSET_Y, UI.badge)
       .setDisplaySize(RETRY_RADIUS * 2, RETRY_RADIUS * 2)
       .setTint(0x3b7dd8);
-    const icon = this.add.image(retryX, RETRY_OFFSET_Y, UI.retry).setDisplaySize(110, 110);
+    const icon = addImage(this, retryX, RETRY_OFFSET_Y, UI.retry).setDisplaySize(110, 110);
     ov.add([btn, icon]);
     this.tweens.add({
       targets: [btn, icon],
@@ -509,16 +521,17 @@ export class GameScene extends Phaser.Scene {
     });
     if (withContinue) {
       // Continue = rewarded ad → refill hearts, same scene (GDD §3). Heart + play icon, no text.
-      const cbtn = this.add
-        .image(-FAIL_BUTTON_DX, RETRY_OFFSET_Y, UI.badge)
+      const cbtn = addImage(this, -FAIL_BUTTON_DX, RETRY_OFFSET_Y, UI.badge)
         .setDisplaySize(RETRY_RADIUS * 2, RETRY_RADIUS * 2)
         .setTint(0x2a9d8f);
-      const heart = this.add
-        .image(-FAIL_BUTTON_DX - 28, RETRY_OFFSET_Y, UI.heart)
-        .setDisplaySize(70, 70);
-      const play = this.add
-        .image(-FAIL_BUTTON_DX + 34, RETRY_OFFSET_Y, UI.play)
-        .setDisplaySize(60, 60);
+      const heart = addImage(this, -FAIL_BUTTON_DX - 28, RETRY_OFFSET_Y, UI.heart).setDisplaySize(
+        70,
+        70,
+      );
+      const play = addImage(this, -FAIL_BUTTON_DX + 34, RETRY_OFFSET_Y, UI.play).setDisplaySize(
+        60,
+        60,
+      );
       ov.add([cbtn, heart, play]);
     }
   }
@@ -554,7 +567,7 @@ export class GameScene extends Phaser.Scene {
     for (const image of images) {
       const c = this.toCanvas(t.x, t.y, image);
       const d = Math.max(t.hitRadius * 2, 120) * this.world.scaleX;
-      const ring = this.add.image(c.x, c.y, UI.ring).setDisplaySize(d, d).setTint(0xffc857);
+      const ring = addImage(this, c.x, c.y, UI.ring).setDisplaySize(d, d).setTint(0xffc857);
       this.fx.add(ring);
       this.tweens.add({
         targets: ring,
@@ -645,13 +658,13 @@ export class GameScene extends Phaser.Scene {
             progress.attempt = 0;
             this.forcedMode = s.mode === 'auto' ? null : s.mode;
             persistProgress();
-            this.startLevel();
+            void this.startLevel();
           },
           onReset: () => {
             this.devMenuOpen = false;
             resetProgress();
             this.forcedMode = null;
-            this.startLevel();
+            void this.startLevel();
           },
           onClose: () => {
             this.devMenuOpen = false;
@@ -749,6 +762,7 @@ export class GameScene extends Phaser.Scene {
         status: this.round?.status ?? 'none',
         remaining: this.round ? remainingTargets(this.round) : 0,
         now: this.time.now,
+        atlasKeys: loadedAtlases(this),
         hudInBand: this.hudInBand(),
       }),
     });

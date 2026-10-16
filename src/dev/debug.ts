@@ -44,6 +44,8 @@ export interface PeekDebug {
     now: number;
     /** HUD row sits inside the band the current layout reserves for it. */
     hudInBand: boolean;
+    /** Loaded atlas texture keys (empty with runtime placeholders). */
+    atlasKeys: string[];
   };
 }
 

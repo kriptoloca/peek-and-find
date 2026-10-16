@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import type { Layout, Rect } from './layout';
 import type { PromptCount } from './rules';
+import { addImage, fitImage, setImageFrame } from './assets';
 import { UI } from './textures/placeholders';
 
 const ICON_MAX = 120;
@@ -38,7 +39,7 @@ export class Hud {
     this.scene = scene;
     this.container = scene.add.container(0, 0).setDepth(20);
     for (let i = 0; i < 3; i++) {
-      const h = scene.add.image(0, 0, UI.heart);
+      const h = addImage(scene, 0, 0, UI.heart);
       this.hearts.push(h);
       this.container.add(h);
     }
@@ -51,8 +52,7 @@ export class Hud {
       })
       .setOrigin(0.5);
     this.container.add(this.level);
-    this.hint = scene.add
-      .image(0, 0, UI.hint)
+    this.hint = addImage(scene, 0, 0, UI.hint)
       .setVisible(false)
       .setInteractive({ useHandCursor: true });
     this.hint.on(Phaser.Input.Events.POINTER_UP, () => {
@@ -85,7 +85,7 @@ export class Hud {
   }
 
   setHearts(n: number): void {
-    this.hearts.forEach((h, i) => h.setTexture(i < n ? UI.heart : UI.heartEmpty));
+    this.hearts.forEach((h, i) => setImageFrame(h, i < n ? UI.heart : UI.heartEmpty));
   }
 
   /** Brief scale bump on the heart that was just lost. */
@@ -104,8 +104,8 @@ export class Hud {
         it.count.destroy();
       }
       this.items = counts.map((c) => {
-        const icon = this.scene.add.image(0, 0, c.icon);
-        const badge = this.scene.add.image(0, 0, UI.badge);
+        const icon = addImage(this.scene, 0, 0, c.icon);
+        const badge = addImage(this.scene, 0, 0, UI.badge);
         const count = this.scene.add
           .text(0, 0, '', {
             fontFamily: 'Arial, Helvetica, sans-serif',
@@ -221,7 +221,7 @@ export class Hud {
   }
 
   private placeItem(it: PromptItemView, x: number, y: number, icon: number): void {
-    it.icon.setDisplaySize(icon, icon).setPosition(x, y).setScale(it.icon.scaleX, it.icon.scaleY);
+    fitImage(it.icon, icon).setPosition(x, y);
     const bx = x + icon * 0.42;
     const by = y + icon * 0.38;
     it.badge.setDisplaySize(BADGE_SIZE, BADGE_SIZE).setPosition(bx, by);

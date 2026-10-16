@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "themes": {
+    "kitchen": {
+      "atlas": "atlases/kitchen.png",
+      "data": "atlases/kitchen.json",
+      "frames": 112,
+      "frameSize": 208,
+      "source": "placeholder",
+      "missing": 40,
+      "background": "backgrounds/kitchen.png",
+      "backgroundSpot": "backgrounds/kitchen_spot.png",
+      "backgroundSource": "placeholder"
+    },
+    "beach": {
+      "atlas": "atlases/beach.png",
+      "data": "atlases/beach.json",
+      "frames": 112,
+      "frameSize": 208,
+      "source": "placeholder",
+      "missing": 40,
+      "background": "backgrounds/beach.png",
+      "backgroundSpot": "backgrounds/beach_spot.png",
+      "backgroundSource": "placeholder"
+    },
+    "city": {
+      "atlas": "atlases/city.png",
+      "data": "atlases/city.json",
+      "frames": 112,
+      "frameSize": 208,
+      "source": "placeholder",
+      "missing": 40,
+      "background": "backgrounds/city.png",
+      "backgroundSpot": "backgrounds/city_spot.png",
+      "backgroundSource": "placeholder"
+    },
+    "forest": {
+      "atlas": "atlases/forest.png",
+      "data": "atlases/forest.json",
+      "frames": 112,
+      "frameSize": 208,
+      "source": "placeholder",
+      "missing": 40,
+      "background": "backgrounds/forest.png",
+      "backgroundSpot": "backgrounds/forest_spot.png",
+      "backgroundSource": "placeholder"
+    },
+    "space": {
+      "atlas": "atlases/space.png",
+      "data": "atlases/space.json",
+      "frames": 112,
+      "frameSize": 208,
+      "source": "placeholder",
+      "missing": 40,
+      "background": "backgrounds/space.png",
+      "backgroundSpot": "backgrounds/space_spot.png",
+      "backgroundSource": "placeholder"
+    }
+  },
+  "ui": {
+    "atlas": "atlases/ui.png",
+    "data": "atlases/ui.json",
+    "frames": 21,
+    "source": "placeholder",
+    "missing": 21
+  }
+}

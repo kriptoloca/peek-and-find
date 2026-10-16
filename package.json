@@ -2,7 +2,7 @@
   "name": "peek-and-find",
   "version": "0.1.0",
   "private": true,
-  "description": "Peek & Find — text-free hidden-object game for YouTube Playables (Pebblit)",
+  "description": "Peek & Find \u2014 text-free hidden-object game for YouTube Playables (Pebblit)",
   "type": "module",
   "engines": {
     "node": ">=20"
@@ -15,7 +15,9 @@
     "test:watch": "vitest",
     "check": "tsc --noEmit -p tsconfig.json && eslint . && prettier --check .",
     "format": "prettier --write .",
-    "size": "node scripts/size.mjs"
+    "size": "node scripts/size.mjs",
+    "assets": "node scripts/assets.mjs",
+    "assets:check": "node scripts/assets.mjs --check"
   },
   "dependencies": {
     "@playgama/bridge": "2.3.1",
@@ -28,6 +30,7 @@
     "eslint-config-prettier": "10.1.8",
     "globals": "17.13.0",
     "prettier": "3.9.10",
+    "sharp": "0.35.5",
     "typescript": "5.9.3",
     "typescript-eslint": "8.71.2",
     "vite": "7.3.7",

@@ -32,7 +32,8 @@ const game = new Phaser.Game({
     width: current.width,
     height: current.height,
   },
-  render: { antialias: true, roundPixels: false },
+  // Atlases are power-of-two, so mipmaps smooth the 208 px frames drawn at ~100 px (Epic 9).
+  render: { antialias: true, roundPixels: false, mipmapFilter: 'LINEAR_MIPMAP_LINEAR' },
   scene: [BootScene, TitleScene, GameScene],
 });
 
