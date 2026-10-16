@@ -35,7 +35,9 @@ Both run on the Bridge "mock" platform (the host is not YouTube): no real ads, s
 | Generator preview | `https://kriptoloca.github.io/peek-and-find/test/#gen` |
 | Dev menu | triple-tap the top-left corner in the `/test/` build |
 
-Pages must be enabled for the repository (Settings → Pages → Source: GitHub Actions). A private repository needs a paid GitHub plan for Pages; otherwise make the repository public.
+Pages has to be switched on once by a repository admin: Settings → Pages → Build and deployment → Source: **GitHub Actions**. A private repository needs a paid GitHub plan for Pages; on a free plan make the repository public first (Settings → General → Danger Zone → Change visibility). Until then the `pages` workflow builds and skips the deployment with a warning. After enabling, push any commit or run the `pages` workflow by hand (Actions → pages → Run workflow); the links go live within a minute.
+
+LAN alternative without Pages: `npm run dev` on the laptop, then open `http://<laptop-lan-ip>:5173/?fakeads=1&adfast=1` on the phone (same Wi-Fi; the dev server already runs in development mode, so every shortcut above works on it too).
 
 ## Phone test (every epic)
 
