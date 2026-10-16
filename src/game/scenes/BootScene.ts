@@ -11,6 +11,7 @@ import {
   ensureUi,
   readAtlasIndex,
 } from '../assets';
+import { AUDIO_INDEX_KEY, AUDIO_INDEX_URL, audio, loadAudio } from '../audio';
 import { attachSaveStore, hydrateProgress, progress, resetProgress } from '../state';
 
 /**
@@ -27,6 +28,7 @@ export class BootScene extends Phaser.Scene {
   preload(): void {
     // Written by scripts/assets.mjs; when absent the game runs on runtime placeholders.
     this.load.json(ATLAS_INDEX_KEY, ATLAS_INDEX_URL);
+    this.load.json(AUDIO_INDEX_KEY, AUDIO_INDEX_URL);
   }
 
   create(): void {
@@ -61,6 +63,8 @@ export class BootScene extends Phaser.Scene {
     if (pre !== null) themes.push(THEMES[pre] as Theme);
     await ensureUi(this);
     await ensureThemes(this, themes);
+    await loadAudio(this);
+    audio.attach(this, platform);
     this.scene.start(target.key, target.data);
   }
 }

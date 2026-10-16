@@ -66,7 +66,7 @@ export function atlasKey(id: string): string {
 }
 
 /** Runs one loader pass; resolves when every queued file finished (failures are logged). */
-function runLoader(
+export function runLoader(
   scene: Phaser.Scene,
   enqueue: (loader: Phaser.Loader.LoaderPlugin) => void,
 ): Promise<void> {

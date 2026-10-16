@@ -8,6 +8,8 @@ import { generateScene } from '../../gen/scene-gen';
 import type { Mode, Placed, Scene as GenScene, Theme } from '../../gen/types';
 import { AdGate, MIN_INTERVAL_MS } from '../../platform/ads';
 import { getPlatform, type Platform } from '../../platform/bridge';
+import { audio } from '../audio';
+import { correctSfx, starSfx } from '../audio-keys';
 import { clearFx, confetti, popCorrect, shakeWrong, sparkle } from '../fx';
 import { Hud } from '../hud';
 import { computeLayout, type Layout, type Rect } from '../layout';
@@ -49,6 +51,11 @@ const RETRY_OFFSET_Y = 40;
 /** Fail overlay with Continue: buttons sit left/right of the center. */
 const FAIL_BUTTON_DX = 160;
 const HINT_GLOW_MS = 2000;
+/** Star reveal timing on the win overlay; the star sounds follow the same schedule. */
+const STAR_REVEAL_DELAY_MS = 120;
+const STAR_REVEAL_STAGGER_MS = 140;
+/** The lost-heart sound trails the wrong-tap sound. */
+const HEART_LOSE_DELAY_MS = 150;
 const DEPTH_PAUSE = 50;
 
 /** Session-wide interstitial gate (wall clock, so pauses and slow frames do not shorten it). */
@@ -144,6 +151,7 @@ export class GameScene extends Phaser.Scene {
   private setPaused(paused: boolean): void {
     if (this.paused === paused) return;
     this.paused = paused;
+    audio.setPaused(paused);
     if (paused) {
       this.tweens.pauseAll();
       this.time.paused = true;
@@ -299,6 +307,7 @@ export class GameScene extends Phaser.Scene {
         });
       });
     };
+    audio.play('pop');
     popIn(sorted, this.world, this.sprites);
     if (gen.spot)
       popIn(
@@ -367,6 +376,7 @@ export class GameScene extends Phaser.Scene {
 
   /** GDD §9 screen 6: badge, streak, back to title on tap. */
   private showDailyComplete(): void {
+    audio.play('daily_complete');
     this.clearOverlay();
     clearFx(this, this.fx);
     const ov = this.makeOverlay(0.7);
@@ -393,6 +403,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private retryLevel(): void {
+    audio.play('button');
     progress.attempt += 1;
     progress.scenesPlayed += 1;
     persistProgress();
@@ -431,6 +442,7 @@ export class GameScene extends Phaser.Scene {
   private onCorrect(target: HitTarget): void {
     const r = this.round;
     if (!r) return;
+    audio.play(correctSfx(r.found.size - 1));
     if (r.scene.mode === 'spot') {
       // Ring the difference on both images; the object may be absent in one of them.
       for (const image of ['a', 'b'] as const) {
@@ -458,6 +470,10 @@ export class GameScene extends Phaser.Scene {
   }
 
   private onWrong(object: HitTarget | null, hearts: number): void {
+    audio.play('tap_wrong');
+    this.time.delayedCall(HEART_LOSE_DELAY_MS, () => {
+      audio.play('heart_lose');
+    });
     if (object) {
       const img = this.sprites.get(object.id);
       if (img) shakeWrong(this, img);
@@ -477,6 +493,8 @@ export class GameScene extends Phaser.Scene {
     adGate.onSceneCompleted();
     this.platform.sendMessage('level_completed');
     this.platform.sendMessage('gameplay_stopped');
+    audio.play('scene_complete');
+    audio.play('confetti');
     confetti(this, this.mainRect(), this.fx);
     if (r.scene.params.bigScene) confetti(this, this.mainRect(), this.fx); // GDD §5 bonus confetti
     const ov = this.makeOverlay(0.35);
@@ -485,13 +503,20 @@ export class GameScene extends Phaser.Scene {
         .setDisplaySize(160, 160)
         .setScale(0);
       ov.add(star);
+      const starDelay = STAR_REVEAL_DELAY_MS + i * STAR_REVEAL_STAGGER_MS;
       this.tweens.add({
         targets: star,
         scale: 160 / 128,
-        delay: 120 + i * 140,
+        delay: starDelay,
         duration: 260,
         ease: 'Back.easeOut',
       });
+      if (i < stars) {
+        const n = (i + 1) as 1 | 2 | 3;
+        this.time.delayedCall(starDelay, () => {
+          audio.play(starSfx(n));
+        });
+      }
     }
     this.advanceTimer = this.time.delayedCall(AUTO_ADVANCE_MS + 400, () => {
       this.advance();
@@ -540,6 +565,7 @@ export class GameScene extends Phaser.Scene {
   private async onContinue(): Promise<void> {
     const r = this.round;
     if (!r || r.status !== 'lost' || this.adInProgress) return;
+    audio.play('button');
     this.adInProgress = true;
     const earned = await this.platform.showRewarded('continue');
     this.adInProgress = false;
@@ -563,6 +589,7 @@ export class GameScene extends Phaser.Scene {
     const t = hintTarget(r);
     if (!t) return;
     this.hintUses += 1;
+    audio.play('hint_reveal');
     const images: ('a' | 'b')[] = r.scene.mode === 'spot' ? ['a', 'b'] : ['a'];
     for (const image of images) {
       const c = this.toCanvas(t.x, t.y, image);
@@ -763,6 +790,7 @@ export class GameScene extends Phaser.Scene {
         remaining: this.round ? remainingTargets(this.round) : 0,
         now: this.time.now,
         atlasKeys: loadedAtlases(this),
+        audio: audio.debug(),
         hudInBand: this.hudInBand(),
       }),
     });

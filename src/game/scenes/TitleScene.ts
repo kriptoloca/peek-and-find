@@ -5,6 +5,7 @@ import { computeLayout } from '../layout';
 import { getPlatform } from '../../platform/bridge';
 import { persistProgress, progress } from '../state';
 import { addImage, setImageFrame } from '../assets';
+import { audio } from '../audio';
 import { UI } from '../textures/placeholders';
 
 const COLOR_BG = 0x1b1f2a;
@@ -157,6 +158,9 @@ export class TitleScene extends Phaser.Scene {
       this.root.add([flame, n]);
     }
     bg.on(Phaser.Input.Events.POINTER_UP, () => {
+      // First user gesture (GDD §12): the music loop may start from here on.
+      audio.startMusic();
+      audio.play('button');
       this.tweens.add({
         targets: [bg, ic, txt],
         scale: '*=0.96',
@@ -182,6 +186,8 @@ export class TitleScene extends Phaser.Scene {
       set(!get());
       setImageFrame(img, get() ? on : off);
       persistProgress();
+      audio.refresh();
+      audio.play('button');
     });
     this.root.add(img);
   }

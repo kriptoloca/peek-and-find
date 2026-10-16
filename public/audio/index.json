@@ -1,0 +1,102 @@
+{
+  "version": 1,
+  "sounds": {
+    "tap_correct_1": {
+      "ogg": "audio/tap_correct_1.ogg",
+      "m4a": "audio/tap_correct_1.m4a",
+      "source": "placeholder",
+      "music": false
+    },
+    "tap_correct_2": {
+      "ogg": "audio/tap_correct_2.ogg",
+      "m4a": "audio/tap_correct_2.m4a",
+      "source": "placeholder",
+      "music": false
+    },
+    "tap_correct_3": {
+      "ogg": "audio/tap_correct_3.ogg",
+      "m4a": "audio/tap_correct_3.m4a",
+      "source": "placeholder",
+      "music": false
+    },
+    "tap_wrong": {
+      "ogg": "audio/tap_wrong.ogg",
+      "m4a": "audio/tap_wrong.m4a",
+      "source": "placeholder",
+      "music": false
+    },
+    "pop": {
+      "ogg": "audio/pop.ogg",
+      "m4a": "audio/pop.m4a",
+      "source": "placeholder",
+      "music": false
+    },
+    "sparkle": {
+      "ogg": "audio/sparkle.ogg",
+      "m4a": "audio/sparkle.m4a",
+      "source": "placeholder",
+      "music": false
+    },
+    "scene_complete": {
+      "ogg": "audio/scene_complete.ogg",
+      "m4a": "audio/scene_complete.m4a",
+      "source": "placeholder",
+      "music": false
+    },
+    "star_1": {
+      "ogg": "audio/star_1.ogg",
+      "m4a": "audio/star_1.m4a",
+      "source": "placeholder",
+      "music": false
+    },
+    "star_2": {
+      "ogg": "audio/star_2.ogg",
+      "m4a": "audio/star_2.m4a",
+      "source": "placeholder",
+      "music": false
+    },
+    "star_3": {
+      "ogg": "audio/star_3.ogg",
+      "m4a": "audio/star_3.m4a",
+      "source": "placeholder",
+      "music": false
+    },
+    "heart_lose": {
+      "ogg": "audio/heart_lose.ogg",
+      "m4a": "audio/heart_lose.m4a",
+      "source": "placeholder",
+      "music": false
+    },
+    "hint_reveal": {
+      "ogg": "audio/hint_reveal.ogg",
+      "m4a": "audio/hint_reveal.m4a",
+      "source": "placeholder",
+      "music": false
+    },
+    "button": {
+      "ogg": "audio/button.ogg",
+      "m4a": "audio/button.m4a",
+      "source": "placeholder",
+      "music": false
+    },
+    "confetti": {
+      "ogg": "audio/confetti.ogg",
+      "m4a": "audio/confetti.m4a",
+      "source": "placeholder",
+      "music": false
+    },
+    "daily_complete": {
+      "ogg": "audio/daily_complete.ogg",
+      "m4a": "audio/daily_complete.m4a",
+      "source": "placeholder",
+      "music": false
+    },
+    "music_loop": {
+      "ogg": "audio/music_loop.ogg",
+      "m4a": "audio/music_loop.m4a",
+      "source": "placeholder",
+      "music": true
+    }
+  },
+  "music": "music_loop"
+}

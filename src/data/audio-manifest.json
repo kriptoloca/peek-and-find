@@ -1,0 +1,21 @@
+{
+  "$comment": "Audio files of ASSETS.md. Sources: assets/audio/<name>.(wav|ogg|mp3|flac|m4a); scripts/audio.mjs encodes OGG + M4A into public/audio/ and synthesizes a placeholder for every missing source. Kept in sync with src/game/audio.ts by a test.",
+  "sfx": [
+    "tap_correct_1",
+    "tap_correct_2",
+    "tap_correct_3",
+    "tap_wrong",
+    "pop",
+    "sparkle",
+    "scene_complete",
+    "star_1",
+    "star_2",
+    "star_3",
+    "heart_lose",
+    "hint_reveal",
+    "button",
+    "confetti",
+    "daily_complete"
+  ],
+  "music": "music_loop"
+}

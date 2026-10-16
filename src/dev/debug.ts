@@ -2,6 +2,8 @@
  * Dev-only hooks for the headless smoke test (never imported in production code paths that
  * survive tree-shaking: GameScene calls installDebug() inside `if (import.meta.env.DEV)`).
  */
+import type { AudioDebug } from '../game/audio';
+
 export interface DebugPoint {
   id: string;
   x: number;
@@ -46,6 +48,7 @@ export interface PeekDebug {
     hudInBand: boolean;
     /** Loaded atlas texture keys (empty with runtime placeholders). */
     atlasKeys: string[];
+    audio: AudioDebug;
   };
 }
 

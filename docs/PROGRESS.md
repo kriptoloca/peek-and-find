@@ -3,7 +3,7 @@
 Single source of truth for "where did we leave off". Update at the end of every epic and whenever a decision changes the plan. Read this first at the start of every session.
 
 ## Status
-Epic: 9a done (asset pipeline + atlas loading) · Next: 9b (audio, HUD polish) can start now; real art drops in whenever the pack is chosen · Last update: 2026-10-16 · Branch: main
+Epic: 9 done with placeholder art and sound (9a pipeline + atlases, 9b audio) · Next: Epic 10 (size/perf report) or the real art/sound drop-in, whichever comes first · Last update: 2026-10-16 · Branch: main
 Repo: https://github.com/kriptoloca/peek-and-find
 
 ## Epic board
@@ -20,7 +20,8 @@ Repo: https://github.com/kriptoloca/peek-and-find
 | 7 | Daily Find + Title screen | done (code) | 8 tests; headless: title → PLAY, title → 5-scene chain → Daily Complete → title with check; streak 1 → 2 → reset after a skipped day |
 | 8 | Playgama Bridge 2.3.1 (source read), ad gating, rewarded hint/continue, pause | done (code) | 6 tests; headless: SDK initialises on the mock platform, saves via bridge storage, fake interstitial after 3 scenes, hint, continue, pause blocks input; only same-origin requests |
 | 9a | Asset pipeline (`npm run assets`: SVG recolor `_c1`/`_c2`, MaxRects atlas ≤ 2048², Spot background crop, placeholders for missing sources, checker) + atlas loading with preload/on-demand | done (code) | 21 tests; byte-identical rebuild (23/23 hashes); headless: UI + kitchen at boot, beach preloaded at L9, city/forest on demand, Spot crop, 9:16 / 16:9 / 1:1 screenshots, no console errors |
-| 9b | Audio (15 SFX + loop, platform mute precedence, nothing before first tap), HUD polish, real art pass | | audio files (CC0) + the art pack |
+| 9b | Audio: `npm run audio` (sources → OGG + M4A, synthesized placeholders), `src/game/audio.ts` (platform mute wins, pause, first-gesture music), SFX wired to taps/win/stars/hints/buttons/daily | done (code) | 6 tests; headless: 16 files load at boot, music starts on PLAY, SFX order button → pop → tap_correct → scene_complete → confetti → star_1..3 → tap_wrong, pause stops the music, resume restarts it, no console errors |
+| 9c | Real art + sound drop-in (no code change expected), HUD polish pass on the real look | | the art pack, CC0 sounds (kenney.nl was unreachable from the cloud session) |
 | 10 | Size & performance budget | | |
 | 11 | Playgama QA tool, certification checklist | | |
 | 12 | Store assets, submission ZIP | | |
@@ -29,6 +30,7 @@ Repo: https://github.com/kriptoloca/peek-and-find
 - [x] Phone test started 2026-10-16 19:35–19:45: desktop 16:9 and iPhone 9:16 both render; first bug (HUD inside the Spot image) found and fixed. Still wanted: 3 lines on L30/L60 search feel, mirror decoys, Spot miss penalty, rotation.
 - [x] Repo renamed to `peek-and-find` (2026-10-16).
 - [ ] Art pack: 2–3 candidate links, **SVG sources required** (ASSETS.md). Flat, cute but not childish, no nursery palette. Input contract and drop-in workflow: `assets/README.md`.
+- [ ] Sounds: download Kenney "Interface Sounds" / "Digital Audio" (CC0) or pick freesound CC0 clips, drop them as `assets/audio/<name>.wav|ogg` (names in `src/data/audio-manifest.json`), run `npm run audio`. Until then the synthesized placeholders play.
 - [ ] Playgama developer account (developer.playgama.com) and YouTube Playables interest form.
 - [ ] Phone test of the Bridge build: `?fakeads=1&adfast=1` on iPhone — interstitial after 3 scenes, hint bulb, Continue on the fail screen, rotation during an ad. The build now ships atlases (sprites are tight-cropped, so they look ~15% bigger than before).
 
@@ -45,17 +47,18 @@ See `docs/questions.md` (every deviation from the spec with its reason).
 ## Measured
 | Metric | Value |
 |---|---|
-| Tests | 136 |
-| Bundle (dist/) | 4.22 MB: code 1.22 + Bridge 0.29 + 5 theme atlases 2.53 + UI 0.03 + backgrounds 0.04 |
+| Tests | 142 |
+| Bundle (dist/) | 4.56 MB: code 1.22 + Bridge 0.29 + 5 theme atlases 2.53 + UI 0.03 + backgrounds 0.04 + audio 0.34 (OGG 161 KB + M4A 182 KB, only one format is fetched) |
 | Atlases | 2048×2048 per theme, 112 frames at 208 px; UI 1024×512 |
 | Level 80 generation | ≈ 0.4 ms |
-| Asset build | ≈ 7 s, reproducible (CI diff check) |
+| Asset build | atlases ≈ 7 s, reproducible (CI diff check); audio ≈ 3 s with ffmpeg (presence checked, not bytes) |
 | CI | 8/8 runs green on main before this epic |
 
 ## Next steps (in order)
-1. **Epic 9b (no pack needed):** audio module (`src/game/audio.ts`) with platform mute precedence and first-interaction unlock; CC0 SFX from Kenney (OGG + M4A) under `public/audio/`, licenses in `assets/LICENSES.md`; HUD polish (star reveal timing, badge style); then the first phone pass of the whole loop.
-2. **When the pack is chosen:** follow `assets/README.md` (copy into `assets/svg/<theme>/`, `npm run assets:check`, `npm run assets`, commit `assets/` + `public/`). The game needs no code change; themes switch from `placeholder` to `svg` in `public/atlases/index.json`.
-3. Epic 10 size/perf report (`docs/size-report.md`, phone profile at L80), Epic 11 Playgama QA tool + certification checklist, Epic 12 store assets and ZIP.
-4. Open tuning items (density/overlap, mirror decoys, empty taps, frame size) stay here until Hasan's feedback on L30/L60.
+1. **Phone pass of the whole loop** (Hasan): sound on iPhone Safari after the first tap, music toggle, interstitial flow with `?fakeads=1&adfast=1`, rotation. Report in 3 lines.
+2. **Epic 10:** `docs/size-report.md` from `npm run size`, object pooling check, 10 scenes at L80 on the phone without drops.
+3. **Drop-ins when they exist:** art per `assets/README.md` (`npm run assets`), sounds per the audio section (`npm run audio`); commit `assets/` + `public/` together. No code change expected.
+4. Epic 11 Playgama QA tool + certification checklist, Epic 12 store assets and ZIP.
+5. Open tuning items (density/overlap, mirror decoys, empty taps, frame size) stay here until Hasan's feedback on L30/L60.
 
-Dev shortcuts: `?level=N`, `?mode=find|odd|spot`, `?daily=1`, `?today=YYYYMMDD`, `?reset=1`, `?fakeads=1`, `?adfast=1`, `?debug=true` (SDK logs), triple-tap top-left for the dev menu, `/#gen` (M cycles modes). `__peekDebug.state().atlasKeys` lists the loaded atlases.
+Dev shortcuts: `?level=N`, `?mode=find|odd|spot`, `?daily=1`, `?today=YYYYMMDD`, `?reset=1`, `?fakeads=1`, `?adfast=1`, `?debug=true` (SDK logs), triple-tap top-left for the dev menu, `/#gen` (M cycles modes). `__peekDebug.state().atlasKeys` lists the loaded atlases, `.audio` the sound state (locked, music, last SFX).

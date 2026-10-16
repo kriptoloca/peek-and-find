@@ -58,3 +58,11 @@ untinted: heart red, star gold, flame orange/gold, hint gold. UI frames keep the
    Run the game (`npm run dev`) and look at the theme on a phone.
 5. Commit `assets/` and `public/` together. CI rebuilds the atlases and fails when the committed
    output is stale (`git diff --exit-code -- public/atlases public/backgrounds`).
+
+## Audio (`npm run audio`)
+
+Sources: `assets/audio/<name>.wav|ogg|mp3|flac|m4a` with the names of `src/data/audio-manifest.json`
+(15 SFX + `music_loop`). `npm run audio` encodes mono OGG + M4A into `public/audio/` with ffmpeg
+(libvorbis + aac) and writes `public/audio/index.json`; a missing source is synthesized. Budgets:
+loop ≤ 150 KB, everything ≤ 1 MB per format. `npm run audio:check` lists what is present.
+Keep clips trimmed (no leading silence); the loop must be seamless (ends on the bar).
