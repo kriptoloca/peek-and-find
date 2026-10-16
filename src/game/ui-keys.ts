@@ -13,4 +13,14 @@ export const UI = {
   odd: 'ui_odd',
   /** "⟷5" prompt icon for Spot 5 (Epic 5). */
   spot: 'ui_spot',
+  /** Title screen (Epic 7). */
+  play: 'ui_play',
+  daily: 'ui_daily',
+  flame: 'ui_flame',
+  check: 'ui_check',
+  soundOn: 'ui_sound_on',
+  soundOff: 'ui_sound_off',
+  musicOn: 'ui_music_on',
+  musicOff: 'ui_music_off',
+  home: 'ui_home',
 } as const;

@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { designSize } from './game/layout';
 import { BootScene } from './game/scenes/BootScene';
 import { GameScene } from './game/scenes/GameScene';
+import { TitleScene } from './game/scenes/TitleScene';
 
 /**
  * Scale strategy (GDD §10, CLAUDE.md rule 5): Scale.FIT with a design size that follows the
@@ -32,7 +33,7 @@ const game = new Phaser.Game({
     height: current.height,
   },
   render: { antialias: true, roundPixels: false },
-  scene: [BootScene, GameScene],
+  scene: [BootScene, TitleScene, GameScene],
 });
 
 function onViewportChange(): void {
@@ -65,12 +66,14 @@ if (import.meta.env.DEV) {
     void import('./dev/GenPreviewScene').then(({ GenPreviewScene }) => {
       game.scene.add('GenPreview', GenPreviewScene, true);
       game.scene.stop('Boot');
+      game.scene.stop('Title');
       game.scene.stop('Game');
     });
   } else if (hash === '#layout') {
     void import('./game/scenes/PlaygroundScene').then(({ PlaygroundScene }) => {
       game.scene.add('Playground', PlaygroundScene, true);
       game.scene.stop('Boot');
+      game.scene.stop('Title');
       game.scene.stop('Game');
     });
   }

@@ -65,3 +65,11 @@ Format: date · question · decision taken (simplest reading) · needs confirmat
 - **Themes.** Five placeholder themes carry the real family names, tags and base sizes from ASSETS.md; only the preview palette is fake. Preload = texture generation for now; it becomes a loader job when atlases arrive (Epic 9).
 - **Dev menu** opens on three taps in the top-left 160 px square within 0.7 s, dev builds only; the early `import.meta.env.DEV` return keeps its chunk out of production.
 - **Spot in retries.** A Retry counts toward `scenesPlayed` (it is a played scene) and is persisted like a win.
+
+## 2026-10-16 (Epic 7)
+
+- **Daily retry replays the same scene.** The daily seed has no attempt component (GENERATOR.md §1), so Retry after a fail shows the identical scene. Intended: the chain is the same for everyone, including its failures.
+- **Daily mode choice** is seeded by date and chain index (`daily-mode:YYYYMMDD:i`) with the layout gate, so a 1:1 player can get Find where a 9:16 player gets Spot on the same day. The scene seed is still shared; only the mode weights differ. Acceptable for v1; log it if the leaderboard idea ever returns.
+- **Streak display.** Title shows the flame + number while the streak is alive (completed today or yesterday) and nothing after a missed day; `bestStreak` is kept in the save for later use.
+- **Title toggles** flip and persist `sound`/`music` now; audio itself arrives in Epic 9.
+- **Dev:** `?daily=1` starts the chain directly, `?today=YYYYMMDD` overrides the date key (dev builds only) so streak transitions can be exercised without waiting a day.

@@ -15,11 +15,16 @@ export interface PeekDebug {
   wrong: () => DebugPoint[];
   state: () => {
     level: number;
+    /** Level of the scene being played (differs from `level` in the daily chain). */
+    sceneLevel: number;
     mode: string;
     theme: string;
     bigScene: boolean;
     scenesPlayed: number;
     devMenuOpen: boolean;
+    dailyIndex: number | null;
+    streak: number;
+    lastDailyDate: string | null;
     hearts: number;
     status: string;
     remaining: number;

@@ -2,12 +2,14 @@ import Phaser from 'phaser';
 import { THEMES, themeForLevel } from '../../data/themes';
 import { themeToPreload } from '../../gen/difficulty';
 import { installDebug } from '../../dev/debug';
-import { sceneSeed } from '../../gen/rng';
+import { Rng, hashSeed, sceneSeed } from '../../gen/rng';
+import { pickMode } from '../../gen/difficulty';
 import { generateScene } from '../../gen/scene-gen';
 import type { Mode, Placed, Scene as GenScene, Theme } from '../../gen/types';
 import { clearFx, confetti, popCorrect, shakeWrong, sparkle } from '../fx';
 import { Hud } from '../hud';
 import { computeLayout, type Layout, type Rect } from '../layout';
+import { DAILY_CHAIN_LENGTH, completeDaily, dailyScene, todayKey } from '../daily';
 import { modeForLevel } from '../progression';
 import {
   applyTap,
@@ -65,11 +67,20 @@ export class GameScene extends Phaser.Scene {
   /** Dev builds only: ?mode=find|odd|spot forces the mode. */
   private forcedMode: Mode | null = null;
   private theme!: Theme;
+  /** Daily chain: null in the normal chain, else the current scene index 0..4. */
+  private dailyIndex: number | null = null;
+  private dailyKey = '';
   private devTaps: number[] = [];
   private devMenuOpen = false;
 
   constructor() {
     super('Game');
+  }
+
+  init(data: { daily?: boolean; today?: string } | undefined): void {
+    this.dailyIndex = data?.daily ? 0 : null;
+    this.dailyKey = data?.today ?? todayKey();
+    this.forcedMode = null;
   }
 
   create(): void {
@@ -166,16 +177,28 @@ export class GameScene extends Phaser.Scene {
     this.sprites.clear();
     this.spritesB.clear();
 
-    const level = progress.level;
+    const canHostSpot = this.layoutNow.spot.canHost;
+    let level: number;
+    let mode: Mode;
+    let seed: number;
+    if (this.dailyIndex !== null) {
+      // GDD §7: fixed levels, date seed, no player salt; a Retry replays the same scene.
+      const d = dailyScene(this.dailyKey, this.dailyIndex);
+      level = d.level;
+      const modeRng = new Rng(hashSeed(`daily-mode:${this.dailyKey}:${String(this.dailyIndex)}`));
+      mode = pickMode(modeRng, level, canHostSpot);
+      seed = d.seed;
+    } else {
+      level = progress.level;
+      mode = this.forcedMode ?? modeForLevel(level, progress.seedSalt, canHostSpot);
+      seed = sceneSeed(mode, level, progress.attempt, progress.seedSalt);
+    }
     this.theme = themeForLevel(level);
     ensureThemeTextures(this, this.theme);
     // GDD §5: the theme that unlocks within three levels is prepared ahead so the chain never
     // stalls. With placeholders this is texture generation; with atlases it becomes a loader job.
     const pre = themeToPreload(level);
     if (pre !== null) ensureThemeTextures(this, THEMES[pre] as Theme);
-    const canHostSpot = this.layoutNow.spot.canHost;
-    const mode: Mode = this.forcedMode ?? modeForLevel(level, progress.seedSalt, canHostSpot);
-    const seed = sceneSeed(mode, level, progress.attempt, progress.seedSalt);
     const gen: GenScene = generateScene({
       seed,
       level,
@@ -185,7 +208,7 @@ export class GameScene extends Phaser.Scene {
     });
     this.round = newRound(gen);
     this.relayout();
-    this.hud.setLevel(level);
+    this.hud.setLevel(this.dailyIndex === null ? level : this.dailyIndex + 1);
     this.hud.setHearts(this.round.hearts);
     this.hud.setPrompt(promptCounts(this.round));
 
@@ -231,11 +254,51 @@ export class GameScene extends Phaser.Scene {
   }
 
   private nextLevel(): void {
+    progress.scenesPlayed += 1;
+    if (this.dailyIndex !== null) {
+      if (this.dailyIndex + 1 < DAILY_CHAIN_LENGTH) {
+        this.dailyIndex += 1;
+        progress.attempt = 0;
+        persistProgress();
+        this.startLevel();
+      } else {
+        Object.assign(progress, completeDaily(progress, this.dailyKey));
+        persistProgress();
+        this.showDailyComplete();
+      }
+      return;
+    }
     progress.level += 1;
     progress.attempt = 0;
-    progress.scenesPlayed += 1;
     persistProgress();
     this.startLevel();
+  }
+
+  /** GDD §9 screen 6: badge, streak, back to title on tap. */
+  private showDailyComplete(): void {
+    this.clearOverlay();
+    clearFx(this, this.fx);
+    const ov = this.makeOverlay(0.7);
+    const badge = this.add.image(0, -120, UI.daily).setDisplaySize(220, 220);
+    const flame = this.add.image(-40, 90, UI.flame).setDisplaySize(140, 140);
+    const n = this.add
+      .text(60, 96, String(progress.streak), {
+        fontFamily: 'Arial, Helvetica, sans-serif',
+        fontSize: '96px',
+        fontStyle: 'bold',
+        color: '#ffffff',
+      })
+      .setOrigin(0.5);
+    ov.add([badge, flame, n]);
+    this.tweens.add({
+      targets: badge,
+      scale: badge.scale * 1.08,
+      yoyo: true,
+      repeat: -1,
+      duration: 700,
+    });
+    if (this.round) this.round.status = 'won';
+    this.dailyIndex = DAILY_CHAIN_LENGTH; // sentinel: chain finished, next tap → title
   }
 
   private retryLevel(): void {
@@ -387,6 +450,10 @@ export class GameScene extends Phaser.Scene {
   private onOverlayTap(pointer: Phaser.Input.Pointer): void {
     const r = this.round;
     if (!r || !this.overlay) return;
+    if (this.dailyIndex === DAILY_CHAIN_LENGTH) {
+      this.scene.start('Title');
+      return;
+    }
     if (r.status === 'won') {
       // tap to skip the auto-advance
       this.nextLevel();
@@ -448,6 +515,9 @@ export class GameScene extends Phaser.Scene {
     if (Number.isFinite(level) && level >= 1) progress.level = Math.floor(level);
     const mode = q.get('mode');
     if (mode === 'find' || mode === 'odd' || mode === 'spot') this.forcedMode = mode;
+    const today = q.get('today');
+    if (today && /^\d{8}$/.test(today)) this.dailyKey = today;
+    if (q.get('daily') === '1') this.dailyIndex = 0;
   }
 
   /** Dev check: the HUD row must be inside the band the current layout reserves for it. */
@@ -495,11 +565,15 @@ export class GameScene extends Phaser.Scene {
       wrong: () => wrongPoints().map(toScreen),
       state: () => ({
         level: progress.level,
+        sceneLevel: this.round?.scene.level ?? 0,
         mode: this.round?.scene.mode ?? 'none',
         theme: this.round?.scene.theme ?? 'none',
         bigScene: this.round?.scene.params.bigScene ?? false,
         scenesPlayed: progress.scenesPlayed,
         devMenuOpen: this.devMenuOpen,
+        dailyIndex: this.dailyIndex,
+        streak: progress.streak,
+        lastDailyDate: progress.lastDailyDate,
         hearts: this.round?.hearts ?? 0,
         status: this.round?.status ?? 'none',
         remaining: this.round ? remainingTargets(this.round) : 0,

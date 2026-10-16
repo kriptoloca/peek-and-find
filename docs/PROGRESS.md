@@ -3,7 +3,7 @@
 Single source of truth for "where did we leave off". Update at the end of every epic and whenever a decision changes the plan. Read this first at the start of every session.
 
 ## Status
-Epic: 6 done · Next: Epic 7 Daily · Last update: 2026-10-16 · Branch: main
+Epic: 7 done · Next: Epic 8 Bridge · Last update: 2026-10-16 · Branch: main
 Repo: https://github.com/kriptoloca/-peek-and-find (name has a leading dash; rename on GitHub when convenient, old name redirects)
 
 ## Epic board
@@ -17,8 +17,8 @@ Repo: https://github.com/kriptoloca/-peek-and-find (name has a leading dash; ren
 | 4 | Odd One Out | done (code) | 19 tests, headless L8/L34/L20; **phone test pending** |
 | 5 | Spot 5 | done (code) | 8 tests, headless L12 stacked / L30 side-by-side, 1:1 gate verified; **phone test pending** |
 | 6 | Progression, saves, theme rotation/preload, big scene, dev menu | done (code) | 12 tests; headless: reload keeps level, L10 = beach, L25 big scene (7 targets), dev menu jump |
-| 7 | Daily Find | next | |
-| 8 | Playgama Bridge (read docs first), ad gating | | |
+| 7 | Daily Find + Title screen | done (code) | 8 tests; headless: title → PLAY, title → 5-scene chain → Daily Complete → title with check; streak 1 → 2 → reset after a skipped day |
+| 8 | Playgama Bridge (read docs first), ad gating | next | |
 | 9 | Real assets pipeline (SVG recolor, atlas), HUD polish, audio | | needs the art pack |
 | 10 | Size & performance budget | | |
 | 11 | Playgama QA tool, certification checklist | | |
@@ -42,15 +42,14 @@ See `docs/questions.md` (every deviation from the spec with its reason).
 ## Measured
 | Metric | Value |
 |---|---|
-| Tests | 101 |
+| Tests | 109 |
 | Bundle | 1.20 MB (Phaser 1.21 MB of it) |
 | Level 80 generation | ≈ 0.4 ms |
 | CI | 2/2 green |
 
 ## Next steps (in order)
-1. Epic 7 Daily: UTC date seed, fixed chain levels 10/20/30/40/50, streak logic with tests (same day / next day / skipped day), Title screen with PLAY and DAILY (streak badge, check mark), Daily Complete overlay.
-2. Epic 8 Bridge: read wiki.playgama.com first, write docs/bridge-notes.md; lifecycle, pause/mute, storage adapter for `StorageBackend`, interstitial gating (pure `platform/ads.ts` + tests), rewarded Hint/Continue.
-3. Epic 9 needs the art pack (SVG) — Hasan's step; everything before it runs on placeholders.
-4. Open tuning items from the phone test (density/overlap, mirror decoys, empty taps) stay in docs/questions.md until Hasan's feedback on L30/L60.
+1. Epic 8 Bridge: **fetch and read wiki.playgama.com and github.com/Playgama first** (the cloud session's proxy blocked playgama.com once; if it still does, Hasan pastes the Bridge JS quick-start and the advertisement/storage/platform API pages into docs/bridge-notes.md). Then: SDK load, GameReady / loading / gameplay lifecycle, pause/mute, storage adapter implementing `StorageBackend`, pure `platform/ads.ts` gating (3 scenes AND 120 s) with tests, interstitial after scene complete, rewarded Hint (one target glows 2 s) and Continue (refill hearts), dev stubs when the SDK is absent.
+2. Epic 9 needs the art pack (SVG) — Hasan's step; everything before it runs on placeholders.
+3. Open tuning items from the phone test (density/overlap, mirror decoys, empty taps) stay in docs/questions.md until Hasan's feedback on L30/L60.
 
-Dev shortcuts: `?level=N`, `?mode=find|odd|spot`, `?reset=1`, triple-tap top-left for the dev menu, `/#gen` (M cycles modes).
+Dev shortcuts: `?level=N`, `?mode=find|odd|spot`, `?daily=1`, `?today=YYYYMMDD`, `?reset=1`, triple-tap top-left for the dev menu, `/#gen` (M cycles modes).

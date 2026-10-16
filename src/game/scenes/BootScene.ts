@@ -17,10 +17,19 @@ export class BootScene extends Phaser.Scene {
     attachSaveStore(store);
     void store.load().then((save) => {
       hydrateProgress(save);
-      if (import.meta.env.DEV && new URLSearchParams(window.location.search).get('reset') === '1') {
-        resetProgress();
+      if (import.meta.env.DEV) {
+        const q = new URLSearchParams(window.location.search);
+        if (q.get('reset') === '1') resetProgress();
+        // Dev shortcuts skip the title: ?level=, ?mode=, ?daily=1
+        if (q.has('level') || q.has('mode') || q.get('daily') === '1') {
+          this.scene.start('Game', {
+            daily: q.get('daily') === '1',
+            today: q.get('today') ?? undefined,
+          });
+          return;
+        }
       }
-      this.scene.start('Game');
+      this.scene.start('Title');
     });
   }
 }

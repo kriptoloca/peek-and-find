@@ -328,6 +328,113 @@ export function ensureUiTextures(scene: Phaser.Scene): void {
     g.lineStyle(s * 0.09, 0xffffff, 1);
     g.lineBetween(s * 0.36, s * 0.8, s * 0.64, s * 0.2);
   });
+  mk(UI.play, (g) => {
+    g.fillStyle(0xffffff, 1);
+    g.fillPoints(
+      [
+        new Phaser.Math.Vector2(s * 0.32, s * 0.2),
+        new Phaser.Math.Vector2(s * 0.82, s * 0.5),
+        new Phaser.Math.Vector2(s * 0.32, s * 0.8),
+      ],
+      true,
+    );
+  });
+  mk(UI.daily, (g) => {
+    // calendar page: frame, header bar, one highlighted day
+    g.fillStyle(0xffffff, 1);
+    g.fillRoundedRect(s * 0.14, s * 0.18, s * 0.72, s * 0.68, 12);
+    g.fillStyle(0xe63946, 1);
+    g.fillRoundedRect(s * 0.14, s * 0.18, s * 0.72, s * 0.18, { tl: 12, tr: 12, bl: 0, br: 0 });
+    g.fillStyle(0x2e3650, 1);
+    for (let r = 0; r < 2; r++)
+      for (let c = 0; c < 3; c++)
+        g.fillRect(s * (0.24 + c * 0.2), s * (0.46 + r * 0.17), s * 0.12, s * 0.1);
+    g.fillStyle(0xffc857, 1);
+    g.fillRect(s * 0.64, s * 0.63, s * 0.12, s * 0.1);
+  });
+  mk(UI.flame, (g) => {
+    g.fillStyle(0xff7b00, 1);
+    g.fillPoints(
+      [
+        new Phaser.Math.Vector2(s * 0.5, s * 0.08),
+        new Phaser.Math.Vector2(s * 0.78, s * 0.5),
+        new Phaser.Math.Vector2(s * 0.68, s * 0.86),
+        new Phaser.Math.Vector2(s * 0.32, s * 0.86),
+        new Phaser.Math.Vector2(s * 0.22, s * 0.5),
+      ],
+      true,
+    );
+    g.fillStyle(0xffc857, 1);
+    g.fillCircle(s * 0.5, s * 0.66, s * 0.16);
+  });
+  mk(UI.check, (g) => {
+    g.lineStyle(s * 0.14, 0xffffff, 1);
+    g.beginPath();
+    g.moveTo(s * 0.22, s * 0.52);
+    g.lineTo(s * 0.42, s * 0.72);
+    g.lineTo(s * 0.8, s * 0.3);
+    g.strokePath();
+  });
+  const speaker = (g: Phaser.GameObjects.Graphics): void => {
+    g.fillStyle(0xffffff, 1);
+    g.fillRect(s * 0.18, s * 0.38, s * 0.16, s * 0.24);
+    g.fillPoints(
+      [
+        new Phaser.Math.Vector2(s * 0.34, s * 0.38),
+        new Phaser.Math.Vector2(s * 0.54, s * 0.22),
+        new Phaser.Math.Vector2(s * 0.54, s * 0.78),
+        new Phaser.Math.Vector2(s * 0.34, s * 0.62),
+      ],
+      true,
+    );
+  };
+  const slash = (g: Phaser.GameObjects.Graphics): void => {
+    g.lineStyle(s * 0.08, 0xe63946, 1);
+    g.lineBetween(s * 0.22, s * 0.8, s * 0.8, s * 0.2);
+  };
+  mk(UI.soundOn, (g) => {
+    speaker(g);
+    g.lineStyle(s * 0.07, 0xffffff, 1);
+    g.beginPath();
+    g.arc(s * 0.56, s * 0.5, s * 0.16, -0.9, 0.9, false);
+    g.strokePath();
+    g.beginPath();
+    g.arc(s * 0.56, s * 0.5, s * 0.28, -0.9, 0.9, false);
+    g.strokePath();
+  });
+  mk(UI.soundOff, (g) => {
+    speaker(g);
+    slash(g);
+  });
+  const note = (g: Phaser.GameObjects.Graphics): void => {
+    g.fillStyle(0xffffff, 1);
+    g.fillCircle(s * 0.36, s * 0.68, s * 0.12);
+    g.fillCircle(s * 0.68, s * 0.6, s * 0.12);
+    g.fillRect(s * 0.44, s * 0.22, s * 0.06, s * 0.46);
+    g.fillRect(s * 0.76, s * 0.14, s * 0.06, s * 0.46);
+    g.fillRect(s * 0.44, s * 0.22, s * 0.38, s * 0.1);
+  };
+  mk(UI.musicOn, (g) => {
+    note(g);
+  });
+  mk(UI.musicOff, (g) => {
+    note(g);
+    slash(g);
+  });
+  mk(UI.home, (g) => {
+    g.fillStyle(0xffffff, 1);
+    g.fillPoints(
+      [
+        new Phaser.Math.Vector2(s * 0.5, s * 0.16),
+        new Phaser.Math.Vector2(s * 0.86, s * 0.48),
+        new Phaser.Math.Vector2(s * 0.14, s * 0.48),
+      ],
+      true,
+    );
+    g.fillRect(s * 0.26, s * 0.48, s * 0.48, s * 0.36);
+    g.fillStyle(0x2e3650, 1);
+    g.fillRect(s * 0.43, s * 0.6, s * 0.14, s * 0.24);
+  });
   mk(UI.spot, (g) => {
     // "⟷" on a dark rounded square (Spot 5 arrives in epic 5)
     g.fillStyle(0x2e3650, 1);
