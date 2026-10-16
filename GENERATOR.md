@@ -21,7 +21,7 @@ Piecewise-linear curves between the columns, plateau at level 80. All values are
 | minSpacing (px between centers) | 150 | 120 | 95 | 80 |
 | t3 / t2 star thresholds (s) | 8/15 | 12/22 | 18/32 | 25/45 |
 
-Invariant: `minSpacing ≥ 2 × hitRadius` for the mode (80 for Find/Odd, 120 for Spot), so hit circles never overlap.
+Invariant: object centers are ≥ `2 × 40 + 2` px apart in every mode, so object hit circles (Find, Odd) never overlap. In Spot 5 only the five difference circles are tappable; they may overlap and a tap resolves to the nearest center.
 
 Teaching levels: for levels 1–5 target slots are taken from the front band first (large, unoccluded); for levels 1–3 targets are additionally scaled ×1.3 / ×1.2 / ×1.1.
 
@@ -82,7 +82,7 @@ Decoys never count as targets. Tapping a decoy = wrong tap. Targets in Find alwa
 - Prompt: `{ kind: "odd" }`.
 
 ### Spot 5
-- Own scene size **1080×840**. objectCount = `max(8, round(params.objectCount × 0.5))`, object scale × 1.3, `minSpacing = max(params.minSpacing, 120)`, hitRadius = 60.
+- Own scene size **1080×840**. objectCount = `max(8, round(params.objectCount × 0.5))`, object scale × 1.3, objects spaced like Find (`params.minSpacing`, floor 82). Difference hit circles: `r = max(60, objectSize / 2)`.
 - Generate the base scene with Find placement (no targets), then clone and apply exactly 5 mutations, each on a different object, each above the visibility threshold: a changed area ≥ **1600 px²** (40×40 design px) or a bounding-box shift/size change ≥ 40 px on one side.
   Mutations: `remove`, `add` (new object in a free Poisson slot), `recolor` (switch to another baked color frame), `flipX` (flippable families only, asymmetric frames), `scale` (×1.3 or ×0.7), `swapFrame` (different variant of the same family).
 - Difference hit areas: circle r = max(objectRadius, 60), same id in both images. Taps on either image resolve to the same difference id.

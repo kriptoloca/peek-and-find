@@ -64,7 +64,7 @@ Keep generator and modes **pure** (no Phaser imports) so they are unit-testable 
 - TypeScript strict, no `any`. ESLint + Prettier, 100-col.
 - Determinism: all randomness goes through `Rng` created from a seed. Same seed → identical scene. Tests assert this.
 - No magic numbers in gameplay code; constants live in `difficulty.ts` / `config.ts` with comments.
-- Hitboxes: circle; radius 40 design px in Find and Odd One Out, 60 in Spot 5, independent of sprite size. The generator guarantees center distance ≥ 2 × radius between any two hit-testable objects, so circles never overlap. A tap resolves to the nearest center among circles containing the point.
+- Hitboxes: circle; radius 40 design px in Find and Odd One Out, independent of sprite size; the generator keeps object centers ≥ 82 px apart, so those circles never overlap. In Spot 5 only the five differences are tappable, with circles of `max(60, objectSize / 2)` that may overlap. In every mode a tap resolves to the nearest center among circles containing the point.
 - Every epic ends with: `npm run check` clean, `npm test` green, `npm run build` succeeds, `npm run size` within budget, and a manual check on a phone via LAN dev server.
 - Commit per epic: `feat(epic-N): <summary>`; small fix commits allowed.
 - Do not add features not in GDD.md. If something is ambiguous, write the question in `docs/questions.md` and choose the simplest reading.

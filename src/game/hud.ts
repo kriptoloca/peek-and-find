@@ -133,6 +133,12 @@ export class Hud {
     else this.applyRow(p);
   }
 
+  /** Spot 5: thin bands above/below the two images, always a row. */
+  applySpot(l: Layout): void {
+    this.layoutCache = l;
+    this.applyRow(l.spot.hudTop);
+  }
+
   private applyRow(p: Rect): void {
     const icon = Math.min(ICON_MAX, p.h - 16);
     const heart = Math.min(HEART_MAX, p.h - 24);

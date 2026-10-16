@@ -102,12 +102,6 @@ describe('generateScene (find)', () => {
     expect(avg).toBeLessThan(50);
   });
 
-  it('rejects Spot until epic 5', () => {
-    expect(() => generateScene({ seed: 1, level: 20, mode: 'spot', theme: KITCHEN })).toThrow(
-      /epic 5/,
-    );
-  });
-
   it('uses two target families only from level 20 on', () => {
     let two = 0;
     for (let s = 0; s < 40; s++) {

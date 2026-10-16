@@ -45,3 +45,11 @@ Format: date · question · decision taken (simplest reading) · needs confirmat
 - **Attribute weights.** < L15: color 60 / flip 25 / scale 15; L15–39: 35 / 30 / 30 / odd 5; L40+: 20 / 30 / 35 / odd 15. The `odd` frame kind is skipped while the theme has no `_odd` frames (placeholder theme has none).
 - **Mode per level** is seeded by level and salt only (not attempt), so Retry keeps the mode and changes the scene. Spot stays gated off until epic 5.
 - **Odd prompt** shows the ≠ icon with no count badge (count is implicitly one).
+
+## 2026-10-16 (Epic 5)
+
+- **Misses in Spot 5 cost a heart.** A tap inside either image that hits no difference circle is a wrong guess; taps outside both images are ignored. Without this, spam-tapping would solve every Spot scene. Find/Odd keep free empty taps (the objects are the guesses there).
+- **Difference hit circle** is `max(60, objectSize / 2)` per GENERATOR.md §6, so a big object counts wherever it is tapped. These circles may overlap each other; a tap resolves to the nearest center. Objects themselves are spaced like Find (≥ 82 px): the first draft spaced them ≥ 122 px and could not fit 30 objects into 880×640 at level 80.
+- **Mutations never touch objects hidden more than 50%,** and each kind appears at most twice per scene, so the five differences stay varied and visible. `add` places the new object in a free Poisson slot, so spacing holds in image B too.
+- **Layout gate.** The mode is chosen when a level starts, from the current layout. Rotating to 1:1 mid-round keeps the Spot round at the smaller scale; the next level picks a different mode.
+- **Pop-in** animates both images together; the star timer starts after the longer of the two.

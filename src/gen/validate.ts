@@ -2,6 +2,13 @@ import { familyById, splitFrame } from '../data/themes';
 import { FILLER_FAMILY_SHARE, FLIPPABLE_TAG } from './constants';
 import { aabb, dist2, rectContainsPoint, rectInside, visibleFraction } from './geometry';
 import { ODD_CORNER_FREE_UNTIL_LEVEL, ODD_SCALE_DELTA, oddCount } from './modes/odd-one-out';
+import {
+  SPOT_DIFFERENCES,
+  differenceVisible,
+  SPOT_MIN_SHIFT,
+  spotObjectCount,
+} from './modes/spot5';
+import { HIT_RADIUS_SPOT, SPOT_H, SPOT_W } from '../config';
 import type { Placed, Scene, Theme } from './types';
 
 const EPS = 1e-6;
@@ -68,7 +75,119 @@ export function validateScene(scene: Scene, theme: Theme): string[] {
 
   if (scene.mode === 'find') validateFind(scene, theme, errs);
   if (scene.mode === 'odd') validateOdd(scene, errs);
+  if (scene.mode === 'spot') validateSpot(scene, errs);
   return errs;
+}
+
+function samePlaced(a: Placed, b: Placed): boolean {
+  return (
+    a.frame === b.frame &&
+    a.x === b.x &&
+    a.y === b.y &&
+    Math.abs(a.size - b.size) < 1e-9 &&
+    a.flipX === b.flipX &&
+    a.family === b.family
+  );
+}
+
+function validateSpot(scene: Scene, errs: string[]): void {
+  const sp = scene.spot;
+  if (!sp) {
+    errs.push('spot: missing spot info');
+    return;
+  }
+  if (scene.width !== SPOT_W || scene.height !== SPOT_H) errs.push('spot: wrong scene size');
+  if (scene.prompt.kind !== 'spot') errs.push(`spot: prompt kind ${scene.prompt.kind}`);
+  const n = spotObjectCount(scene.level);
+  if (scene.objects.length !== n)
+    errs.push(`spot: ${String(scene.objects.length)} objects ≠ ${String(n)}`);
+  if (sp.differences.length !== SPOT_DIFFERENCES)
+    errs.push(`spot: ${String(sp.differences.length)} differences`);
+  const A = new Map(scene.objects.map((o) => [o.id, o]));
+  const B = new Map(sp.b.map((o) => [o.id, o]));
+  const touched = new Set<string>();
+  const ids = new Set<string>();
+  for (const d of sp.differences) {
+    if (ids.has(d.id)) errs.push(`spot: duplicate difference id ${d.id}`);
+    ids.add(d.id);
+    if (touched.has(d.objectId)) errs.push(`spot: object ${d.objectId} mutated twice`);
+    touched.add(d.objectId);
+    const a = A.get(d.objectId);
+    const b = B.get(d.objectId);
+    const ref = d.kind === 'add' ? b : a;
+    if (!ref) {
+      errs.push(`spot ${d.id}: object ${d.objectId} missing`);
+      continue;
+    }
+    if (d.x !== ref.x || d.y !== ref.y) errs.push(`spot ${d.id}: position differs from its object`);
+    if (d.hitRadius < HIT_RADIUS_SPOT) errs.push(`spot ${d.id}: hit radius below the Spot minimum`);
+    if (!differenceVisible(d, scene.objects, sp.b)) {
+      errs.push(`spot ${d.id}: not visible enough in both images`);
+    }
+    switch (d.kind) {
+      case 'remove':
+        if (!a || b) errs.push(`spot ${d.id}: remove must exist in A and not in B`);
+        break;
+      case 'add':
+        if (a || !b) errs.push(`spot ${d.id}: add must exist in B and not in A`);
+        break;
+      case 'recolor':
+        if (!a || !b) break;
+        if (splitFrame(a.frame).base !== splitFrame(b.frame).base)
+          errs.push(`spot ${d.id}: recolor changed the base frame`);
+        if (splitFrame(a.frame).color === splitFrame(b.frame).color)
+          errs.push(`spot ${d.id}: recolor kept the color`);
+        if (!samePlaced({ ...a, frame: b.frame }, b))
+          errs.push(`spot ${d.id}: recolor changed more than the color`);
+        break;
+      case 'flip':
+        if (!a || !b) break;
+        if (a.flipX === b.flipX) errs.push(`spot ${d.id}: flip did not flip`);
+        if (!samePlaced({ ...a, flipX: b.flipX }, b))
+          errs.push(`spot ${d.id}: flip changed more than flipX`);
+        break;
+      case 'scale':
+        if (!a || !b) break;
+        if (Math.abs(a.size - b.size) < SPOT_MIN_SHIFT)
+          errs.push(`spot ${d.id}: scale delta < ${String(SPOT_MIN_SHIFT)}`);
+        if (!samePlaced({ ...a, size: b.size }, b))
+          errs.push(`spot ${d.id}: scale changed more than size`);
+        break;
+      case 'swap':
+        if (!a || !b) break;
+        if (splitFrame(a.frame).base === splitFrame(b.frame).base)
+          errs.push(`spot ${d.id}: swap kept the variant`);
+        if (splitFrame(a.frame).color !== splitFrame(b.frame).color)
+          errs.push(`spot ${d.id}: swap changed the color`);
+        if (a.family !== b.family) errs.push(`spot ${d.id}: swap changed the family`);
+        break;
+    }
+  }
+  for (const [id, a] of A) {
+    if (touched.has(id)) continue;
+    const b = B.get(id);
+    if (!b) errs.push(`spot: untouched ${id} missing in B`);
+    else if (!samePlaced(a, b)) errs.push(`spot: untouched ${id} differs in B`);
+  }
+  for (const id of B.keys()) {
+    if (!A.has(id) && !touched.has(id)) errs.push(`spot: ${id} appears in B without a difference`);
+  }
+  // Image B geometry: inside the rect and spaced like image A.
+  const sceneRect = { x: 0, y: 0, w: scene.width, h: scene.height };
+  for (const o of sp.b) {
+    if (!rectContainsPoint(scene.playable, o.x, o.y))
+      errs.push(`spot B ${o.id}: center outside playable`);
+    if (!rectInside(aabb(o), sceneRect, 0.5)) errs.push(`spot B ${o.id}: box outside scene`);
+  }
+  for (let i = 0; i < sp.b.length; i++) {
+    for (let j = i + 1; j < sp.b.length; j++) {
+      const a = sp.b[i] as Placed;
+      const b = sp.b[j] as Placed;
+      const need = 2 * Math.max(a.hitRadius, b.hitRadius);
+      if (dist2(a.x, a.y, b.x, b.y) < need * need - EPS)
+        errs.push(`spot B ${a.id}/${b.id}: too close`);
+    }
+  }
 }
 
 function validateOdd(scene: Scene, errs: string[]): void {

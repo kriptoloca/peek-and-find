@@ -15,6 +15,7 @@ export interface PeekDebug {
   wrong: () => DebugPoint[];
   state: () => {
     level: number;
+    mode: string;
     hearts: number;
     status: string;
     remaining: number;

@@ -1,6 +1,6 @@
 import { starsFor } from '../gen/difficulty';
 import { dist2 } from '../gen/geometry';
-import type { Placed, Scene } from '../gen/types';
+import type { Scene } from '../gen/types';
 import { UI } from './ui-keys';
 
 /** Hearts per scene (GDD §6). Reset every scene, no global lives. */
@@ -21,12 +21,39 @@ export interface Round {
   status: RoundStatus;
 }
 
+/** Something a tap can land on: an object (Find, Odd) or a difference circle (Spot). */
+export interface HitTarget {
+  id: string;
+  x: number;
+  y: number;
+  hitRadius: number;
+  isTarget: boolean;
+}
+
 export type TapResult =
   | { kind: 'none' }
   | { kind: 'ignored' }
-  | { kind: 'already'; target: Placed }
-  | { kind: 'correct'; target: Placed; remaining: number; won: boolean }
-  | { kind: 'wrong'; object: Placed; hearts: number; lost: boolean };
+  | { kind: 'already'; target: HitTarget }
+  | { kind: 'correct'; target: HitTarget; remaining: number; won: boolean }
+  /** `object` is null when a Spot tap missed every difference (still costs a heart). */
+  | { kind: 'wrong'; object: HitTarget | null; hearts: number; lost: boolean };
+
+export function hitTargets(scene: Scene): readonly HitTarget[] {
+  if (scene.spot) {
+    return scene.spot.differences.map((d) => ({
+      id: d.id,
+      x: d.x,
+      y: d.y,
+      hitRadius: d.hitRadius,
+      isTarget: true,
+    }));
+  }
+  return scene.objects;
+}
+
+export function totalTargets(scene: Scene): number {
+  return scene.spot ? scene.spot.differences.length : scene.targets.length;
+}
 
 export function newRound(scene: Scene): Round {
   return {
@@ -51,8 +78,8 @@ export function startRound(r: Round, now: number): void {
  * Tap resolution (CLAUDE.md coding rules): among the hit circles containing the point, the
  * nearest center wins. Null when the tap hits nothing.
  */
-export function resolveTap(objects: readonly Placed[], x: number, y: number): Placed | null {
-  let best: Placed | null = null;
+export function resolveTap(objects: readonly HitTarget[], x: number, y: number): HitTarget | null {
+  let best: HitTarget | null = null;
   let bestD = Infinity;
   for (const o of objects) {
     const d = dist2(o.x, o.y, x, y);
@@ -65,14 +92,22 @@ export function resolveTap(objects: readonly Placed[], x: number, y: number): Pl
 }
 
 export function remainingTargets(r: Round): number {
-  return r.scene.targets.length - r.found.size;
+  return totalTargets(r.scene) - r.found.size;
 }
 
 /** Applies a tap in scene coordinates. Mutates the round and reports what happened. */
 export function applyTap(r: Round, x: number, y: number, now: number): TapResult {
   if (r.status !== 'playing') return { kind: 'ignored' };
-  const hit = resolveTap(r.scene.objects, x, y);
-  if (!hit) return { kind: 'none' };
+  const hit = resolveTap(hitTargets(r.scene), x, y);
+  if (!hit) {
+    // Spot 5: a tap inside an image that hits no difference is a wrong guess (GDD §3 hearts).
+    if (r.scene.mode !== 'spot') return { kind: 'none' };
+    r.wrongTaps += 1;
+    r.hearts = Math.max(0, r.hearts - 1);
+    const lost = r.hearts === 0;
+    if (lost) r.status = 'lost';
+    return { kind: 'wrong', object: null, hearts: r.hearts, lost };
+  }
   if (hit.isTarget) {
     if (r.found.has(hit.id)) return { kind: 'already', target: hit };
     r.found.add(hit.id);
@@ -113,6 +148,10 @@ export interface PromptCount {
 export function promptCounts(r: Round): PromptCount[] {
   if (r.scene.prompt.kind === 'odd') {
     return [{ family: 'odd', icon: UI.odd, total: 1, remaining: r.found.size === 0 ? 1 : 0 }];
+  }
+  if (r.scene.prompt.kind === 'spot') {
+    const total = r.scene.prompt.count;
+    return [{ family: 'spot', icon: UI.spot, total, remaining: total - r.found.size }];
   }
   if (r.scene.prompt.kind !== 'find') return [];
   return r.scene.prompt.items.map((it) => {

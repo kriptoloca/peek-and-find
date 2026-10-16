@@ -24,6 +24,7 @@ import { hitRadiusFor, params } from './difficulty';
 import { dist2, visibleFraction } from './geometry';
 import { chooseFindTargets, type TargetPlanItem } from './modes/find';
 import { generateOdd } from './modes/odd-one-out';
+import { generateSpot } from './modes/spot5';
 import { poissonDisc } from './poisson';
 import { Rng } from './rng';
 import type {
@@ -57,8 +58,10 @@ export function generateScene(o: GenerateOptions): Scene {
     if (o.validate) assertValid(scene, o.theme);
     return scene;
   }
-  if (o.mode !== 'find') {
-    throw new Error(`generateScene: mode "${o.mode}" is implemented in epic 5`);
+  if (o.mode === 'spot') {
+    const scene = generateSpot(o.seed >>> 0, o.level, o.theme);
+    if (o.validate) assertValid(scene, o.theme);
+    return scene;
   }
   let seed = o.seed >>> 0;
   for (let regen = 0; regen < MAX_REGENERATIONS; regen++) {

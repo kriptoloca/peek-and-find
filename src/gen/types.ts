@@ -100,6 +100,25 @@ export interface OddInfo {
   baseFrame: string;
 }
 
+export type SpotMutation = 'remove' | 'add' | 'recolor' | 'flip' | 'scale' | 'swap';
+
+/** One of the five differences of a Spot 5 scene. Position/hit circle are shared by both images. */
+export interface Difference {
+  id: string;
+  kind: SpotMutation;
+  /** Object id in image A (or in image B for "add"). */
+  objectId: string;
+  x: number;
+  y: number;
+  hitRadius: number;
+}
+
+/** Spot 5 bookkeeping: image B and the differences. Image A is `Scene.objects`. */
+export interface SpotInfo {
+  b: Placed[];
+  differences: Difference[];
+}
+
 export interface Scene {
   seed: number;
   mode: Mode;
@@ -120,4 +139,6 @@ export interface Scene {
   regenerations: number;
   /** Present for mode "odd". */
   odd?: OddInfo;
+  /** Present for mode "spot". */
+  spot?: SpotInfo;
 }

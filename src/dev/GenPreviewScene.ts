@@ -13,11 +13,13 @@ const COLOR_TARGET = 0xffffff;
 const COLOR_DECOY = 0xff8c42;
 const COLOR_HIT = 0x9bd3ff;
 const BAND_ALPHA = [0.55, 0.75, 0.95] as const;
+const MODES: readonly Mode[] = ['find', 'odd', 'spot'];
 
 /**
  * Dev-only page (`#gen` in dev builds): renders a generated scene as colored rectangles.
  * Tap left third: level −1 · middle third: level +1 · right third: new seed.
- * Keyboard: ↑/↓ level, space new seed. Never shipped: main.ts gates it on import.meta.env.DEV.
+ * Keyboard: ↑/↓ level, space new seed, M cycles the mode. `?mode=spot` preselects a mode.
+ * Never shipped: main.ts gates it on import.meta.env.DEV.
  */
 export class GenPreviewScene extends Phaser.Scene {
   private level = 1;
@@ -66,11 +68,13 @@ export class GenPreviewScene extends Phaser.Scene {
       this.regen();
     });
     this.input.keyboard?.on('keydown-M', () => {
-      this.mode = this.mode === 'find' ? 'odd' : 'find';
+      this.mode = MODES[(MODES.indexOf(this.mode) + 1) % MODES.length] as Mode;
       this.regen();
     });
     const q = new URLSearchParams(window.location.search).get('mode');
-    if (q === 'odd' || q === 'find') this.mode = q;
+    if (q === 'odd' || q === 'find' || q === 'spot') this.mode = q;
+    const lvl = Number(new URLSearchParams(window.location.search).get('level'));
+    if (Number.isFinite(lvl) && lvl >= 1) this.level = Math.floor(lvl);
     this.scale.on(Phaser.Scale.Events.RESIZE, this.draw);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.scale.off(Phaser.Scale.Events.RESIZE, this.draw);
@@ -96,15 +100,36 @@ export class GenPreviewScene extends Phaser.Scene {
     const { width, height } = this.scale.gameSize;
     this.cameras.main.setViewport(0, 0, width, height);
     const layout = computeLayout(width, height);
-    const s = layout.scene;
     const g = this.gfx;
     g.clear();
     g.fillStyle(COLOR_BG, 1);
     g.fillRect(0, 0, width, height);
-    g.fillStyle(COLOR_SCENE, 1);
-    g.fillRect(s.x, s.y, s.w, s.h);
 
     const sc = this.current;
+    if (sc?.spot) {
+      const sp = layout.spot;
+      const images: readonly (readonly [Rect, readonly Placed[]])[] = [
+        [sp.a, sc.objects],
+        [sp.b, sc.spot.b],
+      ];
+      for (const [img, list] of images) {
+        g.fillStyle(COLOR_SCENE, 1);
+        g.fillRect(img.x, img.y, img.w, img.h);
+        const sorted = [...list].sort((a, b) => a.z - b.z);
+        for (const o of sorted) this.drawObject(g, o, img, sp.scale);
+        for (const d of sc.spot.differences) {
+          g.lineStyle(4, COLOR_TARGET, 0.9);
+          g.strokeCircle(img.x + d.x * sp.scale, img.y + d.y * sp.scale, d.hitRadius * sp.scale);
+        }
+      }
+      this.info.setText(this.describe());
+      this.info.setPosition(12, 12);
+      return;
+    }
+
+    const s = layout.scene;
+    g.fillStyle(COLOR_SCENE, 1);
+    g.fillRect(s.x, s.y, s.w, s.h);
     if (sc) {
       g.lineStyle(2, COLOR_PLAYABLE, 1);
       g.strokeRect(s.x + sc.playable.x, s.y + sc.playable.y, sc.playable.w, sc.playable.h);
@@ -115,25 +140,26 @@ export class GenPreviewScene extends Phaser.Scene {
     this.info.setPosition(layout.hud.primary.x + 12, layout.hud.primary.y + 12);
   };
 
-  private drawObject(g: Phaser.GameObjects.Graphics, o: Placed, s: Rect): void {
+  private drawObject(g: Phaser.GameObjects.Graphics, o: Placed, s: Rect, k = 1): void {
     const fam = familyById(KITCHEN, o.family);
-    const x = s.x + o.x;
-    const y = s.y + o.y;
-    const half = o.size / 2;
+    const x = s.x + o.x * k;
+    const y = s.y + o.y * k;
+    const size = o.size * k;
+    const half = size / 2;
     g.fillStyle(fam.previewColor, BAND_ALPHA[o.band]);
-    g.fillRect(x - half, y - half, o.size, o.size);
+    g.fillRect(x - half, y - half, size, size);
     // flip marker: notch on the left edge when flipped, right edge otherwise
     g.fillStyle(0x000000, 0.35);
-    g.fillRect(o.flipX ? x - half : x + half - 10, y - half, 10, o.size);
+    g.fillRect(o.flipX ? x - half : x + half - 10 * k, y - half, 10 * k, size);
     if (o.isTarget) {
       g.lineStyle(6, COLOR_TARGET, 1);
-      g.strokeRect(x - half, y - half, o.size, o.size);
+      g.strokeRect(x - half, y - half, size, size);
     } else if (o.isDecoy) {
       g.lineStyle(4, COLOR_DECOY, 1);
-      g.strokeRect(x - half, y - half, o.size, o.size);
+      g.strokeRect(x - half, y - half, size, size);
     }
     g.lineStyle(1, COLOR_HIT, 0.6);
-    g.strokeCircle(x, y, o.hitRadius);
+    g.strokeCircle(x, y, o.hitRadius * k);
   }
 
   private describe(): string {
@@ -141,12 +167,16 @@ export class GenPreviewScene extends Phaser.Scene {
     const head = `${this.mode} L${String(this.level)} attempt ${String(this.attempt)} · gen ${this.genMs.toFixed(1)} ms`;
     if (!sc) return `${head}\n${this.errors.join('\n')}`;
     const decoys = sc.objects.filter((o) => o.isDecoy).length;
-    const prompt =
-      sc.prompt.kind === 'find'
-        ? sc.prompt.items.map((it) => `${it.icon}×${String(it.count)}`).join('  ')
-        : sc.odd
-          ? `odd by ${sc.odd.kind} (${sc.odd.baseFrame}, ${String(sc.odd.cols)}×${String(sc.odd.rows)})`
-          : sc.prompt.kind;
+    let prompt: string;
+    if (sc.prompt.kind === 'find') {
+      prompt = sc.prompt.items.map((it) => `${it.icon}×${String(it.count)}`).join('  ');
+    } else if (sc.odd) {
+      prompt = `odd by ${sc.odd.kind} (${sc.odd.baseFrame}, ${String(sc.odd.cols)}×${String(sc.odd.rows)})`;
+    } else if (sc.spot) {
+      prompt = `spot: ${sc.spot.differences.map((d) => d.kind).join(', ')}`;
+    } else {
+      prompt = sc.prompt.kind;
+    }
     const lines = [
       head,
       `seed ${String(sc.seed)} regen ${String(sc.regenerations)} · n=${String(sc.objects.length)} targets=${String(sc.targets.length)} decoys=${String(decoys)}`,

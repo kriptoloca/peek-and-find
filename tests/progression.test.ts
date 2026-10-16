@@ -25,3 +25,14 @@ describe('modeForLevel', () => {
     expect(seqA).not.toBe(seqB);
   });
 });
+
+describe('modeForLevel with Spot hostable', () => {
+  it('schedules Spot from level 11 when the layout can host it, never before', () => {
+    const counts = { find: 0, odd: 0, spot: 0 };
+    for (let L = 11; L <= 40; L++)
+      for (let salt = 0; salt < 20; salt++) counts[modeForLevel(L, salt, true)] += 1;
+    expect(counts.spot).toBeGreaterThan(60);
+    for (let L = 1; L <= 10; L++)
+      for (let salt = 0; salt < 20; salt++) expect(modeForLevel(L, salt, true)).not.toBe('spot');
+  });
+});
