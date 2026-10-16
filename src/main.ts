@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { designSize } from './game/layout';
-import { PlaygroundScene } from './game/scenes/PlaygroundScene';
+import { GameScene } from './game/scenes/GameScene';
 
 /**
  * Scale strategy (GDD §10, CLAUDE.md rule 5): Scale.FIT with a design size that follows the
@@ -31,7 +31,7 @@ const game = new Phaser.Game({
     height: current.height,
   },
   render: { antialias: true, roundPixels: false },
-  scene: [PlaygroundScene],
+  scene: [GameScene],
 });
 
 function onViewportChange(): void {
@@ -54,11 +54,21 @@ window.addEventListener('orientationchange', () => {
   window.setTimeout(onViewportChange, 300);
 });
 
-// Dev-only generator preview (TASKS.md Epic 2). Dead code in production builds: Vite replaces
-// import.meta.env.DEV with false and the dynamic import is dropped with the branch.
-if (import.meta.env.DEV && window.location.hash === '#gen') {
-  void import('./dev/GenPreviewScene').then(({ GenPreviewScene }) => {
-    game.scene.add('GenPreview', GenPreviewScene, true);
-    game.scene.stop('Playground');
-  });
+// Dev-only pages (dead code in production: Vite replaces import.meta.env.DEV with false and
+// drops the dynamic imports with the branch).
+//   #gen    → generator preview (TASKS.md Epic 2)
+//   #layout → layout placeholder (Epic 1)
+if (import.meta.env.DEV) {
+  const hash = window.location.hash;
+  if (hash === '#gen') {
+    void import('./dev/GenPreviewScene').then(({ GenPreviewScene }) => {
+      game.scene.add('GenPreview', GenPreviewScene, true);
+      game.scene.stop('Game');
+    });
+  } else if (hash === '#layout') {
+    void import('./game/scenes/PlaygroundScene').then(({ PlaygroundScene }) => {
+      game.scene.add('Playground', PlaygroundScene, true);
+      game.scene.stop('Game');
+    });
+  }
 }

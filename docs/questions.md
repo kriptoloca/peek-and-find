@@ -22,3 +22,12 @@ Format: date · question · decision taken (simplest reading) · needs confirmat
 - **Targets never flip; singletons never targets.** Keeps the prompt an exact match and guarantees color decoys exist. Not in the original spec; now in GENERATOR.md §6.
 - **Big scenes at the plateau (78 objects, spacing 82 in 880²).** Poisson yields ≈ 75–85 slots there, so some seeds regenerate (seed+1, deterministic). The scene-gen test asserts the average stays < 5.
 - **Size tell.** With `targetScale` applied to targets only, the level-80 preview made targets the smallest teapots on screen. Decision: same-family decoys (color, mirror) use `targetScale` too; tag decoys keep natural size. GENERATOR.md §5 updated.
+
+## 2026-10-16 (Epic 3)
+
+- **Tap on empty background.** GDD §3 only defines wrong taps on objects. Decision: empty taps do nothing (no heart lost, no feedback). Revisit after the phone test if players spam-tap.
+- **Retry overlay hit area.** The retry button is a 200 px circle at the scene center +40 px; taps elsewhere on the fail overlay are ignored so a stray tap cannot restart the round. Continue (rewarded) arrives with Epic 8; until then only Retry is shown.
+- **Progress is in memory and the seed salt is shared.** `state.ts` holds level/attempt; every player sees the same scenes until Epic 6 persists a per-player `seedSalt`.
+- **Overlay timing uses the Phaser clock.** Auto-advance (1.2 s + star reveal) is a `delayedCall`; Phaser clamps per-frame delta at 200 ms, so under the headless software renderer (≈1–2 fps) the overlay stayed ≈ 10 s instead of 1.6 s. On a phone at 60 fps this is exact. Not changed; noted so nobody chases it as a bug in headless runs.
+- **Hit circles are independent of sprite size.** A level-80 target of 50 px still has an 80 px tap diameter (CLAUDE.md rule); the placeholder sprites show the circle only on the `#gen` page.
+- **Placeholder art.** Shapes are generated at runtime from `previewColor` with hue shifts of ±25° for `_c1`/`_c2`, the same shift the real recolor pipeline will use, so the color-decoy difficulty can already be judged on the phone.

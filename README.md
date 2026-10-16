@@ -20,3 +20,5 @@ npm run size     # dist/ total and 10 largest files vs the 8 MB target / 30 MB h
 1. Phone and laptop on the same Wi-Fi. `npm run dev`, note the LAN URL Vite prints.
 2. Open it in Safari/Chrome on the phone. Rotate; the layout must re-flow without distortion.
 3. Send 3 lines of feedback plus any console output.
+
+Dev-only pages (not in production builds): `/#gen` generator preview (tap left/middle/right thirds for level −/+ and new seed), `/#layout` aspect-ratio placeholder.
