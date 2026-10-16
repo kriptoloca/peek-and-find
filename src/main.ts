@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { designSize } from './game/layout';
+import { BootScene } from './game/scenes/BootScene';
 import { GameScene } from './game/scenes/GameScene';
 
 /**
@@ -31,7 +32,7 @@ const game = new Phaser.Game({
     height: current.height,
   },
   render: { antialias: true, roundPixels: false },
-  scene: [GameScene],
+  scene: [BootScene, GameScene],
 });
 
 function onViewportChange(): void {
@@ -63,11 +64,13 @@ if (import.meta.env.DEV) {
   if (hash === '#gen') {
     void import('./dev/GenPreviewScene').then(({ GenPreviewScene }) => {
       game.scene.add('GenPreview', GenPreviewScene, true);
+      game.scene.stop('Boot');
       game.scene.stop('Game');
     });
   } else if (hash === '#layout') {
     void import('./game/scenes/PlaygroundScene').then(({ PlaygroundScene }) => {
       game.scene.add('Playground', PlaygroundScene, true);
+      game.scene.stop('Boot');
       game.scene.stop('Game');
     });
   }

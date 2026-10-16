@@ -1,9 +1,10 @@
 import Phaser from 'phaser';
-import { KITCHEN } from '../../data/themes';
+import { THEMES, themeForLevel } from '../../data/themes';
+import { themeToPreload } from '../../gen/difficulty';
 import { installDebug } from '../../dev/debug';
 import { sceneSeed } from '../../gen/rng';
 import { generateScene } from '../../gen/scene-gen';
-import type { Mode, Placed, Scene as GenScene } from '../../gen/types';
+import type { Mode, Placed, Scene as GenScene, Theme } from '../../gen/types';
 import { clearFx, confetti, popCorrect, shakeWrong, sparkle } from '../fx';
 import { Hud } from '../hud';
 import { computeLayout, type Layout, type Rect } from '../layout';
@@ -19,7 +20,7 @@ import {
   type HitTarget,
   type Round,
 } from '../rules';
-import { progress } from '../state';
+import { persistProgress, progress, resetProgress } from '../state';
 import { UI, ensureThemeTextures, ensureUiTextures } from '../textures/placeholders';
 
 const COLOR_BG = 0x1b1f2a;
@@ -37,6 +38,9 @@ const TEACH_PULSE_UNTIL_LEVEL = 3;
 /** Retry button: circle radius and vertical offset from the overlay center. */
 const RETRY_RADIUS = 100;
 const RETRY_OFFSET_Y = 40;
+/** Dev menu trigger: three taps in this top-left square within this many ms (dev builds). */
+const DEV_TAP_ZONE = 160;
+const DEV_TAP_WINDOW_MS = 700;
 
 type SpriteMap = Map<string, Phaser.GameObjects.Image>;
 
@@ -60,6 +64,9 @@ export class GameScene extends Phaser.Scene {
   private advanceTimer: Phaser.Time.TimerEvent | null = null;
   /** Dev builds only: ?mode=find|odd|spot forces the mode. */
   private forcedMode: Mode | null = null;
+  private theme!: Theme;
+  private devTaps: number[] = [];
+  private devMenuOpen = false;
 
   constructor() {
     super('Game');
@@ -67,7 +74,6 @@ export class GameScene extends Phaser.Scene {
 
   create(): void {
     ensureUiTextures(this);
-    ensureThemeTextures(this, KITCHEN);
     this.bg = this.add.graphics().setDepth(0);
     this.world = this.add.container(0, 0).setDepth(DEPTH_WORLD);
     this.worldB = this.add.container(0, 0).setDepth(DEPTH_WORLD).setVisible(false);
@@ -161,6 +167,12 @@ export class GameScene extends Phaser.Scene {
     this.spritesB.clear();
 
     const level = progress.level;
+    this.theme = themeForLevel(level);
+    ensureThemeTextures(this, this.theme);
+    // GDD §5: the theme that unlocks within three levels is prepared ahead so the chain never
+    // stalls. With placeholders this is texture generation; with atlases it becomes a loader job.
+    const pre = themeToPreload(level);
+    if (pre !== null) ensureThemeTextures(this, THEMES[pre] as Theme);
     const canHostSpot = this.layoutNow.spot.canHost;
     const mode: Mode = this.forcedMode ?? modeForLevel(level, progress.seedSalt, canHostSpot);
     const seed = sceneSeed(mode, level, progress.attempt, progress.seedSalt);
@@ -168,7 +180,7 @@ export class GameScene extends Phaser.Scene {
       seed,
       level,
       mode,
-      theme: KITCHEN,
+      theme: this.theme,
       validate: import.meta.env.DEV,
     });
     this.round = newRound(gen);
@@ -222,17 +234,22 @@ export class GameScene extends Phaser.Scene {
     progress.level += 1;
     progress.attempt = 0;
     progress.scenesPlayed += 1;
+    persistProgress();
     this.startLevel();
   }
 
   private retryLevel(): void {
     progress.attempt += 1;
+    progress.scenesPlayed += 1;
+    persistProgress();
     this.startLevel();
   }
 
   // ---- input --------------------------------------------------------------------------------
 
   private readonly onPointer = (pointer: Phaser.Input.Pointer): void => {
+    if (this.devMenuOpen) return;
+    if (import.meta.env.DEV && this.checkDevTaps(pointer)) return;
     if (this.overlay) {
       this.onOverlayTap(pointer);
       return;
@@ -304,6 +321,7 @@ export class GameScene extends Phaser.Scene {
     const stars = starsEarned(r, this.time.now);
     progress.totalStars += stars;
     confetti(this, this.mainRect(), this.fx);
+    if (r.scene.params.bigScene) confetti(this, this.mainRect(), this.fx); // GDD §5 bonus confetti
     const ov = this.makeOverlay(0.35);
     for (let i = 0; i < 3; i++) {
       const star = this.add
@@ -383,6 +401,46 @@ export class GameScene extends Phaser.Scene {
 
   // ---- dev ----------------------------------------------------------------------------------
 
+  /** Three quick taps in the top-left corner open the dev menu (dev builds only). */
+  private checkDevTaps(pointer: Phaser.Input.Pointer): boolean {
+    // The early return makes everything below unreachable in production, so the bundler drops
+    // the dynamic import and no DevMenu chunk is emitted.
+    if (!import.meta.env.DEV) return false;
+    if (pointer.x > DEV_TAP_ZONE || pointer.y > DEV_TAP_ZONE) return false;
+    const now = this.time.now;
+    this.devTaps = this.devTaps.filter((t) => now - t < DEV_TAP_WINDOW_MS);
+    this.devTaps.push(now);
+    if (this.devTaps.length < 3) return true;
+    this.devTaps = [];
+    this.devMenuOpen = true;
+    void import('../../dev/DevMenu').then(({ openDevMenu }) => {
+      openDevMenu(
+        this,
+        { level: progress.level, mode: this.forcedMode ?? 'auto' },
+        {
+          onGo: (s) => {
+            this.devMenuOpen = false;
+            progress.level = s.level;
+            progress.attempt = 0;
+            this.forcedMode = s.mode === 'auto' ? null : s.mode;
+            persistProgress();
+            this.startLevel();
+          },
+          onReset: () => {
+            this.devMenuOpen = false;
+            resetProgress();
+            this.forcedMode = null;
+            this.startLevel();
+          },
+          onClose: () => {
+            this.devMenuOpen = false;
+          },
+        },
+      );
+    });
+    return true;
+  }
+
   /** Dev builds only: `?level=40` starts at that level, `?mode=odd|spot|find` forces a mode. */
   private applyDevParams(): void {
     const q = new URLSearchParams(window.location.search);
@@ -438,6 +496,10 @@ export class GameScene extends Phaser.Scene {
       state: () => ({
         level: progress.level,
         mode: this.round?.scene.mode ?? 'none',
+        theme: this.round?.scene.theme ?? 'none',
+        bigScene: this.round?.scene.params.bigScene ?? false,
+        scenesPlayed: progress.scenesPlayed,
+        devMenuOpen: this.devMenuOpen,
         hearts: this.round?.hearts ?? 0,
         status: this.round?.status ?? 'none',
         remaining: this.round ? remainingTargets(this.round) : 0,

@@ -3,7 +3,7 @@
 Single source of truth for "where did we leave off". Update at the end of every epic and whenever a decision changes the plan. Read this first at the start of every session.
 
 ## Status
-Epic: 5 done · Next: phone test checkpoint, then Epic 6 · Last update: 2026-10-16 · Branch: main
+Epic: 6 done · Next: Epic 7 Daily · Last update: 2026-10-16 · Branch: main
 Repo: https://github.com/kriptoloca/-peek-and-find (name has a leading dash; rename on GitHub when convenient, old name redirects)
 
 ## Epic board
@@ -16,8 +16,8 @@ Repo: https://github.com/kriptoloca/-peek-and-find (name has a leading dash; ren
 | 3b | Teaching tweaks (hide ×1, prompt pulse, front-band targets L1–5, ?level= dev param) | done | headless L1/L40 screenshots |
 | 4 | Odd One Out | done (code) | 19 tests, headless L8/L34/L20; **phone test pending** |
 | 5 | Spot 5 | done (code) | 8 tests, headless L12 stacked / L30 side-by-side, 1:1 gate verified; **phone test pending** |
-| 6 | Progression, saves, difficulty tuning, theme preload, dev menu | next (after phone test) | |
-| 7 | Daily Find | | |
+| 6 | Progression, saves, theme rotation/preload, big scene, dev menu | done (code) | 12 tests; headless: reload keeps level, L10 = beach, L25 big scene (7 targets), dev menu jump |
+| 7 | Daily Find | next | |
 | 8 | Playgama Bridge (read docs first), ad gating | | |
 | 9 | Real assets pipeline (SVG recolor, atlas), HUD polish, audio | | needs the art pack |
 | 10 | Size & performance budget | | |
@@ -42,14 +42,15 @@ See `docs/questions.md` (every deviation from the spec with its reason).
 ## Measured
 | Metric | Value |
 |---|---|
-| Tests | 89 |
-| Bundle | 1.18 MB (Phaser 1.21 MB of it) |
+| Tests | 101 |
+| Bundle | 1.20 MB (Phaser 1.21 MB of it) |
 | Level 80 generation | ≈ 0.4 ms |
 | CI | 2/2 green |
 
 ## Next steps (in order)
-1. **Phone test checkpoint** (Hasan): Find + Odd + Spot on iPhone via `npm run dev`; dev shortcuts `?level=N`, `?mode=find|odd|spot`, `/#gen`. 3 lines of feedback. Tuning decisions (density/overlap, mirror decoys, empty taps, Spot miss penalty) are taken here and logged in docs/questions.md.
-2. Epic 6 progression + saves (storage interface with localStorage fallback; Bridge adapter plugs in at Epic 8), theme preload, big scene, dev menu.
-3. Epic 7 Daily (fixed levels 10/20/30/40/50, streak).
-4. Epic 8 Bridge: read wiki.playgama.com first, write docs/bridge-notes.md, ad gating tests.
-5. Epic 9 needs the art pack (SVG) — Hasan's step; everything before it runs on placeholders.
+1. Epic 7 Daily: UTC date seed, fixed chain levels 10/20/30/40/50, streak logic with tests (same day / next day / skipped day), Title screen with PLAY and DAILY (streak badge, check mark), Daily Complete overlay.
+2. Epic 8 Bridge: read wiki.playgama.com first, write docs/bridge-notes.md; lifecycle, pause/mute, storage adapter for `StorageBackend`, interstitial gating (pure `platform/ads.ts` + tests), rewarded Hint/Continue.
+3. Epic 9 needs the art pack (SVG) — Hasan's step; everything before it runs on placeholders.
+4. Open tuning items from the phone test (density/overlap, mirror decoys, empty taps) stay in docs/questions.md until Hasan's feedback on L30/L60.
+
+Dev shortcuts: `?level=N`, `?mode=find|odd|spot`, `?reset=1`, triple-tap top-left for the dev menu, `/#gen` (M cycles modes).

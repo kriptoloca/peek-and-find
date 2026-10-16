@@ -57,3 +57,11 @@ Format: date · question · decision taken (simplest reading) · needs confirmat
 ## 2026-10-16 (phone test, bug 1)
 
 - **HUD drawn inside the top Spot image at level 21 (iPhone).** Cause: rebuilding the prompt items re-applied the layout through the square-scene path, which uses the Find band; the Spot band path was only used on resize, so the first Safari toolbar resize "fixed" it. Fix: the HUD remembers which band set is active and re-applies the same one. The dev state now exposes `hudInBand`, and the headless check walks a Find → Spot transition without reload.
+
+## 2026-10-16 (Epic 6)
+
+- **Save backend.** `platform/storage.ts` defines `StorageBackend { get, set }` (async, like the Bridge storage API); dev builds use localStorage, failures degrade to defaults. `migrate()` coerces every field and starts fresh on an unknown version while keeping the salt, so a player's scene sequence survives a schema bump.
+- **What a reload shows.** The save holds level and salt but not the attempt, so a reload replays the first attempt of the current level (same seed). Two different saves see different scenes. Original Epic 6 wording ("different scenes than before") read as "different per player".
+- **Themes.** Five placeholder themes carry the real family names, tags and base sizes from ASSETS.md; only the preview palette is fake. Preload = texture generation for now; it becomes a loader job when atlases arrive (Epic 9).
+- **Dev menu** opens on three taps in the top-left 160 px square within 0.7 s, dev builds only; the early `import.meta.env.DEV` return keeps its chunk out of production.
+- **Spot in retries.** A Retry counts toward `scenesPlayed` (it is a played scene) and is persisted like a win.

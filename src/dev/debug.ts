@@ -16,6 +16,10 @@ export interface PeekDebug {
   state: () => {
     level: number;
     mode: string;
+    theme: string;
+    bigScene: boolean;
+    scenesPlayed: number;
+    devMenuOpen: boolean;
     hearts: number;
     status: string;
     remaining: number;

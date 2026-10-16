@@ -1,58 +1,185 @@
+import { THEME_COUNT, themeIndex, unlockedThemes } from '../gen/difficulty';
 import type { Family, Theme } from '../gen/types';
 
 /**
- * Placeholder data for ONE theme (Epic 2). Frame names follow ASSETS.md so the real atlas can
- * drop in later: `${theme}_${family}_${variant}` plus `_c1`/`_c2` for baked color variants.
- * baseSize = longest side in design px at band scale 1.0. previewColor is dev-only.
+ * Theme data for the five launch themes (ASSETS.md). Family names, tags and base sizes are the
+ * real ones so the atlas can drop in later; previewColor only drives the runtime placeholders.
+ * Frame names: `${theme}_${family}_${variant}` plus `_c1`/`_c2` for baked color variants.
  */
-function fam(
-  theme: string,
+type FamilySpec = readonly [id: string, baseSize: number, tags: readonly string[]];
+
+const PALETTE = [
+  0xe76f51, 0x264653, 0xa8a8a8, 0xd62828, 0xf4f1de, 0xc98a3d, 0xf2c14e, 0x2a9d8f, 0x8ecae6,
+  0x5aa469, 0x6d597a, 0xb5b5b5, 0x9c6644, 0x3a86ff, 0x52b788, 0xffb703,
+] as const;
+
+function makeTheme(
   id: string,
-  baseSize: number,
-  tags: string[],
-  previewColor: number,
-  variants: string[] = ['a', 'b', 'c'],
-  colors = 2,
-): Family {
-  const family: Family = {
-    id,
-    variants: variants.map((v) => `${theme}_${id}_${v}`),
+  families: readonly FamilySpec[],
+  singletons: readonly FamilySpec[],
+  paletteShift: number,
+): Theme {
+  const fam = (spec: FamilySpec, i: number, variants: string[], colors: number): Family => ({
+    id: spec[0],
+    variants: variants.map((v) => `${id}_${spec[0]}_${v}`),
     colors,
-    tags,
-    baseSize,
-    previewColor,
+    tags: [...spec[2]],
+    baseSize: spec[1],
+    previewColor: PALETTE[(i + paletteShift) % PALETTE.length] as number,
+  });
+  return {
+    id,
+    background: `${id}_bg`,
+    props: [`${id}_prop_a`, `${id}_prop_b`],
+    families: [
+      ...families.map((s, i) => fam(s, i, ['a', 'b', 'c'], 2)),
+      ...singletons.map((s, i) => fam(s, families.length + i, ['a'], 0)),
+    ],
   };
-  return family;
 }
 
-const T = 'kitchen';
+const F = 'flippable';
+const R = 'round';
+const A = 'animal';
+const T = 'tall';
 
-export const KITCHEN: Theme = {
-  id: T,
-  background: `${T}_bg`,
-  props: [`${T}_prop_table`, `${T}_prop_shelf`],
-  families: [
-    fam(T, 'mug', 110, ['flippable'], 0xe76f51),
-    fam(T, 'pan', 170, ['flippable', 'round'], 0x264653),
-    fam(T, 'spoon', 140, ['tall', 'flippable'], 0xa8a8a8),
-    fam(T, 'apple', 100, ['round'], 0xd62828),
-    fam(T, 'egg', 90, ['round'], 0xf4f1de),
-    fam(T, 'bread', 150, ['flippable'], 0xc98a3d),
-    fam(T, 'cheese', 120, ['flippable'], 0xf2c14e),
-    fam(T, 'teapot', 160, ['tall', 'flippable'], 0x2a9d8f),
-    fam(T, 'cup', 100, ['flippable'], 0x8ecae6),
-    fam(T, 'bottle', 160, ['tall'], 0x5aa469),
-    fam(T, 'bowl', 150, ['round'], 0x6d597a),
-    fam(T, 'knife', 150, ['tall', 'flippable'], 0xb5b5b5),
-    // singletons: one variant, no color variants
-    fam(T, 'toaster', 170, ['flippable'], 0x9c6644, ['a'], 0),
-    fam(T, 'kettle', 150, ['tall', 'flippable'], 0x3a86ff, ['a'], 0),
-    fam(T, 'plant', 170, ['tall'], 0x52b788, ['a'], 0),
-    fam(T, 'clock', 120, ['round'], 0xffb703, ['a'], 0),
+export const KITCHEN: Theme = makeTheme(
+  'kitchen',
+  [
+    ['mug', 110, [F]],
+    ['pan', 170, [F, R]],
+    ['spoon', 140, [T, F]],
+    ['apple', 100, [R]],
+    ['egg', 90, [R]],
+    ['bread', 150, [F]],
+    ['cheese', 120, [F]],
+    ['teapot', 160, [T, F]],
+    ['cup', 100, [F]],
+    ['bottle', 160, [T]],
+    ['bowl', 150, [R]],
+    ['knife', 150, [T, F]],
   ],
-};
+  [
+    ['toaster', 170, [F]],
+    ['kettle', 150, [T, F]],
+    ['plant', 170, [T]],
+    ['clock', 120, [R]],
+  ],
+  0,
+);
 
-export const THEMES: Theme[] = [KITCHEN];
+export const BEACH: Theme = makeTheme(
+  'beach',
+  [
+    ['crab', 140, [A, F]],
+    ['shell', 110, [R]],
+    ['starfish', 130, [R]],
+    ['ball', 110, [R]],
+    ['bucket', 150, [T, F]],
+    ['fish', 140, [A, F]],
+    ['icecream', 140, [T, F]],
+    ['flipflop', 130, [F]],
+    ['umbrella', 170, [T]],
+    ['sunglasses', 140, [F]],
+    ['coconut', 110, [R]],
+    ['bottle', 160, [T]],
+  ],
+  [
+    ['towel', 170, [F]],
+    ['surfboard', 170, [T, F]],
+    ['seagull', 140, [A, F]],
+    ['sandcastle', 160, []],
+  ],
+  3,
+);
+
+export const CITY: Theme = makeTheme(
+  'city',
+  [
+    ['car', 170, [F]],
+    ['dog', 140, [A, F]],
+    ['cat', 130, [A, F]],
+    ['bike', 160, [F]],
+    ['pigeon', 110, [A, F]],
+    ['cone', 120, [T]],
+    ['mailbox', 150, [T]],
+    ['balloon', 120, [R, T]],
+    ['hat', 120, [F]],
+    ['bag', 130, [F]],
+    ['lamp', 170, [T]],
+    ['trashcan', 140, [T]],
+  ],
+  [
+    ['bench', 170, [F]],
+    ['hydrant', 140, [T]],
+    ['scooter', 160, [F]],
+    ['sign', 150, [T]],
+  ],
+  6,
+);
+
+export const FOREST: Theme = makeTheme(
+  'forest',
+  [
+    ['mushroom', 120, [T]],
+    ['acorn', 100, [R]],
+    ['fox', 150, [A, F]],
+    ['owl', 130, [A, F]],
+    ['rabbit', 130, [A, F]],
+    ['leaf', 120, [F]],
+    ['berry', 90, [R]],
+    ['log', 160, [F]],
+    ['flower', 120, [T]],
+    ['butterfly', 120, [A]],
+    ['snail', 120, [A, F]],
+    ['pinecone', 110, [R]],
+  ],
+  [
+    ['tent', 170, []],
+    ['campfire', 140, []],
+    ['backpack', 150, [F]],
+    ['stone', 120, [R]],
+  ],
+  9,
+);
+
+export const SPACE: Theme = makeTheme(
+  'space',
+  [
+    ['planet', 140, [R]],
+    ['star', 110, [R]],
+    ['rocket', 160, [T, F]],
+    ['alien', 130, [A, F]],
+    ['satellite', 150, [F]],
+    ['moon', 120, [R]],
+    ['comet', 140, [F]],
+    ['helmet', 120, [R]],
+    ['robot', 150, [F]],
+    ['crystal', 120, [T]],
+    ['ufo', 150, []],
+    ['asteroid', 120, [R]],
+  ],
+  [
+    ['telescope', 160, [T, F]],
+    ['flag', 140, [T, F]],
+    ['capsule', 150, [T]],
+    ['lander', 160, []],
+  ],
+  12,
+);
+
+/** Launch order = unlock order (GDD §5): a new theme every 10 levels. */
+export const THEMES: readonly Theme[] = [KITCHEN, BEACH, CITY, FOREST, SPACE];
+
+/** Theme for a level: rotates every 3 levels among the unlocked ones (GENERATOR.md §2). */
+export function themeForLevel(level: number): Theme {
+  return THEMES[themeIndex(level, THEME_COUNT)] as Theme;
+}
+
+/** Themes unlocked at a level, in order. */
+export function unlockedThemeList(level: number): readonly Theme[] {
+  return THEMES.slice(0, unlockedThemes(level, THEME_COUNT));
+}
 
 export function familyById(theme: Theme, id: string): Family {
   const f = theme.families.find((x) => x.id === id);

@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { KITCHEN, familyById } from '../data/themes';
+import { familyById, themeForLevel } from '../data/themes';
 import { computeLayout, type Rect } from '../game/layout';
 import { sceneSeed } from '../gen/rng';
 import { generateScene } from '../gen/scene-gen';
@@ -86,8 +86,9 @@ export class GenPreviewScene extends Phaser.Scene {
     const seed = sceneSeed(this.mode, this.level, this.attempt, this.salt);
     const t0 = performance.now();
     try {
-      this.current = generateScene({ seed, level: this.level, mode: this.mode, theme: KITCHEN });
-      this.errors = validateScene(this.current, KITCHEN);
+      const theme = themeForLevel(this.level);
+      this.current = generateScene({ seed, level: this.level, mode: this.mode, theme });
+      this.errors = validateScene(this.current, theme);
     } catch (e) {
       this.current = null;
       this.errors = [e instanceof Error ? e.message : String(e)];
@@ -141,7 +142,7 @@ export class GenPreviewScene extends Phaser.Scene {
   };
 
   private drawObject(g: Phaser.GameObjects.Graphics, o: Placed, s: Rect, k = 1): void {
-    const fam = familyById(KITCHEN, o.family);
+    const fam = familyById(themeForLevel(this.level), o.family);
     const x = s.x + o.x * k;
     const y = s.y + o.y * k;
     const size = o.size * k;
