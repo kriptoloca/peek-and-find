@@ -1,6 +1,7 @@
 import { starsFor } from '../gen/difficulty';
 import { dist2 } from '../gen/geometry';
 import type { Placed, Scene } from '../gen/types';
+import { UI } from './ui-keys';
 
 /** Hearts per scene (GDD §6). Reset every scene, no global lives. */
 export const HEARTS_PER_SCENE = 3;
@@ -110,6 +111,9 @@ export interface PromptCount {
 
 /** Per prompt item: how many of that target frame are still to be found. */
 export function promptCounts(r: Round): PromptCount[] {
+  if (r.scene.prompt.kind === 'odd') {
+    return [{ family: 'odd', icon: UI.odd, total: 1, remaining: r.found.size === 0 ? 1 : 0 }];
+  }
   if (r.scene.prompt.kind !== 'find') return [];
   return r.scene.prompt.items.map((it) => {
     const foundHere = r.scene.targets.filter(

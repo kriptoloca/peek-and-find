@@ -9,17 +9,9 @@ const OUTLINE = 6;
 /** Hue shift of the baked color variants (ASSETS.md recolor pipeline mirrors this). */
 const COLOR_SHIFT_DEG = [0, 25, -25] as const;
 
-export const UI = {
-  heart: 'ui_heart',
-  heartEmpty: 'ui_heart_empty',
-  star: 'ui_star',
-  starEmpty: 'ui_star_empty',
-  retry: 'ui_retry',
-  spark: 'ui_spark',
-  confetti: 'ui_confetti',
-  badge: 'ui_badge',
-  ring: 'ui_ring',
-} as const;
+import { UI } from '../ui-keys';
+
+export { UI };
 
 type Shape =
   | 'circle'
@@ -325,5 +317,26 @@ export function ensureUiTextures(scene: Phaser.Scene): void {
   mk(UI.ring, (g) => {
     g.lineStyle(10, 0xffffff, 1);
     g.strokeCircle(s / 2, s / 2, s / 2 - 6);
+  });
+  mk(UI.odd, (g) => {
+    // "≠": two bars and a slash, white on a dark rounded square
+    g.fillStyle(0x2e3650, 1);
+    g.fillRoundedRect(4, 4, s - 8, s - 8, 24);
+    g.fillStyle(0xffffff, 1);
+    g.fillRoundedRect(s * 0.22, s * 0.38, s * 0.56, s * 0.1, 5);
+    g.fillRoundedRect(s * 0.22, s * 0.56, s * 0.56, s * 0.1, 5);
+    g.lineStyle(s * 0.09, 0xffffff, 1);
+    g.lineBetween(s * 0.36, s * 0.8, s * 0.64, s * 0.2);
+  });
+  mk(UI.spot, (g) => {
+    // "⟷" on a dark rounded square (Spot 5 arrives in epic 5)
+    g.fillStyle(0x2e3650, 1);
+    g.fillRoundedRect(4, 4, s - 8, s - 8, 24);
+    g.lineStyle(s * 0.09, 0xffffff, 1);
+    g.lineBetween(s * 0.2, s * 0.5, s * 0.8, s * 0.5);
+    g.lineBetween(s * 0.2, s * 0.5, s * 0.34, s * 0.36);
+    g.lineBetween(s * 0.2, s * 0.5, s * 0.34, s * 0.64);
+    g.lineBetween(s * 0.8, s * 0.5, s * 0.66, s * 0.36);
+    g.lineBetween(s * 0.8, s * 0.5, s * 0.66, s * 0.64);
   });
 }

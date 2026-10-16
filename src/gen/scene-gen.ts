@@ -1,5 +1,6 @@
 import { SCENE_SIZE } from '../config';
 import { colorFrame } from '../data/themes';
+import { bandOf, playableRect, roundPoints } from './common';
 import {
   BAND_MULT,
   DECOY_KIND_WEIGHTS,
@@ -14,7 +15,6 @@ import {
   MAX_SPACING_RELAX,
   MIRROR_DECOY_SCALE,
   ROUNDING_CUSHION,
-  SCENE_MARGIN,
   SPACING_RELAX_FACTOR,
   TARGET_SPREAD_STEPS,
   TEACH_FRONT_BAND_UNTIL_LEVEL,
@@ -23,10 +23,10 @@ import {
 import { hitRadiusFor, params } from './difficulty';
 import { dist2, visibleFraction } from './geometry';
 import { chooseFindTargets, type TargetPlanItem } from './modes/find';
+import { generateOdd } from './modes/odd-one-out';
 import { poissonDisc } from './poisson';
 import { Rng } from './rng';
 import type {
-  Band,
   DecoyKind,
   Family,
   GenRect,
@@ -52,9 +52,13 @@ const EPS = 1e-9;
 
 /** Entry point. Deterministic: same options → deep-equal scene. */
 export function generateScene(o: GenerateOptions): Scene {
+  if (o.mode === 'odd') {
+    const scene = generateOdd(o.seed >>> 0, o.level, o.theme);
+    if (o.validate) assertValid(scene, o.theme);
+    return scene;
+  }
   if (o.mode !== 'find') {
-    const epic = o.mode === 'odd' ? 4 : 5;
-    throw new Error(`generateScene: mode "${o.mode}" is implemented in epic ${String(epic)}`);
+    throw new Error(`generateScene: mode "${o.mode}" is implemented in epic 5`);
   }
   let seed = o.seed >>> 0;
   for (let regen = 0; regen < MAX_REGENERATIONS; regen++) {
@@ -69,24 +73,6 @@ export function generateScene(o: GenerateOptions): Scene {
     `generateScene: no valid scene after ${String(MAX_REGENERATIONS)} regenerations ` +
       `(seed ${String(o.seed)}, level ${String(o.level)})`,
   );
-}
-
-export function playableRect(width = SCENE_SIZE, height = SCENE_SIZE): GenRect {
-  return {
-    x: SCENE_MARGIN,
-    y: SCENE_MARGIN,
-    w: width - 2 * SCENE_MARGIN,
-    h: height - 2 * SCENE_MARGIN,
-  };
-}
-
-export function bandOf(y: number, playable: GenRect): Band {
-  const i = Math.floor(((y - playable.y) / playable.h) * 3);
-  return (i < 0 ? 0 : i > 2 ? 2 : i) as Band;
-}
-
-function roundPoints(pts: readonly Point[]): Point[] {
-  return pts.map((q) => ({ x: Math.round(q.x), y: Math.round(q.y) }));
 }
 
 interface Slots {
@@ -423,3 +409,5 @@ function tryFind(seed: number, regen: number, o: GenerateOptions): Scene | null 
     regenerations: regen,
   };
 }
+
+export { bandOf, playableRect } from './common';

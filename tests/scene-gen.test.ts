@@ -102,10 +102,7 @@ describe('generateScene (find)', () => {
     expect(avg).toBeLessThan(50);
   });
 
-  it('rejects modes that are not implemented yet', () => {
-    expect(() => generateScene({ seed: 1, level: 20, mode: 'odd', theme: KITCHEN })).toThrow(
-      /epic 4/,
-    );
+  it('rejects Spot until epic 5', () => {
     expect(() => generateScene({ seed: 1, level: 20, mode: 'spot', theme: KITCHEN })).toThrow(
       /epic 5/,
     );

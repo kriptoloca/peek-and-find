@@ -3,7 +3,7 @@ import { KITCHEN } from '../../data/themes';
 import { installDebug } from '../../dev/debug';
 import { sceneSeed } from '../../gen/rng';
 import { generateScene } from '../../gen/scene-gen';
-import type { Placed, Scene as GenScene } from '../../gen/types';
+import type { Mode, Placed, Scene as GenScene } from '../../gen/types';
 import { clearFx, confetti, popCorrect, shakeWrong, sparkle } from '../fx';
 import { Hud } from '../hud';
 import { computeLayout, type Layout } from '../layout';
@@ -16,6 +16,7 @@ import {
   starsEarned,
   type Round,
 } from '../rules';
+import { modeForLevel } from '../progression';
 import { progress } from '../state';
 import { UI, ensureThemeTextures, ensureUiTextures } from '../textures/placeholders';
 
@@ -45,6 +46,8 @@ export class GameScene extends Phaser.Scene {
   private round: Round | null = null;
   private layoutNow!: Layout;
   private advanceTimer: Phaser.Time.TimerEvent | null = null;
+  /** Dev builds only: ?mode=find|odd forces the mode. */
+  private forcedMode: Mode | null = null;
 
   constructor() {
     super('Game');
@@ -91,11 +94,13 @@ export class GameScene extends Phaser.Scene {
     this.world.removeAll(true);
     this.sprites.clear();
     const level = progress.level;
-    const seed = sceneSeed('find', level, progress.attempt, progress.seedSalt);
+    // Spot 5 is gated off until epic 5 lands; the layout gate takes over then.
+    const mode: Mode = this.forcedMode ?? modeForLevel(level, progress.seedSalt, false);
+    const seed = sceneSeed(mode, level, progress.attempt, progress.seedSalt);
     const gen: GenScene = generateScene({
       seed,
       level,
-      mode: 'find',
+      mode,
       theme: KITCHEN,
       validate: import.meta.env.DEV,
     });
@@ -278,10 +283,13 @@ export class GameScene extends Phaser.Scene {
 
   // ---- dev ----------------------------------------------------------------------------------
 
-  /** Dev builds only: `?level=40` starts at that level. */
+  /** Dev builds only: `?level=40` starts at that level, `?mode=odd` forces a mode. */
   private applyDevParams(): void {
-    const level = Number(new URLSearchParams(window.location.search).get('level'));
+    const q = new URLSearchParams(window.location.search);
+    const level = Number(q.get('level'));
     if (Number.isFinite(level) && level >= 1) progress.level = Math.floor(level);
+    const mode = q.get('mode');
+    if (mode === 'find' || mode === 'odd') this.forcedMode = mode;
   }
 
   private installDebugHooks(): void {

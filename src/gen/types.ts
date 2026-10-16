@@ -86,6 +86,20 @@ export interface Params {
   bigScene: boolean;
 }
 
+export type OddKind = 'color' | 'flip' | 'scale' | 'odd';
+
+/** Odd One Out bookkeeping for validation and the dev preview. */
+export interface OddInfo {
+  kind: OddKind;
+  cols: number;
+  rows: number;
+  /** Grid cell of the odd item. */
+  col: number;
+  row: number;
+  /** Frame every regular item uses. */
+  baseFrame: string;
+}
+
 export interface Scene {
   seed: number;
   mode: Mode;
@@ -104,4 +118,6 @@ export interface Scene {
   params: Params;
   /** How many seed+1 regenerations were needed (diagnostics). */
   regenerations: number;
+  /** Present for mode "odd". */
+  odd?: OddInfo;
 }

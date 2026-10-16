@@ -1,6 +1,7 @@
 import { familyById, splitFrame } from '../data/themes';
 import { FILLER_FAMILY_SHARE, FLIPPABLE_TAG } from './constants';
 import { aabb, dist2, rectContainsPoint, rectInside, visibleFraction } from './geometry';
+import { ODD_CORNER_FREE_UNTIL_LEVEL, ODD_SCALE_DELTA, oddCount } from './modes/odd-one-out';
 import type { Placed, Scene, Theme } from './types';
 
 const EPS = 1e-6;
@@ -12,7 +13,8 @@ export function validateScene(scene: Scene, theme: Theme): string[] {
   const sceneRect = { x: 0, y: 0, w: scene.width, h: scene.height };
 
   if (scene.theme !== theme.id) errs.push(`theme mismatch: ${scene.theme} vs ${theme.id}`);
-  if (scene.objects.length !== p.objectCount) {
+  // Find uses params.objectCount; Odd One Out has its own count (validated in validateOdd).
+  if (scene.mode === 'find' && scene.objects.length !== p.objectCount) {
     errs.push(`objectCount ${String(scene.objects.length)} ≠ ${String(p.objectCount)}`);
   }
 
@@ -65,7 +67,55 @@ export function validateScene(scene: Scene, theme: Theme): string[] {
   }
 
   if (scene.mode === 'find') validateFind(scene, theme, errs);
+  if (scene.mode === 'odd') validateOdd(scene, errs);
   return errs;
+}
+
+function validateOdd(scene: Scene, errs: string[]): void {
+  const info = scene.odd;
+  if (!info) {
+    errs.push('odd: missing odd info');
+    return;
+  }
+  if (scene.prompt.kind !== 'odd') errs.push(`odd: prompt kind ${scene.prompt.kind}`);
+  const n = oddCount(scene.level);
+  if (scene.objects.length !== n)
+    errs.push(`odd: ${String(scene.objects.length)} items ≠ ${String(n)}`);
+  const odds = scene.objects.filter((o) => o.isTarget);
+  if (odds.length !== 1) errs.push(`odd: ${String(odds.length)} odd items`);
+  const odd = odds[0];
+  const regular = scene.objects.filter((o) => !o.isTarget);
+  const ref = regular[0];
+  if (!odd || !ref) return;
+  for (const o of regular) {
+    if (o.frame !== info.baseFrame)
+      errs.push(`${o.id}: regular frame ${o.frame} ≠ ${info.baseFrame}`);
+    if (o.flipX) errs.push(`${o.id}: regular item flipped`);
+    if (Math.abs(o.size - ref.size) > 1e-6) errs.push(`${o.id}: regular size differs`);
+    if (o.isDecoy) errs.push(`${o.id}: regular item flagged as decoy`);
+  }
+  const frameDiff = odd.frame !== info.baseFrame;
+  const flipDiff = odd.flipX;
+  const sizeDiff = Math.abs(odd.size - ref.size) > 1e-6;
+  const diffs = [frameDiff, flipDiff, sizeDiff].filter(Boolean).length;
+  if (diffs !== 1) errs.push(`odd: differs in ${String(diffs)} attributes (kind ${info.kind})`);
+  switch (info.kind) {
+    case 'color':
+    case 'odd':
+      if (!frameDiff) errs.push('odd: kind needs a different frame');
+      break;
+    case 'flip':
+      if (!flipDiff) errs.push('odd: kind flip but not flipped');
+      break;
+    case 'scale':
+      if (Math.abs(odd.size - ref.size * ODD_SCALE_DELTA) > 1e-6)
+        errs.push('odd: scale delta wrong');
+      break;
+  }
+  const corner =
+    (info.col === 0 || info.col === info.cols - 1) &&
+    (info.row === 0 || info.row === info.rows - 1);
+  if (scene.level < ODD_CORNER_FREE_UNTIL_LEVEL && corner) errs.push('odd: in a corner before L15');
 }
 
 function validateFind(scene: Scene, theme: Theme, errs: string[]): void {

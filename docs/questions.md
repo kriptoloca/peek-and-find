@@ -37,3 +37,11 @@ Format: date · question · decision taken (simplest reading) · needs confirmat
 - **"×1" badge.** Shown only when the prompt count is ≥ 2; a lone ×1 was visual noise. GDD §3 says "icon + count badge"; reading: the count is implied when it is one.
 - **Teaching.** Levels 1–5 put targets in the front band; levels 1–3 add a ×1.3/×1.2/×1.1 size boost; the prompt icon breathes three times after pop-in on levels 1–3. No text, per GDD.
 - **`?level=N`** starts at that level in dev builds only, so the curve can be judged without replaying 40 scenes.
+
+## 2026-10-16 (Epic 4)
+
+- **Odd One Out grid.** `cols = ceil(√n)`, `rows = ceil(n / cols)`, cells centred in the playable rect; the unused cells are holes, so the layout reads as "grid-ish" rather than a perfect grid. Jitter is half of the spacing budget, which keeps neighbours ≥ 82 px apart without a validator exception.
+- **Regular items never flip.** The base orientation is always unflipped; "flip" as the odd attribute therefore always means the one mirrored item. Simpler than a random base flip and identical to the player.
+- **Attribute weights.** < L15: color 60 / flip 25 / scale 15; L15–39: 35 / 30 / 30 / odd 5; L40+: 20 / 30 / 35 / odd 15. The `odd` frame kind is skipped while the theme has no `_odd` frames (placeholder theme has none).
+- **Mode per level** is seeded by level and salt only (not attempt), so Retry keeps the mode and changes the scene. Spot stays gated off until epic 5.
+- **Odd prompt** shows the ≠ icon with no count badge (count is implicitly one).

@@ -3,7 +3,7 @@ import { KITCHEN, familyById } from '../data/themes';
 import { computeLayout, type Rect } from '../game/layout';
 import { sceneSeed } from '../gen/rng';
 import { generateScene } from '../gen/scene-gen';
-import type { Placed, Scene } from '../gen/types';
+import type { Mode, Placed, Scene } from '../gen/types';
 import { validateScene } from '../gen/validate';
 
 const COLOR_BG = 0x1b1f2a;
@@ -22,6 +22,7 @@ const BAND_ALPHA = [0.55, 0.75, 0.95] as const;
 export class GenPreviewScene extends Phaser.Scene {
   private level = 1;
   private attempt = 0;
+  private mode: Mode = 'find';
   private readonly salt = 1234;
   private gfx!: Phaser.GameObjects.Graphics;
   private info!: Phaser.GameObjects.Text;
@@ -64,6 +65,12 @@ export class GenPreviewScene extends Phaser.Scene {
       this.attempt += 1;
       this.regen();
     });
+    this.input.keyboard?.on('keydown-M', () => {
+      this.mode = this.mode === 'find' ? 'odd' : 'find';
+      this.regen();
+    });
+    const q = new URLSearchParams(window.location.search).get('mode');
+    if (q === 'odd' || q === 'find') this.mode = q;
     this.scale.on(Phaser.Scale.Events.RESIZE, this.draw);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.scale.off(Phaser.Scale.Events.RESIZE, this.draw);
@@ -72,10 +79,10 @@ export class GenPreviewScene extends Phaser.Scene {
   }
 
   private regen(): void {
-    const seed = sceneSeed('find', this.level, this.attempt, this.salt);
+    const seed = sceneSeed(this.mode, this.level, this.attempt, this.salt);
     const t0 = performance.now();
     try {
-      this.current = generateScene({ seed, level: this.level, mode: 'find', theme: KITCHEN });
+      this.current = generateScene({ seed, level: this.level, mode: this.mode, theme: KITCHEN });
       this.errors = validateScene(this.current, KITCHEN);
     } catch (e) {
       this.current = null;
@@ -131,19 +138,21 @@ export class GenPreviewScene extends Phaser.Scene {
 
   private describe(): string {
     const sc = this.current;
-    const head = `L${String(this.level)} attempt ${String(this.attempt)} · gen ${this.genMs.toFixed(1)} ms`;
+    const head = `${this.mode} L${String(this.level)} attempt ${String(this.attempt)} · gen ${this.genMs.toFixed(1)} ms`;
     if (!sc) return `${head}\n${this.errors.join('\n')}`;
     const decoys = sc.objects.filter((o) => o.isDecoy).length;
     const prompt =
       sc.prompt.kind === 'find'
         ? sc.prompt.items.map((it) => `${it.icon}×${String(it.count)}`).join('  ')
-        : sc.prompt.kind;
+        : sc.odd
+          ? `odd by ${sc.odd.kind} (${sc.odd.baseFrame}, ${String(sc.odd.cols)}×${String(sc.odd.rows)})`
+          : sc.prompt.kind;
     const lines = [
       head,
       `seed ${String(sc.seed)} regen ${String(sc.regenerations)} · n=${String(sc.objects.length)} targets=${String(sc.targets.length)} decoys=${String(decoys)}`,
       `spacing ${sc.spacing.toFixed(0)} targetSpacing ${sc.targetSpacing.toFixed(0)} occl≤${sc.params.maxOcclusion.toFixed(2)} tScale ${sc.params.targetScale.toFixed(2)}`,
       `prompt: ${prompt}`,
-      'tap: left −level · middle +level · right new seed',
+      'tap: left −level · middle +level · right new seed · key M: mode',
     ];
     if (this.errors.length > 0) lines.push(`INVALID: ${this.errors.slice(0, 3).join(' | ')}`);
     return lines.join('\n');

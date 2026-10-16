@@ -3,7 +3,7 @@
 Single source of truth for "where did we leave off". Update at the end of every epic and whenever a decision changes the plan. Read this first at the start of every session.
 
 ## Status
-Epic: 3 done, 4 in progress · Last update: 2026-10-16 · Branch: main (CI green)
+Epic: 4 done, 5 next · Last update: 2026-10-16 · Branch: main (CI green)
 Repo: https://github.com/kriptoloca/-peek-and-find (name has a leading dash; rename on GitHub when convenient, old name redirects)
 
 ## Epic board
@@ -13,9 +13,9 @@ Repo: https://github.com/kriptoloca/-peek-and-find (name has a leading dash; ren
 | 1 | Project skeleton, layout, dist audit | done | 10 layout tests, headless 4 aspects |
 | 2 | Generator core (Find) | done | 41 tests, L80 ≈ 0.4 ms, #gen preview |
 | 3 | Find mode playable | done (code) | headless full round; **phone test pending** |
-| 3b | Teaching tweaks (hide ×1, prompt pulse, front-band targets L1–5, ?level= dev param) | in progress | |
-| 4 | Odd One Out | next | |
-| 5 | Spot 5 | | |
+| 3b | Teaching tweaks (hide ×1, prompt pulse, front-band targets L1–5, ?level= dev param) | done | headless L1/L40 screenshots |
+| 4 | Odd One Out | done (code) | 19 tests, headless L8/L34/L20; **phone test pending** |
+| 5 | Spot 5 | next | |
 | 6 | Progression, saves, difficulty tuning, theme preload, dev menu | | |
 | 7 | Daily Find | | |
 | 8 | Playgama Bridge (read docs first), ad gating | | |
@@ -42,14 +42,15 @@ See `docs/questions.md` (every deviation from the spec with its reason).
 ## Measured
 | Metric | Value |
 |---|---|
-| Tests | 59 |
+| Tests | 78 |
 | Bundle | 1.18 MB (Phaser 1.21 MB of it) |
 | Level 80 generation | ≈ 0.4 ms |
 | CI | 2/2 green |
 
 ## Next steps (in order)
-1. Epic 3b teaching tweaks → commit, push.
-2. Epic 4 Odd One Out: jittered grid, one odd attribute, corner rule < L15, rotation from L6, ≠ prompt icon, tests, headless check → commit, push.
-3. Epic 5 Spot 5: own 1080×840 scene, 5 mutations, stacked/side layout, layout gate → commit, push.
-4. Epic 6 progression + saves (needs Bridge storage interface stub) → then Epic 7 Daily.
-5. Epic 8 Bridge: read wiki.playgama.com first, write docs/bridge-notes.md.
+1. Epic 5 Spot 5: own 1080×840 scene, 5 mutations above threshold, stacked/side rendering, taps on either image, layout gate (`canHostSpot`), tests, headless check → commit, push.
+2. **Phone test checkpoint** (Hasan): Find + Odd + Spot on iPhone, 3 lines of feedback. Tuning decisions (density, mirror decoys, empty taps) are taken here.
+3. Epic 6 progression + saves (storage interface with localStorage fallback; Bridge adapter plugs in at Epic 8), theme preload, big scene, dev menu.
+4. Epic 7 Daily (fixed levels 10/20/30/40/50, streak).
+5. Epic 8 Bridge: read wiki.playgama.com first, write docs/bridge-notes.md, ad gating tests.
+6. Epic 9 needs the art pack (SVG) — Hasan's step; everything before it runs on placeholders.
