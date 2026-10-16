@@ -46,7 +46,7 @@ See `docs/questions.md` (every deviation from the spec with its reason).
 | Tests | 115 |
 | Bundle | 1.51 MB (Phaser 1.21 MB + Bridge 0.29 MB) |
 | Level 80 generation | ≈ 0.4 ms |
-| CI | 2/2 green |
+| CI | 8/8 runs green on main (last: epic-8, run #8) |
 
 ## Next steps (in order)
 1. **Hasan's steps now gate the project:** (a) art pack with SVG sources (ASSETS.md), (b) Playgama developer account, (c) phone test of the current build on iPhone (`?fakeads=1` shows the ad flows without a platform), (d) optional repo rename.
