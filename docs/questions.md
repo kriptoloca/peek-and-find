@@ -53,3 +53,7 @@ Format: date · question · decision taken (simplest reading) · needs confirmat
 - **Mutations never touch objects hidden more than 50%,** and each kind appears at most twice per scene, so the five differences stay varied and visible. `add` places the new object in a free Poisson slot, so spacing holds in image B too.
 - **Layout gate.** The mode is chosen when a level starts, from the current layout. Rotating to 1:1 mid-round keeps the Spot round at the smaller scale; the next level picks a different mode.
 - **Pop-in** animates both images together; the star timer starts after the longer of the two.
+
+## 2026-10-16 (phone test, bug 1)
+
+- **HUD drawn inside the top Spot image at level 21 (iPhone).** Cause: rebuilding the prompt items re-applied the layout through the square-scene path, which uses the Find band; the Spot band path was only used on resize, so the first Safari toolbar resize "fixed" it. Fix: the HUD remembers which band set is active and re-applies the same one. The dev state now exposes `hudInBand`, and the headless check walks a Find → Spot transition without reload.

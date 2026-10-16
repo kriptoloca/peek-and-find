@@ -28,6 +28,8 @@ export class Hud {
   private readonly level: Phaser.GameObjects.Text;
   private items: PromptItemView[] = [];
   private layoutCache: Layout | null = null;
+  /** True while the Spot 5 bands are in use; re-applies must keep using them. */
+  private spotMode = false;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -85,7 +87,7 @@ export class Hud {
         this.container.add([icon, badge, count]);
         return { icon, badge, count, key: c.icon };
       });
-      if (this.layoutCache) this.apply(this.layoutCache);
+      this.reapply();
     }
     counts.forEach((c, i) => {
       const it = this.items[i];
@@ -126,8 +128,21 @@ export class Hud {
     });
   }
 
+  /** Re-runs the last layout (square bands/columns or Spot bands) after items were rebuilt. */
+  private reapply(): void {
+    if (!this.layoutCache) return;
+    if (this.spotMode) this.applySpot(this.layoutCache);
+    else this.apply(this.layoutCache);
+  }
+
+  /** Canvas y of the HUD row (level number); used by the dev smoke test to check placement. */
+  rowCenterY(): number {
+    return this.level.y;
+  }
+
   apply(l: Layout): void {
     this.layoutCache = l;
+    this.spotMode = false;
     const p = l.hud.primary;
     if (l.hud.placement === 'columns') this.applyColumn(p);
     else this.applyRow(p);
@@ -136,6 +151,7 @@ export class Hud {
   /** Spot 5: thin bands above/below the two images, always a row. */
   applySpot(l: Layout): void {
     this.layoutCache = l;
+    this.spotMode = true;
     this.applyRow(l.spot.hudTop);
   }
 

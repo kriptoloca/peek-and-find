@@ -392,6 +392,14 @@ export class GameScene extends Phaser.Scene {
     if (mode === 'find' || mode === 'odd' || mode === 'spot') this.forcedMode = mode;
   }
 
+  /** Dev check: the HUD row must be inside the band the current layout reserves for it. */
+  private hudInBand(): boolean {
+    const l = this.layoutNow;
+    const band = this.round?.scene.mode === 'spot' ? l.spot.hudTop : l.hud.primary;
+    const y = this.hud.rowCenterY();
+    return y >= band.y && y <= band.y + band.h;
+  }
+
   private installDebugHooks(): void {
     const toScreen = (o: {
       id: string;
@@ -434,6 +442,7 @@ export class GameScene extends Phaser.Scene {
         status: this.round?.status ?? 'none',
         remaining: this.round ? remainingTargets(this.round) : 0,
         now: this.time.now,
+        hudInBand: this.hudInBand(),
       }),
     });
   }

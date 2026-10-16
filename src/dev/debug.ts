@@ -21,6 +21,8 @@ export interface PeekDebug {
     remaining: number;
     /** Phaser clock (ms) to compare with wall time in slow headless renderers. */
     now: number;
+    /** HUD row sits inside the band the current layout reserves for it. */
+    hudInBand: boolean;
   };
 }
 

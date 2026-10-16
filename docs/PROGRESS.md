@@ -25,7 +25,7 @@ Repo: https://github.com/kriptoloca/-peek-and-find (name has a leading dash; ren
 | 12 | Store assets, submission ZIP | | |
 
 ## Hasan's steps (outside the code)
-- [ ] Phone test of Epic 3: play ≥ 10 scenes on iPhone Safari via LAN, send 3 lines (first-scene clarity, tap feel on small targets, color/mirror decoy fairness after L20, rotation/iOS toolbar).
+- [x] Phone test started 2026-10-16 19:35–19:45: desktop 16:9 and iPhone 9:16 both render; first bug (HUD inside the Spot image) found and fixed. Still wanted: 3 lines on L30/L60 search feel, mirror decoys, Spot miss penalty, rotation.
 - [ ] Art pack: 2–3 candidate links, **SVG sources required** (ASSETS.md). Flat, cute but not childish, no nursery palette.
 - [ ] Playgama developer account (developer.playgama.com) and YouTube Playables interest form.
 - [ ] Optional: rename the repo to `peek-and-find`.
