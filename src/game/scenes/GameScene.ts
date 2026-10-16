@@ -6,6 +6,8 @@ import { Rng, hashSeed, sceneSeed } from '../../gen/rng';
 import { pickMode } from '../../gen/difficulty';
 import { generateScene } from '../../gen/scene-gen';
 import type { Mode, Placed, Scene as GenScene, Theme } from '../../gen/types';
+import { AdGate, MIN_INTERVAL_MS } from '../../platform/ads';
+import { getPlatform, type Platform } from '../../platform/bridge';
 import { clearFx, confetti, popCorrect, shakeWrong, sparkle } from '../fx';
 import { Hud } from '../hud';
 import { computeLayout, type Layout, type Rect } from '../layout';
@@ -13,6 +15,8 @@ import { DAILY_CHAIN_LENGTH, completeDaily, dailyScene, todayKey } from '../dail
 import { modeForLevel } from '../progression';
 import {
   applyTap,
+  continueRound,
+  hintTarget,
   hitTargets,
   newRound,
   promptCounts,
@@ -40,6 +44,18 @@ const TEACH_PULSE_UNTIL_LEVEL = 3;
 /** Retry button: circle radius and vertical offset from the overlay center. */
 const RETRY_RADIUS = 100;
 const RETRY_OFFSET_Y = 40;
+/** Fail overlay with Continue: buttons sit left/right of the center. */
+const FAIL_BUTTON_DX = 160;
+const HINT_GLOW_MS = 2000;
+const DEPTH_PAUSE = 50;
+
+/** Session-wide interstitial gate (wall clock, so pauses and slow frames do not shorten it). */
+const adGate = new AdGate(
+  // Dev builds: ?adfast=1 pretends the session started 120 s ago so the first interstitial can
+  // be exercised right after three scenes.
+  performance.now() -
+    (import.meta.env.DEV && window.location.search.includes('adfast=1') ? MIN_INTERVAL_MS : 0),
+);
 /** Dev menu trigger: three taps in this top-left square within this many ms (dev builds). */
 const DEV_TAP_ZONE = 160;
 const DEV_TAP_WINDOW_MS = 700;
@@ -70,6 +86,14 @@ export class GameScene extends Phaser.Scene {
   /** Daily chain: null in the normal chain, else the current scene index 0..4. */
   private dailyIndex: number | null = null;
   private dailyKey = '';
+  private platform!: Platform;
+  private unsubscribePause: (() => void) | null = null;
+  private pauseOverlay: Phaser.GameObjects.Container | null = null;
+  private paused = false;
+  private adInProgress = false;
+  private adsShown = 0;
+  private hintUses = 0;
+  private continueUses = 0;
   private devTaps: number[] = [];
   private devMenuOpen = false;
 
@@ -95,10 +119,41 @@ export class GameScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.scale.off(Phaser.Scale.Events.RESIZE, this.relayout);
     });
+    this.platform = getPlatform();
+    this.unsubscribePause = this.platform.onPause((p) => {
+      this.setPaused(p);
+    });
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.unsubscribePause?.();
+      this.unsubscribePause = null;
+    });
+    this.hud.setHint(this.platform.rewardedSupported, () => {
+      void this.onHint();
+    });
     this.relayout();
     if (import.meta.env.DEV) this.applyDevParams();
     this.startLevel();
     if (import.meta.env.DEV) this.installDebugHooks();
+  }
+
+  // ---- platform pause (CLAUDE.md rule 4) ---------------------------------------------------
+
+  private setPaused(paused: boolean): void {
+    if (this.paused === paused) return;
+    this.paused = paused;
+    if (paused) {
+      this.tweens.pauseAll();
+      this.time.paused = true;
+      const { width, height } = this.scale.gameSize;
+      const dim = this.add.graphics();
+      dim.fillStyle(0x000000, 0.55).fillRect(0, 0, width, height);
+      this.pauseOverlay = this.add.container(0, 0, [dim]).setDepth(DEPTH_PAUSE);
+    } else {
+      this.pauseOverlay?.destroy(true);
+      this.pauseOverlay = null;
+      this.time.paused = false;
+      this.tweens.resumeAll();
+    }
   }
 
   // ---- layout -------------------------------------------------------------------------------
@@ -199,6 +254,7 @@ export class GameScene extends Phaser.Scene {
     // stalls. With placeholders this is texture generation; with atlases it becomes a loader job.
     const pre = themeToPreload(level);
     if (pre !== null) ensureThemeTextures(this, THEMES[pre] as Theme);
+    this.platform.sendMessage('in_game_loading_started');
     const gen: GenScene = generateScene({
       seed,
       level,
@@ -206,6 +262,7 @@ export class GameScene extends Phaser.Scene {
       theme: this.theme,
       validate: import.meta.env.DEV,
     });
+    this.platform.sendMessage('in_game_loading_stopped');
     this.round = newRound(gen);
     this.relayout();
     this.hud.setLevel(this.dailyIndex === null ? level : this.dailyIndex + 1);
@@ -249,8 +306,27 @@ export class GameScene extends Phaser.Scene {
     this.time.delayedCall(total, () => {
       if (this.round?.scene !== gen) return;
       startRound(this.round, this.time.now);
+      this.platform.sendMessage('level_started');
+      this.platform.sendMessage('gameplay_started');
       if (level <= TEACH_PULSE_UNTIL_LEVEL) this.hud.teachPulse();
     });
+  }
+
+  /** Scene complete → maybe an interstitial (gate + platform support) → next level. */
+  private advance(): void {
+    if (this.adInProgress) return;
+    const now = performance.now();
+    if (this.platform.interstitialSupported && adGate.shouldShowInterstitial(now)) {
+      adGate.markShown(now);
+      this.adInProgress = true;
+      this.adsShown += 1;
+      void this.platform.showInterstitial().then(() => {
+        this.adInProgress = false;
+        this.nextLevel();
+      });
+      return;
+    }
+    this.nextLevel();
   }
 
   private nextLevel(): void {
@@ -311,7 +387,8 @@ export class GameScene extends Phaser.Scene {
   // ---- input --------------------------------------------------------------------------------
 
   private readonly onPointer = (pointer: Phaser.Input.Pointer): void => {
-    if (this.devMenuOpen) return;
+    if (this.devMenuOpen || this.paused || this.adInProgress) return;
+    if (this.hud.hitsHint(pointer.x, pointer.y)) return;
     if (import.meta.env.DEV && this.checkDevTaps(pointer)) return;
     if (this.overlay) {
       this.onOverlayTap(pointer);
@@ -383,6 +460,9 @@ export class GameScene extends Phaser.Scene {
     if (!r) return;
     const stars = starsEarned(r, this.time.now);
     progress.totalStars += stars;
+    adGate.onSceneCompleted();
+    this.platform.sendMessage('level_completed');
+    this.platform.sendMessage('gameplay_stopped');
     confetti(this, this.mainRect(), this.fx);
     if (r.scene.params.bigScene) confetti(this, this.mainRect(), this.fx); // GDD §5 bonus confetti
     const ov = this.makeOverlay(0.35);
@@ -401,20 +481,24 @@ export class GameScene extends Phaser.Scene {
       });
     }
     this.advanceTimer = this.time.delayedCall(AUTO_ADVANCE_MS + 400, () => {
-      this.nextLevel();
+      this.advance();
     });
   }
 
   private onLost(): void {
+    this.platform.sendMessage('level_failed');
+    this.platform.sendMessage('gameplay_stopped');
     const ov = this.makeOverlay(0.6);
     for (let i = 0; i < 3; i++) {
       ov.add(this.add.image((i - 1) * 110, -170, UI.heartEmpty).setDisplaySize(90, 90));
     }
+    const withContinue = this.platform.rewardedSupported;
+    const retryX = withContinue ? FAIL_BUTTON_DX : 0;
     const btn = this.add
-      .image(0, RETRY_OFFSET_Y, UI.badge)
+      .image(retryX, RETRY_OFFSET_Y, UI.badge)
       .setDisplaySize(RETRY_RADIUS * 2, RETRY_RADIUS * 2)
       .setTint(0x3b7dd8);
-    const icon = this.add.image(0, RETRY_OFFSET_Y, UI.retry).setDisplaySize(110, 110);
+    const icon = this.add.image(retryX, RETRY_OFFSET_Y, UI.retry).setDisplaySize(110, 110);
     ov.add([btn, icon]);
     this.tweens.add({
       targets: [btn, icon],
@@ -423,6 +507,67 @@ export class GameScene extends Phaser.Scene {
       repeat: -1,
       duration: 600,
     });
+    if (withContinue) {
+      // Continue = rewarded ad → refill hearts, same scene (GDD §3). Heart + play icon, no text.
+      const cbtn = this.add
+        .image(-FAIL_BUTTON_DX, RETRY_OFFSET_Y, UI.badge)
+        .setDisplaySize(RETRY_RADIUS * 2, RETRY_RADIUS * 2)
+        .setTint(0x2a9d8f);
+      const heart = this.add
+        .image(-FAIL_BUTTON_DX - 28, RETRY_OFFSET_Y, UI.heart)
+        .setDisplaySize(70, 70);
+      const play = this.add
+        .image(-FAIL_BUTTON_DX + 34, RETRY_OFFSET_Y, UI.play)
+        .setDisplaySize(60, 60);
+      ov.add([cbtn, heart, play]);
+    }
+  }
+
+  /** Rewarded Continue: refill hearts and resume the same scene when the reward was earned. */
+  private async onContinue(): Promise<void> {
+    const r = this.round;
+    if (!r || r.status !== 'lost' || this.adInProgress) return;
+    this.adInProgress = true;
+    const earned = await this.platform.showRewarded('continue');
+    this.adInProgress = false;
+    if (this.round !== r) return;
+    if (earned && continueRound(r)) {
+      this.continueUses += 1;
+      this.clearOverlay();
+      this.hud.setHearts(r.hearts);
+      this.platform.sendMessage('gameplay_started');
+    }
+  }
+
+  /** Rewarded Hint: one remaining target glows for two seconds (GDD §6). */
+  private async onHint(): Promise<void> {
+    const r = this.round;
+    if (!r || r.status !== 'playing' || this.adInProgress || this.paused) return;
+    this.adInProgress = true;
+    const earned = await this.platform.showRewarded('hint');
+    this.adInProgress = false;
+    if (!earned || this.round !== r || r.status !== 'playing') return;
+    const t = hintTarget(r);
+    if (!t) return;
+    this.hintUses += 1;
+    const images: ('a' | 'b')[] = r.scene.mode === 'spot' ? ['a', 'b'] : ['a'];
+    for (const image of images) {
+      const c = this.toCanvas(t.x, t.y, image);
+      const d = Math.max(t.hitRadius * 2, 120) * this.world.scaleX;
+      const ring = this.add.image(c.x, c.y, UI.ring).setDisplaySize(d, d).setTint(0xffc857);
+      this.fx.add(ring);
+      this.tweens.add({
+        targets: ring,
+        scale: ring.scale * 1.25,
+        alpha: 0.2,
+        yoyo: true,
+        repeat: Math.floor(HINT_GLOW_MS / 500) - 1,
+        duration: 250,
+        onComplete: () => {
+          ring.destroy();
+        },
+      });
+    }
   }
 
   private makeOverlay(dimAlpha: number): Phaser.GameObjects.Container {
@@ -456,13 +601,22 @@ export class GameScene extends Phaser.Scene {
     }
     if (r.status === 'won') {
       // tap to skip the auto-advance
-      this.nextLevel();
+      this.advance();
       return;
     }
-    if (r.status === 'lost') {
-      const dx = pointer.x - this.overlay.x;
+    if (r.status === 'lost' && this.overlay) {
+      const withContinue = this.platform.rewardedSupported;
+      const retryX = this.overlay.x + (withContinue ? FAIL_BUTTON_DX : 0);
       const dy = pointer.y - (this.overlay.y + RETRY_OFFSET_Y);
-      if (dx * dx + dy * dy <= RETRY_RADIUS * RETRY_RADIUS) this.retryLevel();
+      const dxRetry = pointer.x - retryX;
+      if (dxRetry * dxRetry + dy * dy <= RETRY_RADIUS * RETRY_RADIUS) {
+        this.retryLevel();
+        return;
+      }
+      if (withContinue) {
+        const dxCont = pointer.x - (this.overlay.x - FAIL_BUTTON_DX);
+        if (dxCont * dxCont + dy * dy <= RETRY_RADIUS * RETRY_RADIUS) void this.onContinue();
+      }
     }
   }
 
@@ -563,6 +717,15 @@ export class GameScene extends Phaser.Scene {
               .map(toScreen)
           : [],
       wrong: () => wrongPoints().map(toScreen),
+      simulatePause: (p: boolean) => {
+        this.setPaused(p);
+      },
+      tapHint: () => {
+        void this.onHint();
+      },
+      tapContinue: () => {
+        void this.onContinue();
+      },
       state: () => ({
         level: progress.level,
         sceneLevel: this.round?.scene.level ?? 0,
@@ -572,6 +735,14 @@ export class GameScene extends Phaser.Scene {
         scenesPlayed: progress.scenesPlayed,
         devMenuOpen: this.devMenuOpen,
         dailyIndex: this.dailyIndex,
+        platformId: this.platform.platformId,
+        interstitialSupported: this.platform.interstitialSupported,
+        rewardedSupported: this.platform.rewardedSupported,
+        adsShown: this.adsShown,
+        hintUses: this.hintUses,
+        continueUses: this.continueUses,
+        paused: this.paused,
+        adInProgress: this.adInProgress,
         streak: progress.streak,
         lastDailyDate: progress.lastDailyDate,
         hearts: this.round?.hearts ?? 0,

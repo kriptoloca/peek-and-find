@@ -23,4 +23,6 @@ export const UI = {
   musicOn: 'ui_music_on',
   musicOff: 'ui_music_off',
   home: 'ui_home',
+  /** Rewarded hint button (Epic 8). */
+  hint: 'ui_hint',
 } as const;

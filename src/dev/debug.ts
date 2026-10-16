@@ -13,6 +13,10 @@ export interface PeekDebug {
   targets: () => DebugPoint[];
   /** Screen centers of a few non-target objects. */
   wrong: () => DebugPoint[];
+  /** Dev-only levers for the headless checks. */
+  simulatePause: (paused: boolean) => void;
+  tapHint: () => void;
+  tapContinue: () => void;
   state: () => {
     level: number;
     /** Level of the scene being played (differs from `level` in the daily chain). */
@@ -23,6 +27,14 @@ export interface PeekDebug {
     scenesPlayed: number;
     devMenuOpen: boolean;
     dailyIndex: number | null;
+    platformId: string;
+    interstitialSupported: boolean;
+    rewardedSupported: boolean;
+    adsShown: number;
+    hintUses: number;
+    continueUses: number;
+    paused: boolean;
+    adInProgress: boolean;
     streak: number;
     lastDailyDate: string | null;
     hearts: number;

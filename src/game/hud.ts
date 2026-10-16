@@ -1,4 +1,4 @@
-import type Phaser from 'phaser';
+import Phaser from 'phaser';
 import type { Layout, Rect } from './layout';
 import type { PromptCount } from './rules';
 import { UI } from './textures/placeholders';
@@ -7,6 +7,7 @@ const ICON_MAX = 120;
 const HEART_MAX = 72;
 const ITEM_GAP = 24;
 const BADGE_SIZE = 52;
+const HINT_SIZE = 110;
 const COLOR_BADGE_TEXT = '#1b1f2a';
 const COLOR_LEVEL_TEXT = '#ffffff';
 
@@ -27,6 +28,8 @@ export class Hud {
   private readonly hearts: Phaser.GameObjects.Image[] = [];
   private readonly level: Phaser.GameObjects.Text;
   private items: PromptItemView[] = [];
+  private readonly hint: Phaser.GameObjects.Image;
+  private onHintTap: (() => void) | null = null;
   private layoutCache: Layout | null = null;
   /** True while the Spot 5 bands are in use; re-applies must keep using them. */
   private spotMode = false;
@@ -48,6 +51,33 @@ export class Hud {
       })
       .setOrigin(0.5);
     this.container.add(this.level);
+    this.hint = scene.add
+      .image(0, 0, UI.hint)
+      .setVisible(false)
+      .setInteractive({ useHandCursor: true });
+    this.hint.on(Phaser.Input.Events.POINTER_UP, () => {
+      this.onHintTap?.();
+    });
+    this.container.add(this.hint);
+  }
+
+  /** Rewarded hint button (GDD §6): shown only when the platform supports rewarded ads. */
+  setHint(visible: boolean, onTap: (() => void) | null): void {
+    this.hint.setVisible(visible);
+    this.onHintTap = onTap;
+  }
+
+  /** True when a canvas point lands on the visible hint button (so the scene ignores it). */
+  hitsHint(x: number, y: number): boolean {
+    if (!this.hint.visible) return false;
+    const r = this.hint.displayWidth / 2 + 10;
+    return (x - this.hint.x) ** 2 + (y - this.hint.y) ** 2 <= r * r;
+  }
+
+  private placeHint(sec: Rect, size = HINT_SIZE): void {
+    this.hint
+      .setDisplaySize(size, size)
+      .setPosition(sec.x + sec.w - size / 2 - 24, sec.y + sec.h / 2);
   }
 
   setLevel(level: number): void {
@@ -143,6 +173,7 @@ export class Hud {
   apply(l: Layout): void {
     this.layoutCache = l;
     this.spotMode = false;
+    this.placeHint(l.hud.secondary, Math.min(HINT_SIZE, Math.max(72, l.hud.secondary.h - 16)));
     const p = l.hud.primary;
     if (l.hud.placement === 'columns') this.applyColumn(p);
     else this.applyRow(p);
@@ -153,6 +184,7 @@ export class Hud {
     this.layoutCache = l;
     this.spotMode = true;
     this.applyRow(l.spot.hudTop);
+    this.placeHint(l.spot.hudBottom, Math.min(HINT_SIZE, Math.max(72, l.spot.hudBottom.h - 16)));
   }
 
   private applyRow(p: Rect): void {

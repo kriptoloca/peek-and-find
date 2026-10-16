@@ -17,8 +17,13 @@ const ALLOW = [
   /^https?:\/\/photonstorm\.github\.io\//, // Phaser license text
   /^https?:\/\/github\.com\/(photonstorm|phaserjs)\//, // Phaser license text
   /^https?:\/\/opensource\.org\/licenses\//, // license text
-  /^https?:\/\/(cdn\.)?playgama\.com\//, // Playgama Bridge SDK (confirm exact host in epic 8)
 ];
+
+// The Playgama Bridge runtime (@playgama/bridge, shipped as playgama-bridge.js by its Vite
+// plugin in "local" mode) is the one allowed third-party script (CLAUDE.md rule 1). It embeds
+// the hosts of every platform adapter it can run on; on YouTube only the ytgame API is used.
+// It is therefore skipped by the URL scan, while index.html and our own bundle are still scanned.
+const SKIP_FILES = new Set(['playgama-bridge.js']);
 
 function walk(dir, out = []) {
   for (const name of readdirSync(dir)) {
@@ -38,6 +43,7 @@ for (const file of files) {
   const ext = extname(file).toLowerCase();
   if (FORBIDDEN_EXT.has(ext)) problems.push(`compressed artefact shipped: ${rel}`);
   if (!TEXT_EXT.has(ext)) continue;
+  if (SKIP_FILES.has(rel)) continue;
   const text = readFileSync(file, 'utf8');
   const re = /https?:\/\/[^\s"'`<>)\\]+/g;
   let m;
@@ -56,4 +62,6 @@ if (problems.length > 0) {
   for (const p of problems) console.error('  ' + p);
   process.exit(1);
 }
-console.log(`audit-dist: OK (${files.length} files, no external URLs, no compressed artefacts)`);
+console.log(
+  `audit-dist: OK (${files.length} files, no external URLs outside ${[...SKIP_FILES].join(', ')}, no compressed artefacts)`,
+);

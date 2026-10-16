@@ -161,3 +161,16 @@ export function promptCounts(r: Round): PromptCount[] {
     return { family: it.family, icon: it.icon, total: it.count, remaining: it.count - foundHere };
   });
 }
+
+/** Rewarded Continue (GDD §3): refill hearts and resume the same scene. */
+export function continueRound(r: Round): boolean {
+  if (r.status !== 'lost') return false;
+  r.hearts = HEARTS_PER_SCENE;
+  r.status = 'playing';
+  return true;
+}
+
+/** Rewarded Hint (GDD §6): the next target still to be found, or null. */
+export function hintTarget(r: Round): HitTarget | null {
+  return hitTargets(r.scene).find((h) => h.isTarget && !r.found.has(h.id)) ?? null;
+}

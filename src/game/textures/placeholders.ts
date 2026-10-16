@@ -435,6 +435,16 @@ export function ensureUiTextures(scene: Phaser.Scene): void {
     g.fillStyle(0x2e3650, 1);
     g.fillRect(s * 0.43, s * 0.6, s * 0.14, s * 0.24);
   });
+  mk(UI.hint, (g) => {
+    // light bulb on a round badge
+    g.fillStyle(0xffc857, 1);
+    g.fillCircle(s / 2, s / 2, s / 2 - 4);
+    g.fillStyle(0xffffff, 1);
+    g.fillCircle(s * 0.5, s * 0.42, s * 0.2);
+    g.fillRect(s * 0.42, s * 0.56, s * 0.16, s * 0.14);
+    g.fillStyle(0x2e3650, 1);
+    g.fillRect(s * 0.42, s * 0.7, s * 0.16, s * 0.05);
+  });
   mk(UI.spot, (g) => {
     // "⟷" on a dark rounded square (Spot 5 arrives in epic 5)
     g.fillStyle(0x2e3650, 1);

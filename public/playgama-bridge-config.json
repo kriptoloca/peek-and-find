@@ -1,0 +1,10 @@
+{
+  "platforms": {
+    "youtube": {}
+  },
+  "advertisement": {
+    "minimumDelayBetweenInterstitial": 120,
+    "useAdvertisementErrorPopup": false
+  },
+  "disableLoadingLogo": false
+}

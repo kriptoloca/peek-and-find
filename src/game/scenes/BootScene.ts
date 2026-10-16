@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
-import { LocalStorageBackend, SaveStore } from '../../platform/storage';
+import { initPlatform } from '../../platform/bridge';
+import { SaveStore } from '../../platform/storage';
 import { attachSaveStore, hydrateProgress, resetProgress } from '../state';
 
 /**
@@ -13,23 +14,29 @@ export class BootScene extends Phaser.Scene {
   }
 
   create(): void {
-    const store = new SaveStore(new LocalStorageBackend());
-    attachSaveStore(store);
-    void store.load().then((save) => {
-      hydrateProgress(save);
-      if (import.meta.env.DEV) {
-        const q = new URLSearchParams(window.location.search);
-        if (q.get('reset') === '1') resetProgress();
-        // Dev shortcuts skip the title: ?level=, ?mode=, ?daily=1
-        if (q.has('level') || q.has('mode') || q.get('daily') === '1') {
-          this.scene.start('Game', {
-            daily: q.get('daily') === '1',
-            today: q.get('today') ?? undefined,
-          });
-          return;
+    // Bridge first (docs/bridge-notes.md): storage goes through the platform when there is one.
+    void initPlatform()
+      .then((platform) => {
+        platform.sendMessage('in_game_loading_started');
+        const store = new SaveStore(platform.storage);
+        attachSaveStore(store);
+        return store.load();
+      })
+      .then((save) => {
+        hydrateProgress(save);
+        if (import.meta.env.DEV) {
+          const q = new URLSearchParams(window.location.search);
+          if (q.get('reset') === '1') resetProgress();
+          // Dev shortcuts skip the title: ?level=, ?mode=, ?daily=1
+          if (q.has('level') || q.has('mode') || q.get('daily') === '1') {
+            this.scene.start('Game', {
+              daily: q.get('daily') === '1',
+              today: q.get('today') ?? undefined,
+            });
+            return;
+          }
         }
-      }
-      this.scene.start('Title');
-    });
+        this.scene.start('Title');
+      });
   }
 }

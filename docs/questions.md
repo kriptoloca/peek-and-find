@@ -73,3 +73,15 @@ Format: date · question · decision taken (simplest reading) · needs confirmat
 - **Streak display.** Title shows the flame + number while the streak is alive (completed today or yesterday) and nothing after a missed day; `bestStreak` is kept in the save for later use.
 - **Title toggles** flip and persist `sound`/`music` now; audio itself arrives in Epic 9.
 - **Dev:** `?daily=1` starts the chain directly, `?today=YYYYMMDD` overrides the date key (dev builds only) so streak transitions can be exercised without waiting a day.
+
+## 2026-10-16 (Epic 8)
+
+- **SDK shipped with the game, not from the CDN.** `@playgama/bridge@2.3.1` via its Vite plugin in `local` mode: `playgama-bridge.js` (≈ 300 KB) lands in dist next to `index.html`; no `bridge.playgama.com` tag. YouTube blocks external calls, and CLAUDE.md rule 1 asks for everything bundled.
+- **Audit exemption.** The SDK file embeds the hosts of every platform adapter it supports (CrazyGames, Poki, AdSense …); on YouTube only `ytgame` is used. `scripts/audit-dist.mjs` skips that one file by name and still scans `index.html` and our bundle. Allowlisting the hosts individually would have hidden real regressions.
+- **Wiki unreachable from the cloud session.** All API names come from the SDK source at 2.3.1 (docs/bridge-notes.md cites the files). If the wiki disagrees, the source wins until the package is bumped.
+- **Interstitial gate uses the wall clock** (`performance.now()`), not Phaser's clock, so a pause or a slow frame never shortens the 120 s. The SDK's own minimum delay is set to 120 as the second guard.
+- **Ad results.** An ad call that produces no state within 4 s is treated as finished (the SDK declines silently when its delay guard blocks); an open ad is capped at 120 s. Rewarded = `rewarded` state seen before `closed`/`failed`.
+- **`game_ready`** is sent once, when the Title is up (rule 3); `in_game_loading_*` wraps boot and each scene generation; `gameplay_started/stopped` and `level_*` follow the round.
+- **Pause** (platform pause, hidden tab, open ad — the SDK aggregates them) pauses tweens and timers, dims the screen and ignores input; resume reverses it. Audio arrives in Epic 9 and will read `platform.isAudioEnabled()`.
+- **Fail overlay** shows Continue (heart + play) left and Retry right when rewarded ads are supported; only Retry otherwise. The hint bulb exists only when rewarded ads are supported.
+- **Dev levers:** `?fakeads=1` (DOM overlay stands in for ads, rewards always earned), `?adfast=1` (first interstitial allowed right after three scenes), `__peekDebug.simulatePause/tapHint/tapContinue`.

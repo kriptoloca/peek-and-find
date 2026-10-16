@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { t } from '../../data/strings';
 import { dailyStatus, todayKey } from '../daily';
 import { computeLayout } from '../layout';
+import { getPlatform } from '../../platform/bridge';
 import { persistProgress, progress } from '../state';
 import { UI, ensureUiTextures } from '../textures/placeholders';
 
@@ -34,6 +35,10 @@ export class TitleScene extends Phaser.Scene {
       this.scale.off(Phaser.Scale.Events.RESIZE, this.build);
     });
     this.build();
+    // CLAUDE.md rule 3: GameReady only when the player can interact (the title is up).
+    const platform = getPlatform();
+    platform.sendMessage('in_game_loading_stopped');
+    platform.sendMessage('game_ready');
   }
 
   private readonly build = (): void => {

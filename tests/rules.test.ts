@@ -6,7 +6,9 @@ import type { Placed } from '../src/gen/types';
 import {
   HEARTS_PER_SCENE,
   applyTap,
+  continueRound,
   elapsedSeconds,
+  hintTarget,
   newRound,
   promptCounts,
   remainingTargets,
@@ -147,5 +149,30 @@ describe('round flow', () => {
     const item = after.find((c) => c.icon === t.frame)!;
     const was = before.find((c) => c.icon === t.frame)!;
     expect(item.remaining).toBe(was.remaining - 1);
+  });
+});
+
+describe('rewarded helpers', () => {
+  it('continueRound refills hearts only from the lost state', () => {
+    const r = newRound(scene(30, 4));
+    startRound(r, 0);
+    expect(continueRound(r)).toBe(false);
+    const wrong = r.scene.objects.filter((o) => !o.isTarget);
+    for (let i = 0; i < 3; i++) applyTap(r, wrong[i]!.x, wrong[i]!.y, i);
+    expect(r.status).toBe('lost');
+    expect(continueRound(r)).toBe(true);
+    expect(r.hearts).toBe(HEARTS_PER_SCENE);
+    expect(r.status).toBe('playing');
+    const t = r.scene.targets[0]!;
+    expect(applyTap(r, t.x, t.y, 10).kind).toBe('correct');
+  });
+
+  it('hintTarget returns a remaining target and null when everything is found', () => {
+    const r = newRound(scene(1));
+    startRound(r, 0);
+    const h = hintTarget(r)!;
+    expect(h.isTarget).toBe(true);
+    applyTap(r, h.x, h.y, 1);
+    expect(hintTarget(r)).toBeNull();
   });
 });
