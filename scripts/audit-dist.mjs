@@ -4,7 +4,7 @@
 //  - no external URL in shipped text files other than allowlisted non-network literals
 //    (XML namespaces, license comments) and the Playgama Bridge script.
 import { readdirSync, readFileSync, statSync } from 'node:fs';
-import { extname, join, relative } from 'node:path';
+import { basename, extname, join, relative } from 'node:path';
 
 const DIST = new URL('../dist/', import.meta.url).pathname;
 const TEXT_EXT = new Set(['.js', '.mjs', '.html', '.css', '.json', '.svg', '.txt']);
@@ -22,7 +22,8 @@ const ALLOW = [
 // The Playgama Bridge runtime (@playgama/bridge, shipped as playgama-bridge.js by its Vite
 // plugin in "local" mode) is the one allowed third-party script (CLAUDE.md rule 1). It embeds
 // the hosts of every platform adapter it can run on; on YouTube only the ytgame API is used.
-// It is therefore skipped by the URL scan, while index.html and our own bundle are still scanned.
+// It is therefore skipped by the URL scan (by file name, so the dev-mode build under dist/test
+// is treated the same), while index.html and our own bundle are still scanned.
 const SKIP_FILES = new Set(['playgama-bridge.js']);
 
 function walk(dir, out = []) {
@@ -43,7 +44,7 @@ for (const file of files) {
   const ext = extname(file).toLowerCase();
   if (FORBIDDEN_EXT.has(ext)) problems.push(`compressed artefact shipped: ${rel}`);
   if (!TEXT_EXT.has(ext)) continue;
-  if (SKIP_FILES.has(rel)) continue;
+  if (SKIP_FILES.has(basename(rel))) continue;
   const text = readFileSync(file, 'utf8');
   const re = /https?:\/\/[^\s"'`<>)\\]+/g;
   let m;
