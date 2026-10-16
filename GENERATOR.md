@@ -62,7 +62,7 @@ A decoy is an object meant to be mistaken for a target. For target family F, pic
 - 50%: same family, same or different variant, **different baked color frame** (`_c1`/`_c2`) — same silhouette, different color.
 - 30%: different family sharing ≥ 1 tag with F (similar silhouette, e.g. `round` for a ball target → orange, clock).
 - 20%: same frame as the target but `flipX` and scale 0.85, placed partially occluded.
-Decoys never count as targets. Tapping a decoy = wrong tap. Targets in Find always use the base color frame so the prompt icon matches exactly.
+Decoys never count as targets. Tapping a decoy = wrong tap. Targets in Find always use the base color frame so the prompt icon matches exactly. Same-family decoys (color, mirror) are scaled with `targetScale` like the targets, so size never gives the answer away; tag decoys keep their natural size.
 
 ## 6. Modes
 ### Find

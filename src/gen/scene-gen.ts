@@ -239,12 +239,18 @@ function place(
   const band = bandOf(pt.y, playable);
   const x = pt.x;
   const y = pt.y;
+  // Look-alike decoys (same family) get the target scale too, otherwise "tap the smallest one"
+  // would give the answer away at high levels.
   // Front-band sprites near the edge would poke out of the square; cap the size at twice the
   // distance to the nearest edge (≥ 2 × SCENE_MARGIN, so the cap bites only on the largest ones).
   const edgeCap = 2 * Math.min(x, y, SCENE_SIZE - x, SCENE_SIZE - y);
   const size = Math.min(
     edgeCap,
-    b.family.baseSize * BAND_MULT[band] * jitter * (b.isTarget ? p.targetScale : 1) * b.extraScale,
+    b.family.baseSize *
+      BAND_MULT[band] *
+      jitter *
+      (b.isTarget || b.decoyKind === 'color' || b.decoyKind === 'mirror' ? p.targetScale : 1) *
+      b.extraScale,
   );
   const placed: Placed = {
     id,
