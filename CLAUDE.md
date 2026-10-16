@@ -2,6 +2,8 @@
 
 You are building a YouTube Playables game published via Playgama Bridge. Read GDD.md, GENERATOR.md, ASSETS.md and TASKS.md before any work. Platform rules below are hard constraints; violating them fails certification.
 
+**Session start:** read `docs/PROGRESS.md` first (where we left off, next steps, Hasan's pending steps), then `docs/questions.md` (decisions that override the spec). **Epic end:** update `docs/PROGRESS.md` (board, measured, next steps) in the same commit.
+
 ## Stack
 - Phaser 3 (exact version pinned in package.json, never `latest`), TypeScript (strict), Vite. No React, no UI frameworks.
 - Package manager: npm. Node ≥ 20. Every dependency is pinned to an exact version (no `^`, no `~`).
