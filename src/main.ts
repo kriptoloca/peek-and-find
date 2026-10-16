@@ -53,3 +53,12 @@ window.addEventListener('orientationchange', () => {
   window.setTimeout(onViewportChange, 60);
   window.setTimeout(onViewportChange, 300);
 });
+
+// Dev-only generator preview (TASKS.md Epic 2). Dead code in production builds: Vite replaces
+// import.meta.env.DEV with false and the dynamic import is dropped with the branch.
+if (import.meta.env.DEV && window.location.hash === '#gen') {
+  void import('./dev/GenPreviewScene').then(({ GenPreviewScene }) => {
+    game.scene.add('GenPreview', GenPreviewScene, true);
+    game.scene.stop('Playground');
+  });
+}

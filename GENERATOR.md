@@ -48,7 +48,7 @@ type Scene = { seed: number; mode: Mode; theme: string; width: number; height: n
 Each theme has 12 families × 3 variants (+ singletons, see ASSETS.md). Families carry tags used for decoy selection. **Color variants are atlas frames baked at build time (ASSETS.md); the generator only picks frame names.**
 
 ## 4. Placement algorithm (Find, and the base scene of Spot)
-1. Playable rect: scene width×height minus 40 px margin.
+1. Playable rect: scene width×height minus a 100 px margin for object centers (front-band sprites reach ~215 px, so 40 px would let them hang off the edge). Slot coordinates are rounded to integers right after sampling; the hard minimum spacing is `2 × hitRadius + 2` to absorb the rounding. An object's size is additionally capped at twice its distance to the nearest scene edge so every AABB stays inside the square.
 2. Depth bands: 3 horizontal bands (back/mid/front). Band scale multipliers 0.8 / 1.0 / 1.15. Objects lower on screen draw on top (z = y).
 3. Candidate positions with **Poisson-disc sampling** (Bridson, spatial grid) using `minSpacing`; take `objectCount` positions; if fewer found, relax spacing by 10% and retry (max 3). Spacing never drops below `2 × hitRadius`.
 4. Assign families: targets first (see mode), then decoys (`round(decoyRatio × objectCount)`), then filler families weighted to avoid > 25% of any single family.
@@ -69,7 +69,8 @@ Decoys never count as targets. Tapping a decoy = wrong tap. Targets in Find alwa
 - Choose `targetCount` instances of ONE family (level < 20) or up to 2 families (level ≥ 20, badges show both).
 - Targets must be ≥ 1.5 × minSpacing apart from each other (spread across the scene).
 - hitRadius = 40.
-- Prompt: `{ kind: "find", items: [{ icon: familyIcon, count }] }`.
+- Targets never flip and always use the base color frame; the prompt shows the exact target frame (`icon` = frame), so a separate `_icon` asset is optional. Singleton families (no color variants) are never targets.
+- Prompt: `{ kind: "find", items: [{ family, icon: targetFrame, count }] }`.
 
 ### Odd One Out
 - Jittered grid (not Poisson): `n = clamp(8 + level, 8, 36)` instances of one frame, identical scale; cell size ≥ 2 × hitRadius + jitter, so spacing holds.
