@@ -77,7 +77,7 @@ Save after every scene. Never block gameplay on save errors. `version` enables m
 Pause: platform pause → freeze tweens/physics/audio, dim overlay; resume on platform resume. Platform mute overrides in-game sound settings.
 
 ## 10. Layout & aspect ratios
-Design unit: the short side of the canvas is always 1080 design px; the long side follows the window aspect, clamped to [1080, 1920]. Phaser Scale `FIT` with that design size; `layout()` runs on every resize.
+Design unit: the short side of the canvas is always 1080 design px; the long side follows the window aspect, clamped to [1080, 2400]. Phaser Scale `FIT` with that design size; `layout()` runs on every resize.
 - **Find / Odd**: scene area is a 1080×1080 square.
   - 9:16: square + HUD bands above/below (as designed).
   - 1:1: HUD shrinks to thin bars inside the square's top/bottom edges.
