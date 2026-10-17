@@ -257,7 +257,9 @@ function place(
     band,
     isTarget: b.isTarget,
     isDecoy: b.isDecoy,
-    hitRadius,
+    // A tap anywhere on the visible sprite counts (player feedback: big sprites "did not react");
+    // spacing still guarantees ≥ 2 × the base radius, nearest center resolves overlaps.
+    hitRadius: Math.max(hitRadius, size / 2),
   };
   if (b.decoyKind) placed.decoyKind = b.decoyKind;
   return placed;

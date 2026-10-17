@@ -23,12 +23,14 @@ Repo: https://github.com/kriptoloca/peek-and-find
 | 9b | Audio: `npm run audio` (sources → OGG + M4A, synthesized placeholders), `src/game/audio.ts` (platform mute wins, pause, first-gesture music), SFX wired to taps/win/stars/hints/buttons/daily | done (code) | 6 tests; headless: 16 files load at boot, music starts on PLAY, SFX order button → pop → tap_correct → scene_complete → confetti → star_1..3 → tap_wrong, pause stops the music, resume restarts it, no console errors |
 | 9c | Real art + sound drop-in (no code change expected), HUD polish pass on the real look | | the art pack, CC0 sounds (kenney.nl was unreachable from the cloud session) |
 | 9d | Playwright e2e (links, player path, audio with bus measurement), own boot screen instead of the Bridge logo, iOS silent-switch unmute, GitHub Pages publishing (production + /test/) | done (code) | 15 e2e tests green locally; CI runs them on every push and on the live site after each deploy |
+| 9e | Phone test 2 fixes: visible color variants (grey tint, pixel-measured in the pipeline), tap circle = whole sprite, taps during the pop-in count, rules e2e (Spot pixel diff, rim tap, early tap) | done (code) | 20 e2e + 145 unit tests |
 | 10 | Size & performance budget | | |
 | 11 | Playgama QA tool, certification checklist | | |
 | 12 | Store assets, submission ZIP | | |
 
 ## Hasan's steps (outside the code)
 - [x] Phone test started 2026-10-16 19:35–19:45: desktop 16:9 and iPhone 9:16 both render; first bug (HUD inside the Spot image) found and fixed. Still wanted: 3 lines on L30/L60 search feel, mirror decoys, Spot miss penalty, rotation.
+- [x] Phone test 2 (2026-10-17): "fifth difference not findable" (grey recolor was invisible) and "tap on a shape not registering" (40 px circle under big sprites, taps during pop-in) → fixed in 9e.
 - [x] Repo renamed to `peek-and-find` (2026-10-16); made public and GitHub Pages switched to "GitHub Actions" (2026-10-17) so the test links in README.md are live.
 - [ ] Art pack: 2–3 candidate links, **SVG sources required** (ASSETS.md). Flat, cute but not childish, no nursery palette. Input contract and drop-in workflow: `assets/README.md`.
 - [ ] Sounds: download Kenney "Interface Sounds" / "Digital Audio" (CC0) or pick freesound CC0 clips, drop them as `assets/audio/<name>.wav|ogg` (names in `src/data/audio-manifest.json`), run `npm run audio`. Until then the synthesized placeholders play.

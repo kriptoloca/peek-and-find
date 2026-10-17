@@ -7,6 +7,7 @@ import {
   rotateHue,
   scaleLightness,
   toHex,
+  variantColor,
 } from '../../scripts/lib/color.mjs';
 
 describe('color', () => {
@@ -76,5 +77,32 @@ describe('color', () => {
     const base = rgbToHsl(parseColor('#e76f51')!);
     expect(rgbToHsl(parseColor(scaleLightness('#e76f51', 0.5))!).l).toBeLessThan(base.l);
     expect(rgbToHsl(parseColor(scaleLightness('#e76f51', 1.3))!).l).toBeGreaterThan(base.l);
+  });
+
+  it('variantColor always yields a visibly different color, greys included', () => {
+    const far = (a: string, b: string): number => {
+      const x = parseColor(a)!;
+      const y = parseColor(b)!;
+      return Math.max(Math.abs(x.r - y.r), Math.abs(x.g - y.g), Math.abs(x.b - y.b));
+    };
+    for (const hex of [
+      '#a8a8a8',
+      '#b5b5b5',
+      '#f4f1de',
+      '#264653',
+      '#e76f51',
+      '#2a9d8f',
+      '#ffffff',
+      '#101010',
+    ]) {
+      const c1 = variantColor(hex, 25)!;
+      const c2 = variantColor(hex, -25)!;
+      expect(far(hex, c1), `${hex} → ${c1}`).toBeGreaterThanOrEqual(48);
+      expect(far(hex, c2), `${hex} → ${c2}`).toBeGreaterThanOrEqual(48);
+      expect(far(c1, c2), `${c1} vs ${c2}`).toBeGreaterThanOrEqual(30);
+    }
+    expect(variantColor('#e76f51', 25)).toBe(rotateHue('#e76f51', 25)); // saturated: plain rotation
+    expect(variantColor('#5aa469', -25)).not.toBe(rotateHue('#5aa469', -25)); // dull: pushed further
+    expect(variantColor('none', 25)).toBeNull();
   });
 });

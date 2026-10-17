@@ -3,10 +3,11 @@
 //
 // Two modes:
 //  - "class": the pack marks recolorable shapes with class="fill-main" (or a `.fill-main` CSS rule).
-//    Only those fills rotate. Chosen automatically when the file contains the class.
+//    Only those fills change, and always visibly (greys are tinted, see variantColor).
+//    Chosen automatically when the file contains the class.
 //  - "auto":  no classes → every plain-colored fill that passes isMainColor() rotates
 //    (saturated, not near-black, not near-white). Strokes never rotate.
-import { isMainColor, parseColor, rotateHue } from './color.mjs';
+import { isMainColor, parseColor, rotateHue, variantColor } from './color.mjs';
 
 export const MAIN_CLASS = 'fill-main';
 
@@ -40,8 +41,10 @@ export function hasMainClass(svg) {
 function rotateValue(value, degrees, checkMain) {
   const rgb = parseColor(value);
   if (!rgb) return null;
-  if (checkMain && !isMainColor(rgb)) return null;
-  return rotateHue(value, degrees);
+  // auto mode: only clearly colored fills rotate (greys are shadows there);
+  // class mode: the author marked this fill, so the variant must always be visible.
+  if (checkMain) return isMainColor(rgb) ? rotateHue(value, degrees) : null;
+  return variantColor(value, degrees);
 }
 
 /**

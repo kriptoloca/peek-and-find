@@ -9,6 +9,7 @@ import {
   spotObjectCount,
 } from './modes/spot5';
 import { HIT_RADIUS_SPOT, SPOT_H, SPOT_W } from '../config';
+import { hitRadiusFor } from './difficulty';
 import type { Placed, Scene, Theme } from './types';
 
 const EPS = 1e-6;
@@ -56,17 +57,21 @@ export function validateScene(scene: Scene, theme: Theme): string[] {
     if (Math.abs(o.scale * fam.baseSize - o.size) > 1e-6) errs.push(`${o.id}: scale/size mismatch`);
   }
 
-  // geometry: centers inside playable, boxes inside the scene, spacing ≥ 2 × hitRadius
+  // geometry: centers inside playable, boxes inside the scene, spacing ≥ 2 × base hit radius
+  // (the tap circle itself grows with the sprite, so circles may overlap; nearest center wins)
+  const baseRadius = hitRadiusFor(scene.mode === 'odd' ? 'odd' : 'find');
   for (const o of scene.objects) {
     if (!rectContainsPoint(scene.playable, o.x, o.y)) errs.push(`${o.id}: center outside playable`);
     if (!rectInside(aabb(o), sceneRect, 0.5)) errs.push(`${o.id}: box outside scene`);
-    if (o.hitRadius <= 0) errs.push(`${o.id}: hitRadius ${String(o.hitRadius)}`);
+    if (o.hitRadius < Math.max(baseRadius, o.size / 2) - EPS) {
+      errs.push(`${o.id}: hit radius ${String(o.hitRadius)} smaller than the sprite`);
+    }
   }
+  const need = 2 * baseRadius;
   for (let i = 0; i < scene.objects.length; i++) {
     const a = scene.objects[i] as Placed;
     for (let j = i + 1; j < scene.objects.length; j++) {
       const b = scene.objects[j] as Placed;
-      const need = 2 * Math.max(a.hitRadius, b.hitRadius);
       if (dist2(a.x, a.y, b.x, b.y) < need * need - EPS) {
         errs.push(`${a.id}/${b.id}: centers closer than ${String(need)}`);
       }
@@ -183,7 +188,7 @@ function validateSpot(scene: Scene, errs: string[]): void {
     for (let j = i + 1; j < sp.b.length; j++) {
       const a = sp.b[i] as Placed;
       const b = sp.b[j] as Placed;
-      const need = 2 * Math.max(a.hitRadius, b.hitRadius);
+      const need = 2 * hitRadiusFor('find');
       if (dist2(a.x, a.y, b.x, b.y) < need * need - EPS)
         errs.push(`spot B ${a.id}/${b.id}: too close`);
     }

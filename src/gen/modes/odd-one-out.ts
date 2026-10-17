@@ -113,7 +113,7 @@ export function generateOdd(seed: number, level: number, theme: Theme): Scene {
       band: bandOf(y, playable),
       isTarget: isOdd,
       isDecoy: false,
-      hitRadius,
+      hitRadius: Math.max(hitRadius, itemSize / 2),
     };
   });
 

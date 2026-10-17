@@ -8,6 +8,19 @@ export interface DebugPoint {
   id: string;
   x: number;
   y: number;
+  /** Screen px: sprite longest side and tap radius (objects only). */
+  size?: number;
+  r?: number;
+  isTarget?: boolean;
+}
+
+/** One Spot difference with its center in both images (screen px) and its tap radius. */
+export interface DebugDifference {
+  id: string;
+  kind: string;
+  a: DebugPoint;
+  b: DebugPoint;
+  r: number;
 }
 
 export interface PeekDebug {
@@ -15,6 +28,10 @@ export interface PeekDebug {
   targets: () => DebugPoint[];
   /** Screen centers of a few non-target objects. */
   wrong: () => DebugPoint[];
+  /** Every object of the current scene (Find/Odd) with size and tap radius in screen px. */
+  objects: () => DebugPoint[];
+  /** The five Spot differences in both images; empty outside Spot. */
+  differences: () => DebugDifference[];
   /** Dev-only levers for the headless checks. */
   simulatePause: (paused: boolean) => void;
   tapHint: () => void;

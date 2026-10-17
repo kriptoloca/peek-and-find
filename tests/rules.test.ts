@@ -61,13 +61,32 @@ describe('resolveTap', () => {
 });
 
 describe('round flow', () => {
-  it('ignores taps before pop-in finished and starts the timer on startRound', () => {
+  it('a tap during the pop-in starts the round and counts; startRound is idempotent', () => {
     const r = newRound(scene(1));
     const t = r.scene.targets[0]!;
-    expect(applyTap(r, t.x, t.y, 0)).toEqual({ kind: 'ignored' });
-    startRound(r, 1000);
-    expect(r.status).toBe('playing');
-    expect(elapsedSeconds(r, 3500)).toBe(2.5);
+    const res = applyTap(r, t.x, t.y, 1000);
+    expect(res.kind).toBe('correct');
+    expect(r.status).toBe('won');
+    expect(r.startedAt).toBe(1000);
+    const r2 = newRound(scene(1));
+    startRound(r2, 1000);
+    startRound(r2, 5000);
+    expect(r2.startedAt).toBe(1000);
+    expect(elapsedSeconds(r2, 3500)).toBe(2.5);
+  });
+
+  it('a tap anywhere on a big sprite counts (hit radius follows the sprite size)', () => {
+    const r = newRound(scene(12));
+    startRound(r, 0);
+    const t = r.scene.targets[0]!;
+    expect(t.hitRadius).toBeGreaterThanOrEqual(t.size / 2);
+    expect(t.hitRadius).toBeGreaterThanOrEqual(40);
+    const edge = applyTap(r, t.x + t.hitRadius * 0.98, t.y, 10);
+    expect(edge.kind === 'correct' || edge.kind === 'wrong').toBe(true);
+    if (edge.kind === 'wrong') {
+      // only a nearer neighbour may claim the tap, never empty space
+      expect(edge.object).not.toBeNull();
+    }
   });
 
   it('finds targets, never penalises a repeat tap, and wins on the last one', () => {

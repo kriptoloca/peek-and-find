@@ -142,3 +142,60 @@ export function scaleLightness(hex, factor) {
   const hsl = rgbToHsl(rgb);
   return toHex(hslToRgb({ h: hsl.h, s: hsl.s, l: Math.max(0, Math.min(1, hsl.l * factor)) }));
 }
+
+/** Below this saturation a fill has no usable hue (greys); such variants are tinted instead. */
+export const NEUTRAL_SAT = 0.2;
+const LIGHT_MAX = 0.85;
+const DARK_LIFT_BELOW = 0.35;
+/** Tint hues for neutral fills: cool for `_c1` (+), warm for `_c2` (−). */
+const TINT_HUE = { cool: 210, warm: 30 };
+/**
+ * A variant must move at least one RGB channel by this much; the sprite's shading (an 18 %
+ * dark overlay, anti-aliased edges) still leaves a clearly visible change after that.
+ */
+export const VARIANT_MIN_DELTA = 48;
+const PUSH_STEPS = 6;
+
+/**
+ * Largest per-channel difference between two colors (0..255).
+ * @param {Rgb} a
+ * @param {Rgb} b
+ */
+export function maxChannelDelta(a, b) {
+  return Math.max(Math.abs(a.r - b.r), Math.abs(a.g - b.g), Math.abs(a.b - b.b));
+}
+
+/**
+ * Color of a baked variant (`_c1` = +degrees, `_c2` = −degrees) that is guaranteed to look
+ * different from the base: saturated mid tones rotate their hue (ASSETS.md); greys get a cool or
+ * warm tint because a hue rotation leaves them unchanged (the "invisible fifth difference" bug);
+ * very light fills come down to a readable lightness and dark fills are lifted a little. When the
+ * first candidate is still too close (dull colors move little under a 25° rotation), the change is
+ * pushed further: more saturation, a lightness step and a wider rotation, until
+ * VARIANT_MIN_DELTA holds.
+ * @param {string} value any value parseColor accepts
+ * @param {number} degrees
+ * @returns {string | null} `#rrggbb`, or null when the value is not a plain color
+ */
+export function variantColor(value, degrees) {
+  const rgb = parseColor(value);
+  if (!rgb) return null;
+  if (degrees === 0) return rotateHue(value, 0);
+  const { h, s, l } = rgbToHsl(rgb);
+  const cool = degrees > 0;
+  const sign = cool ? 1 : -1;
+  const neutral = s < NEUTRAL_SAT;
+  const target = neutral
+    ? { h: cool ? TINT_HUE.cool : TINT_HUE.warm, s: 0.5, l: Math.max(0.3, Math.min(0.7, l)) }
+    : l > LIGHT_MAX
+      ? { h: h + degrees, s: Math.max(s, 0.5), l: 0.7 }
+      : { h: h + degrees, s, l: l < DARK_LIFT_BELOW ? l + 0.12 : l };
+  let cand = hslToRgb(target);
+  for (let i = 0; i < PUSH_STEPS && maxChannelDelta(cand, rgb) < VARIANT_MIN_DELTA; i++) {
+    target.s = Math.min(1, target.s + 0.15);
+    target.l = target.l > 0.5 ? target.l - 0.07 : target.l + 0.07;
+    if (!neutral) target.h += sign * 15;
+    cand = hslToRgb(target);
+  }
+  return toHex(cand);
+}

@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { THEMES, backgroundKey, themeForLevel } from '../../data/themes';
 import { themeToPreload } from '../../gen/difficulty';
-import { installDebug } from '../../dev/debug';
+import { installDebug, type DebugPoint } from '../../dev/debug';
 import { Rng, hashSeed, sceneSeed } from '../../gen/rng';
 import { pickMode } from '../../gen/difficulty';
 import { generateScene } from '../../gen/scene-gen';
@@ -731,16 +731,37 @@ export class GameScene extends Phaser.Scene {
   }
 
   private installDebugHooks(): void {
+    const screenScale = (): number =>
+      this.game.canvas.getBoundingClientRect().width / this.scale.gameSize.width;
+    const toScreenIn = (
+      o: {
+        id: string;
+        x: number;
+        y: number;
+        size?: number;
+        hitRadius?: number;
+        isTarget?: boolean;
+      },
+      image: 'a' | 'b',
+    ): DebugPoint => {
+      const rect = this.game.canvas.getBoundingClientRect();
+      const k = screenScale();
+      const c = this.toCanvas(o.x, o.y, image);
+      const world = this.world.scaleX * k;
+      const p: DebugPoint = { id: o.id, x: rect.left + c.x * k, y: rect.top + c.y * k };
+      if (o.size !== undefined) p.size = o.size * world;
+      if (o.hitRadius !== undefined) p.r = o.hitRadius * world;
+      if (o.isTarget !== undefined) p.isTarget = o.isTarget;
+      return p;
+    };
     const toScreen = (o: {
       id: string;
       x: number;
       y: number;
-    }): { id: string; x: number; y: number } => {
-      const rect = this.game.canvas.getBoundingClientRect();
-      const k = rect.width / this.scale.gameSize.width;
-      const c = this.toCanvas(o.x, o.y, 'a');
-      return { id: o.id, x: rect.left + c.x * k, y: rect.top + c.y * k };
-    };
+      size?: number;
+      hitRadius?: number;
+      isTarget?: boolean;
+    }): DebugPoint => toScreenIn(o, 'a');
     const wrongPoints = (): { id: string; x: number; y: number }[] => {
       const r = this.round;
       if (!r) return [];
@@ -765,6 +786,17 @@ export class GameScene extends Phaser.Scene {
               .map(toScreen)
           : [],
       wrong: () => wrongPoints().map(toScreen),
+      objects: () => (this.round ? this.round.scene.objects.map(toScreen) : []),
+      differences: () =>
+        this.round?.scene.spot
+          ? this.round.scene.spot.differences.map((d) => ({
+              id: d.id,
+              kind: d.kind,
+              a: toScreenIn(d, 'a'),
+              b: toScreenIn(d, 'b'),
+              r: d.hitRadius * this.world.scaleX * screenScale(),
+            }))
+          : [],
       simulatePause: (p: boolean) => {
         this.setPaused(p);
       },

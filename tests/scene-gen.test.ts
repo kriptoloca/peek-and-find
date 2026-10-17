@@ -115,6 +115,21 @@ describe('generateScene (find)', () => {
   });
 });
 
+describe('tap circles', () => {
+  it('cover the whole sprite and never shrink below the base radius, in Find and Odd', () => {
+    for (const level of [1, 12, 40, 80]) {
+      for (const mode of ['find', 'odd'] as const) {
+        const sc = generateScene({ seed: level * 7, level, mode, theme: KITCHEN });
+        for (const o of sc.objects) {
+          expect(o.hitRadius).toBeGreaterThanOrEqual(o.size / 2 - 1e-9);
+          expect(o.hitRadius).toBeGreaterThanOrEqual(40);
+        }
+        expect(validateScene(sc, KITCHEN)).toEqual([]);
+      }
+    }
+  });
+});
+
 describe('helpers', () => {
   it('playable rect uses the margin and bands split it in thirds', () => {
     const r = playableRect();

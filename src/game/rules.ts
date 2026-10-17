@@ -97,6 +97,8 @@ export function remainingTargets(r: Round): number {
 
 /** Applies a tap in scene coordinates. Mutates the round and reports what happened. */
 export function applyTap(r: Round, x: number, y: number, now: number): TapResult {
+  // Fast players tap while sprites are still popping in: that tap starts the round and counts.
+  if (r.status === 'intro') startRound(r, now);
   if (r.status !== 'playing') return { kind: 'ignored' };
   const hit = resolveTap(hitTargets(r.scene), x, y);
   if (!hit) {

@@ -118,7 +118,9 @@ function makePlaced(
     band,
     isTarget: false,
     isDecoy: false,
-    hitRadius,
+    // Objects are not tappable in Spot (only the differences are), but the radius still follows
+    // the sprite so the difference circle derived from it covers what the player sees.
+    hitRadius: Math.max(hitRadius, size / 2),
   };
 }
 
@@ -269,6 +271,7 @@ function trySpot(seed: number, regen: number, level: number, theme: Theme): Scen
         const next = Math.min(edgeCap(obj.x, obj.y), obj.size * f);
         target.size = next;
         target.scale = next / fam.baseSize;
+        target.hitRadius = Math.max(hitRadius, next / 2);
         diffs.push(diff(diffs.length, kind, obj));
         break;
       }

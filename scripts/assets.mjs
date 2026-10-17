@@ -41,6 +41,9 @@ const SPOT_W = 1080;
 const SPOT_H = 840;
 /** Budget checks (ASSETS.md "Budget"), reported, not enforced. */
 const BG_BUDGET = 200 * 1024;
+/** A color variant must change at least this share of the sprite's pixels noticeably. */
+const VARIANT_MIN_CHANGED = 0.08;
+const VARIANT_PIXEL_DELTA = 24;
 
 const args = new Set(process.argv.slice(2));
 const themeArg = process.argv.includes('--theme')
@@ -106,6 +109,29 @@ async function renderSvg(svg, size, { trim }) {
     data.copy(out, y * w * 4, srcStart, srcStart + w * 4);
   }
   return { w, h, data: out };
+}
+
+/**
+ * Share of pixels (opaque in either frame) whose color differs noticeably. Frames of different
+ * size count as fully different (the silhouette changed).
+ * @returns {number} 0..1
+ */
+function frameDifference(a, b) {
+  if (a.w !== b.w || a.h !== b.h) return 1;
+  let opaque = 0;
+  let changed = 0;
+  for (let i = 0; i < a.data.length; i += 4) {
+    if (a.data[i + 3] === 0 && b.data[i + 3] === 0) continue;
+    opaque += 1;
+    const d = Math.max(
+      Math.abs(a.data[i] - b.data[i]),
+      Math.abs(a.data[i + 1] - b.data[i + 1]),
+      Math.abs(a.data[i + 2] - b.data[i + 2]),
+      Math.abs(a.data[i + 3] - b.data[i + 3]),
+    );
+    if (d > VARIANT_PIXEL_DELTA) changed += 1;
+  }
+  return opaque === 0 ? 0 : changed / opaque;
 }
 
 /** Composes placed frames into one PNG and the matching Phaser JSON-hash atlas data. */
@@ -202,6 +228,26 @@ async function buildTheme(theme) {
     throw new Error(
       `${theme.id}: frames do not fit a ${String(ATLAS_MAX)}² atlas even at ${String(FRAME_SIZE_MIN)} px`,
     );
+  // Every `_c1`/`_c2` must look different from its base, or a color decoy / Spot recolor would be
+  // an invisible difference. Placeholders always pass (variantColor); a pack fails loudly here.
+  const byName = new Map(rendered.map((r) => [r.name, r]));
+  const invisible = [];
+  for (const sp of specs) {
+    const base = byName.get(sp.base);
+    for (let c = 1; c <= sp.colors; c++) {
+      const v = byName.get(`${sp.base}_c${String(c)}`);
+      if (!base || !v) continue;
+      const share = frameDifference(base, v);
+      if (share < VARIANT_MIN_CHANGED) {
+        invisible.push(`${sp.file} _c${String(c)} (${String(Math.round(share * 100))}% changed)`);
+      }
+    }
+  }
+  if (invisible.length > 0) {
+    throw new Error(
+      `${theme.id}: color variants not visible enough: ${invisible.join(', ')}. Mark the main fills with class="fill-main" (assets/README.md).`,
+    );
+  }
   const bytes = await writeAtlas(theme.id, packed, rendered);
   const bg = await buildBackground(theme);
   return {

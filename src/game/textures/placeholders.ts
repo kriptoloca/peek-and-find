@@ -50,11 +50,21 @@ const SHAPES: readonly Shape[] = [
   'bolt',
 ];
 
+/** Mirrors scripts/lib/color.mjs variantColor: greys get a cool/warm tint, hues rotate. */
 function shiftHue(color: number, degrees: number): number {
   const rgb = Phaser.Display.Color.IntegerToRGB(color);
   const hsv = Phaser.Display.Color.RGBToHSV(rgb.r, rgb.g, rgb.b);
-  const h = (((hsv.h + degrees / 360) % 1) + 1) % 1;
-  const out = Phaser.Display.Color.HSVToRGB(h, hsv.s, hsv.v) as Phaser.Types.Display.ColorObject;
+  let h = (((hsv.h + degrees / 360) % 1) + 1) % 1;
+  let s = hsv.s;
+  let v = hsv.v;
+  if (degrees !== 0 && hsv.s < 0.2) {
+    h = (degrees > 0 ? 210 : 30) / 360;
+    s = 0.45;
+    v = Math.max(0.45, Math.min(0.85, hsv.v));
+  } else if (degrees !== 0 && hsv.v < 0.45) {
+    v = hsv.v + 0.15;
+  }
+  const out = Phaser.Display.Color.HSVToRGB(h, s, v) as Phaser.Types.Display.ColorObject;
   return Phaser.Display.Color.GetColor(out.r, out.g, out.b);
 }
 

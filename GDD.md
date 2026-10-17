@@ -86,7 +86,7 @@ Design unit: the short side of the canvas is always 1080 design px; the long sid
   - 9:16: two images stacked at scale 1.0 (2 × 840 = 1680) + thin HUD bands.
   - 16:9: side by side at scale ≈ 0.87, thin HUD bands top/bottom.
   - 1:1: not scheduled (scale would drop below 0.8; hit circles would become too small).
-Minimum tap target 72×72 design px. Object hitboxes are circles with radius 40 design px (Find, Odd) or 60 (Spot), independent of sprite size. The generator keeps centers ≥ 2 × radius apart, so circles never overlap; a tap resolves to the nearest center among circles containing the point.
+Minimum tap target 72×72 design px. Object hitboxes are circles with radius `max(40, size / 2)` design px (Find, Odd) or `max(60, size / 2)` (Spot), so the whole visible sprite is tappable. The generator keeps centers ≥ 2 × 40 px apart; where big sprites overlap, a tap resolves to the nearest center among circles containing the point. A tap during the pop-in starts the round and counts (v1.2, player feedback).
 
 ## 11. Art direction
 Flat vector, cute but not childish, bold silhouettes, 2–3 tone shading, saturated but harmonious palette per theme, 0–2 px outlines. No text inside sprites. No AI-generated look (no smeared gradients, no inconsistent line weights). Backgrounds are simple, low-detail, lower contrast than objects.
