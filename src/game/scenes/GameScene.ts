@@ -9,6 +9,7 @@ import type { Mode, Placed, Scene as GenScene, Theme } from '../../gen/types';
 import { AdGate, MIN_INTERVAL_MS } from '../../platform/ads';
 import { getPlatform, type Platform } from '../../platform/bridge';
 import { audio } from '../audio';
+import { haptic, setHapticsEnabled } from '../../platform/haptics';
 import { correctSfx, starSfx } from '../audio-keys';
 import { clearFx, confetti, popCorrect, shakeWrong, sparkle } from '../fx';
 import { Hud } from '../hud';
@@ -152,6 +153,7 @@ export class GameScene extends Phaser.Scene {
     if (this.paused === paused) return;
     this.paused = paused;
     audio.setPaused(paused);
+    setHapticsEnabled(!paused);
     if (paused) {
       this.tweens.pauseAll();
       this.time.paused = true;
@@ -451,6 +453,7 @@ export class GameScene extends Phaser.Scene {
     const r = this.round;
     if (!r) return;
     audio.play(correctSfx(r.found.size - 1));
+    haptic('correct');
     if (r.scene.mode === 'spot') {
       // Ring the difference on both images; the object may be absent in one of them.
       for (const image of ['a', 'b'] as const) {
@@ -479,6 +482,7 @@ export class GameScene extends Phaser.Scene {
 
   private onWrong(object: HitTarget | null, hearts: number): void {
     audio.play('tap_wrong');
+    haptic('wrong');
     this.time.delayedCall(HEART_LOSE_DELAY_MS, () => {
       audio.play('heart_lose');
     });
@@ -503,6 +507,7 @@ export class GameScene extends Phaser.Scene {
     this.platform.sendMessage('gameplay_stopped');
     audio.play('scene_complete');
     audio.play('confetti');
+    haptic('won');
     confetti(this, this.mainRect(), this.fx);
     if (r.scene.params.bigScene) confetti(this, this.mainRect(), this.fx); // GDD §5 bonus confetti
     const ov = this.makeOverlay(0.35);
@@ -532,6 +537,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private onLost(): void {
+    haptic('lost');
     this.platform.sendMessage('level_failed');
     this.platform.sendMessage('gameplay_stopped');
     const ov = this.makeOverlay(0.6);

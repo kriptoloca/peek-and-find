@@ -75,6 +75,7 @@ Save after every scene. Never block gameplay on save errors. `version` enables m
 5. **Fail** overlay: Continue (rewarded) / Retry.
 6. **Daily Complete** overlay: badge, streak, back to title.
 Pause: platform pause → freeze tweens/physics/audio, dim overlay; resume on platform resume. Platform mute overrides in-game sound settings.
+Haptics (v1.2): short vibration on correct (12 ms), wrong (40-50-40), scene won, scene lost, through the Vibration API where it exists (Android); silent no-op on iOS and desktop, off while paused. No toggle, no feature depends on it.
 
 ## 10. Layout & aspect ratios
 Design unit: the short side of the canvas is always 1080 design px; the long side follows the window aspect, clamped to [1080, 2400]. Phaser Scale `FIT` with that design size; `layout()` runs on every resize.
