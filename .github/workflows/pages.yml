@@ -36,6 +36,9 @@ jobs:
       - run: node scripts/audit-dist.mjs
       - id: pages
         uses: actions/configure-pages@v5
+        with:
+          # Creates the Pages site on first run (works once the repository is public).
+          enablement: true
         continue-on-error: true
       - if: steps.pages.outcome != 'success'
         run: echo "::warning::GitHub Pages is not enabled for this repository (Settings → Pages → Source → GitHub Actions). Build OK, deployment skipped."
