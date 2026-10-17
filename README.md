@@ -8,7 +8,7 @@ Design docs: [GDD.md](GDD.md) · [GENERATOR.md](GENERATOR.md) · [ASSETS.md](ASS
 
 ```
 npm install
-npm run dev      # Vite dev server on 0.0.0.0:5173 (open http://<your-lan-ip>:5173 on the phone)
+npm run dev      # prints the phone links for this machine, then Vite dev server on 0.0.0.0:5173
 npm run check    # tsc + eslint + prettier
 npm test         # vitest
 npm run build    # tsc + vite build + dist audit (no external URLs, no compressed files)
@@ -37,7 +37,7 @@ Both run on the Bridge "mock" platform (the host is not YouTube): no real ads, s
 
 Pages has to be switched on once by a repository admin: Settings → Pages → Build and deployment → Source: **GitHub Actions**. A private repository needs a paid GitHub plan for Pages; on a free plan make the repository public first (Settings → General → Danger Zone → Change visibility). Until then the `pages` workflow builds and skips the deployment with a warning. After enabling, push any commit or run the `pages` workflow by hand (Actions → pages → Run workflow); the links go live within a minute.
 
-LAN alternative without Pages: `npm run dev` on the laptop, then open `http://<laptop-lan-ip>:5173/?fakeads=1&adfast=1` on the phone (same Wi-Fi; the dev server already runs in development mode, so every shortcut above works on it too).
+LAN alternative without Pages: `npm run dev` on the laptop prints ready-to-type phone links with this computer's own Wi-Fi address (for example `http://192.168.0.14:5173/?fakeads=1&adfast=1`; `npm run dev:url` prints them again). Phone and laptop must be on the same Wi-Fi, and the firewall must allow Node.js on private networks. The dev server runs in development mode, so every shortcut above works on it too.
 
 ## Phone test (every epic)
 

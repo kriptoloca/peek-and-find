@@ -8,7 +8,7 @@
     "node": ">=20"
   },
   "scripts": {
-    "dev": "vite --host 0.0.0.0",
+    "dev": "node scripts/dev-url.mjs && vite --host 0.0.0.0",
     "build": "tsc --noEmit -p tsconfig.json && vite build && node scripts/audit-dist.mjs",
     "preview": "vite preview --host 0.0.0.0",
     "test": "vitest run",
@@ -19,7 +19,8 @@
     "assets": "node scripts/assets.mjs",
     "assets:check": "node scripts/assets.mjs --check",
     "audio": "node scripts/audio.mjs",
-    "audio:check": "node scripts/audio.mjs --check"
+    "audio:check": "node scripts/audio.mjs --check",
+    "dev:url": "node scripts/dev-url.mjs"
   },
   "dependencies": {
     "@playgama/bridge": "2.3.1",
