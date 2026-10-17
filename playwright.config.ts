@@ -17,7 +17,7 @@ export default defineConfig({
   timeout: 120_000,
   expect: { timeout: 20_000 },
   retries: live ? 1 : 0,
-  workers: 2,
+  workers: process.env.CI ? 1 : 2,
   reporter: [['list']],
   outputDir: 'test-results',
   use: {

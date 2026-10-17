@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import {
+  CANVAS,
   TEST,
   collect,
   expectSameOrigin,
@@ -19,7 +20,7 @@ test('title → PLAY → first scene → find everything → next level', async 
   baseURL,
 }, info) => {
   const c = collect(page);
-  await page.goto(`${TEST}?reset=1`, { waitUntil: 'load' });
+  await page.goto(`${TEST}?reset=1${CANVAS}`, { waitUntil: 'load' });
   await waitTitle(page);
   await shot(page, info, 'title');
   await tapTitle(page, 'play');
@@ -39,7 +40,7 @@ test('fake ads: interstitial after three scenes, rewarded hint and continue', as
   page,
 }, info) => {
   const c = collect(page);
-  await page.goto(`${TEST}?level=5&mode=find&fakeads=1&adfast=1`, { waitUntil: 'load' });
+  await page.goto(`${TEST}?level=5&mode=find&fakeads=1&adfast=1${CANVAS}`, { waitUntil: 'load' });
   await waitState(page, (s) => s.status === 'playing', 'level 5');
   for (let i = 0; i < 3; i++) {
     await winScene(page);
@@ -96,7 +97,7 @@ test('rotation keeps the HUD out of the images; 1:1 never hosts Spot', async ({ 
 
 test('daily chain plays five fixed levels and finishes', async ({ page }, info) => {
   test.setTimeout(240_000);
-  await page.goto(`${TEST}?daily=1&reset=1&today=20261017`, { waitUntil: 'load' });
+  await page.goto(`${TEST}?daily=1&reset=1&today=20261017${CANVAS}`, { waitUntil: 'load' });
   for (let i = 0; i < 5; i++) {
     const s = await waitState(
       page,

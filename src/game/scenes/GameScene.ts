@@ -799,6 +799,8 @@ export class GameScene extends Phaser.Scene {
         now: this.time.now,
         atlasKeys: loadedAtlases(this),
         audio: audio.debug(),
+        fps: Math.round(this.game.loop.actualFps),
+        renderer: this.game.renderer.type === Phaser.CANVAS ? 'canvas' : 'webgl',
         hudInBand: this.hudInBand(),
       }),
     });

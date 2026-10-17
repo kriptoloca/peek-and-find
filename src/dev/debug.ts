@@ -49,6 +49,9 @@ export interface PeekDebug {
     /** Loaded atlas texture keys (empty with runtime placeholders). */
     atlasKeys: string[];
     audio: AudioDebug;
+    /** Frame rate the game loop actually achieves (headless CI runs slowly). */
+    fps: number;
+    renderer: 'webgl' | 'canvas';
   };
 }
 

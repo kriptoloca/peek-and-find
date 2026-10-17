@@ -1,5 +1,14 @@
 import { expect, test } from '@playwright/test';
-import { TEST, collect, state, tapTitle, titleAudio, waitState, waitTitle } from './helpers';
+import {
+  CANVAS,
+  TEST,
+  collect,
+  state,
+  tapTitle,
+  titleAudio,
+  waitState,
+  waitTitle,
+} from './helpers';
 
 /**
  * Audio from the player's side: silent before the first tap, music after PLAY with a real
@@ -24,7 +33,7 @@ async function waitLevel(
 
 test('silent before the first tap, music and SFX after PLAY', async ({ page }) => {
   const c = collect(page);
-  await page.goto(`${TEST}?reset=1`, { waitUntil: 'load' });
+  await page.goto(`${TEST}?reset=1${CANVAS}`, { waitUntil: 'load' });
   await waitTitle(page);
   await page.waitForTimeout(800);
   // Headless Chromium starts the context unlocked (autoplay policy), so "locked" is not asserted;
@@ -46,7 +55,7 @@ test('silent before the first tap, music and SFX after PLAY', async ({ page }) =
 });
 
 test('music toggle on the Title keeps the loop off', async ({ page }) => {
-  await page.goto(`${TEST}?reset=1`, { waitUntil: 'load' });
+  await page.goto(`${TEST}?reset=1${CANVAS}`, { waitUntil: 'load' });
   await waitTitle(page);
   await tapTitle(page, 'music');
   await page.waitForTimeout(300);
@@ -62,7 +71,7 @@ test('music toggle on the Title keeps the loop off', async ({ page }) => {
 });
 
 test('platform pause silences the music, resume restores it', async ({ page }) => {
-  await page.goto(`${TEST}?reset=1`, { waitUntil: 'load' });
+  await page.goto(`${TEST}?reset=1${CANVAS}`, { waitUntil: 'load' });
   await waitTitle(page);
   await tapTitle(page, 'play');
   await waitState(page, (x) => x.status === 'playing' && x.audio.musicPlaying, 'music');

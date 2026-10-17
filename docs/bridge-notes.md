@@ -37,3 +37,13 @@ Source of truth read on 2026-10-16: the SDK repository `github.com/Playgama/brid
 - ~~Whether YouTube certification wants `disableLoadingLogo: true`~~ Decided 2026-10-17: off; the game draws its own boot screen (docs/questions.md, Epic 9d). Revisit only if Playgama requires the logo.
 - Behaviour of `useAdvertisementErrorPopup: false` on YouTube when an ad fails.
 - The Playgama QA tool platform (`PLATFORM_ID.QA_TOOL`) is selected by the tool itself; our build needs no special handling.
+
+## Analytics (added 2026-10-17)
+
+`modules/analytics/AnalyticsModule.ts` posts events to `https://api.playgama.com` (fetch + sendBeacon on
+unload) unless one of these holds: the page is on `localhost` / `127.0.0.1` / `file://`, the platform
+adapter reports `isPlatformExternalCallsSupported === false`, or the config says
+`"sendAnalyticsEvents": false` (ignored on Playgama's own portal, where it is always on).
+`YoutubePlatformBridge.isPlatformExternalCallsSupported` returns `false`, so on YouTube the SDK makes
+no external calls by itself. Our config sets `sendAnalyticsEvents: false` anyway so the GitHub Pages
+test site (mock platform) behaves like YouTube; the live e2e run caught the difference.

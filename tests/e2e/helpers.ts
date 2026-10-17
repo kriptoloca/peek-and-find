@@ -7,6 +7,13 @@ export type TitleSpot = keyof ReturnType<PeekTitleDebug['positions']>;
 
 /** Published path of the development-mode build (dev shortcuts, debug hooks). */
 export const TEST = 'test/';
+/**
+ * Flows that wait on Phaser timers (intro, auto-advance, stars) run on the Canvas renderer:
+ * CI machines have no GPU and SwiftShader WebGL drops to a few fps, where Phaser caps the
+ * delta per frame and its clock falls far behind the wall clock. The links suite keeps the
+ * default (WebGL) renderer, so both paths are covered.
+ */
+export const CANVAS = '&renderer=canvas';
 
 export interface Collected {
   errors: string[];

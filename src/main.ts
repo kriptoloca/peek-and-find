@@ -25,8 +25,14 @@ installIosUnmute();
 const first = viewport();
 let current = designSize(first.w, first.h);
 
+// Dev builds: ?renderer=canvas runs the Canvas renderer (headless CI machines have no GPU and
+// crawl under SwiftShader WebGL, which starves Phaser's timers). Production is always AUTO.
+const rendererParam = import.meta.env.DEV
+  ? new URLSearchParams(window.location.search).get('renderer')
+  : null;
+
 const game = new Phaser.Game({
-  type: Phaser.AUTO,
+  type: rendererParam === 'canvas' ? Phaser.CANVAS : Phaser.AUTO,
   parent: 'game',
   backgroundColor: '#1b1f2a',
   banner: false,
