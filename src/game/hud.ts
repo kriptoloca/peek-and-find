@@ -9,6 +9,8 @@ const HEART_MAX = 72;
 const ITEM_GAP = 24;
 const BADGE_SIZE = 52;
 const HINT_SIZE = 110;
+/** Home button (GDD v1.3): same size rule as the hint, opposite end of the secondary bar. */
+const HOME_SIZE = 96;
 /** 1:1 only: the HUD bars sit inside the square, over the scene; a dim strip separates them. */
 const HUD_BACKING_ALPHA = 0.45;
 const COLOR_BADGE_TEXT = '#1b1f2a';
@@ -34,6 +36,8 @@ export class Hud {
   private items: PromptItemView[] = [];
   private readonly hint: Phaser.GameObjects.Image;
   private onHintTap: (() => void) | null = null;
+  private readonly home: Phaser.GameObjects.Image;
+  private onHomeTap: (() => void) | null = null;
   private layoutCache: Layout | null = null;
   /** True while the Spot 5 bands are in use; re-applies must keep using them. */
   private spotMode = false;
@@ -64,6 +68,34 @@ export class Hud {
       this.onHintTap?.();
     });
     this.container.add(this.hint);
+    this.home = addImage(scene, 0, 0, UI.home).setInteractive({ useHandCursor: true });
+    this.home.on(Phaser.Input.Events.POINTER_UP, () => {
+      this.onHomeTap?.();
+    });
+    this.container.add(this.home);
+  }
+
+  /** Home button (GDD v1.3): back to the Title at any time; the scene decides what that means. */
+  setHome(onTap: (() => void) | null): void {
+    this.onHomeTap = onTap;
+  }
+
+  /** True when a canvas point lands on the home button (so the scene ignores it). */
+  hitsHome(x: number, y: number): boolean {
+    const r = this.home.displayWidth / 2 + 10;
+    return (x - this.home.x) ** 2 + (y - this.home.y) ** 2 <= r * r;
+  }
+
+  /** Canvas (design px) center of the home button; dev hooks turn it into a screen point. */
+  homeCenter(): { x: number; y: number } {
+    return { x: this.home.x, y: this.home.y };
+  }
+
+  private placeHome(sec: Rect, placement: 'row' | 'column'): void {
+    const size = Math.min(HOME_SIZE, Math.max(64, (placement === 'row' ? sec.h : sec.w) - 24));
+    this.home.setDisplaySize(size, size);
+    if (placement === 'column') this.home.setPosition(sec.x + sec.w / 2, sec.y + 90);
+    else this.home.setPosition(sec.x + size / 2 + 24, sec.y + sec.h / 2);
   }
 
   /** Rewarded hint button (GDD §6): shown only when the platform supports rewarded ads. */
@@ -180,14 +212,17 @@ export class Hud {
     this.layoutCache = l;
     this.spotMode = false;
     this.placeHint(l.hud.secondary, Math.min(HINT_SIZE, Math.max(72, l.hud.secondary.h - 16)));
+    this.placeHome(l.hud.secondary, l.hud.placement === 'columns' ? 'column' : 'row');
     const p = l.hud.primary;
     if (l.hud.placement === 'columns') this.applyColumn(p);
     else this.applyRow(p);
     this.backing.clear();
     if (l.hud.placement === 'overlay') {
-      this.backing.fillStyle(0x000000, HUD_BACKING_ALPHA).fillRect(p.x, p.y, p.w, p.h);
       const sec = l.hud.secondary;
-      if (this.hint.visible) this.backing.fillRect(sec.x, sec.y, sec.w, sec.h);
+      this.backing
+        .fillStyle(0x000000, HUD_BACKING_ALPHA)
+        .fillRect(p.x, p.y, p.w, p.h)
+        .fillRect(sec.x, sec.y, sec.w, sec.h);
     }
   }
 
@@ -198,6 +233,7 @@ export class Hud {
     this.backing.clear();
     this.applyRow(l.spot.hudTop);
     this.placeHint(l.spot.hudBottom, Math.min(HINT_SIZE, Math.max(72, l.spot.hudBottom.h - 16)));
+    this.placeHome(l.spot.hudBottom, 'row');
   }
 
   private applyRow(p: Rect): void {

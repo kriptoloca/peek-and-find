@@ -36,6 +36,8 @@ export interface PeekDebug {
   simulatePause: (paused: boolean) => void;
   tapHint: () => void;
   tapContinue: () => void;
+  /** Screen center of the HUD home button (back to the Title). */
+  home: () => DebugPoint;
   state: () => {
     level: number;
     /** Level of the scene being played (differs from `level` in the daily chain). */

@@ -38,7 +38,7 @@ Repo: https://github.com/kriptoloca/peek-and-find
 - [ ] Sounds: download Kenney "Interface Sounds" / "Digital Audio" (CC0) or pick freesound CC0 clips, drop them as `assets/audio/<name>.wav|ogg` (names in `src/data/audio-manifest.json`), run `npm run audio`. Until then the synthesized placeholders play.
 - [ ] Playgama developer account (developer.playgama.com) and YouTube Playables interest form.
 - [ ] Phone test of the Bridge build (links in README.md → Test links; `https://kriptoloca.github.io/peek-and-find/test/?fakeads=1&adfast=1`). First report (2026-10-17): no sound heard on iPhone Safari; the ringer switch silences Web Audio there, now worked around (`src/platform/ios-unmute.ts`). Third report (2026-10-17, production link, level 10): still no music, no vibration (iPhone: expected, no API). **Next:** open `https://kriptoloca.github.io/peek-and-find/test/?audiodebug=1`, tap PLAY, screenshot the green text box in the corner and send it; also check the music toggle on the Title is on (it is persisted). `?fakeads=1&adfast=1` on iPhone — interstitial after 3 scenes, hint bulb, Continue on the fail screen, rotation during an ad.
-- [ ] Decide: in-game home button back to the Title (GDD change; docs/questions.md 2026-10-17 phone test 3).
+- [x] Decided 2026-10-17: in-game home button back to the Title (GDD v1.3), shipped.
 
 ## Open design questions (decide after the phone test)
 - Theme cadence: levels 1–9 are all kitchen (second theme at 10). Early variety helps day-0 retention; unlocking beach at level 4 is one constant (`THEME_UNLOCK_EVERY`) but changes GDD §5 (visual-review.md §5).
@@ -55,7 +55,7 @@ See `docs/questions.md` (every deviation from the spec with its reason).
 ## Measured
 | Metric | Value |
 |---|---|
-| Tests | 156 unit + 20 e2e (+ `npm run tour`, 17 screenshot flows, not a gate) |
+| Tests | 156 unit + 22 e2e (+ `npm run tour`, 17 screenshot flows, not a gate) |
 | Bundle (dist/) | 4.6 MB shipped; initial load before GameReady 2.24 MB (OGG) / 2.26 MB (M4A): bundle 1.22 + Bridge 0.29 + kitchen atlas 0.50 + UI 0.03 + backgrounds + audio 0.16 (`docs/size-report.md`) |
 | Atlases | 2048×2048 per theme, 112 frames at 208 px; UI 1024×512 |
 | Level 80 generation | ≈ 0.4 ms |

@@ -146,6 +146,9 @@ export class GameScene extends Phaser.Scene {
     this.hud.setHint(this.platform.rewardedSupported, () => {
       void this.onHint();
     });
+    this.hud.setHome(() => {
+      this.goHome();
+    });
     this.relayout();
     if (import.meta.env.DEV) this.applyDevParams();
     void this.startLevel();
@@ -430,7 +433,7 @@ export class GameScene extends Phaser.Scene {
 
   private readonly onPointer = (pointer: Phaser.Input.Pointer): void => {
     if (this.devMenuOpen || this.paused || this.adInProgress) return;
-    if (this.hud.hitsHint(pointer.x, pointer.y)) return;
+    if (this.hud.hitsHint(pointer.x, pointer.y) || this.hud.hitsHome(pointer.x, pointer.y)) return;
     if (import.meta.env.DEV && this.checkDevTaps(pointer)) return;
     if (this.overlay) {
       this.onOverlayTap(pointer);
@@ -655,6 +658,21 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  /**
+   * Home button (GDD v1.3): back to the Title from anywhere in play, no confirmation. The
+   * abandoned scene keeps its seed (same attempt), so PLAY returns to the very same scene; a
+   * daily chain restarts from its first scene. Ignored while paused or during an ad.
+   */
+  private goHome(): void {
+    if (this.paused || this.adInProgress || this.devMenuOpen) return;
+    audio.play('button');
+    const r = this.round;
+    if (r && (r.status === 'playing' || r.status === 'intro')) {
+      this.platform.sendMessage('gameplay_stopped');
+    }
+    this.scene.start('Title');
+  }
+
   private onOverlayTap(pointer: Phaser.Input.Pointer): void {
     const r = this.round;
     if (!r || !this.overlay) return;
@@ -820,6 +838,12 @@ export class GameScene extends Phaser.Scene {
       },
       tapContinue: () => {
         void this.onContinue();
+      },
+      home: () => {
+        const rect = this.game.canvas.getBoundingClientRect();
+        const k = screenScale();
+        const c = this.hud.homeCenter();
+        return { id: 'home', x: rect.left + c.x * k, y: rect.top + c.y * k };
       },
       state: () => ({
         level: progress.level,

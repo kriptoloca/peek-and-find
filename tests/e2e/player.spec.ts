@@ -118,3 +118,26 @@ test('daily chain plays five fixed levels and finishes', async ({ page }, info) 
   expect(done.lastDailyDate).toBe('20261017');
   await shot(page, info, 'daily-complete');
 });
+
+test('home button: back to the Title from play, PLAY returns to the same scene', async ({
+  page,
+}, info) => {
+  for (const view of [
+    { width: 390, height: 844 },
+    { width: 700, height: 700 },
+  ]) {
+    await page.setViewportSize(view);
+    await page.goto(`${TEST}?level=7&mode=find&reset=1${CANVAS}`, { waitUntil: 'load' });
+    const before = await waitState(page, (s) => s.status === 'playing', 'playing');
+    const home = await page.evaluate(() => window.__peekDebug?.home());
+    if (!home) throw new Error('home hook missing');
+    await page.mouse.click(home.x, home.y);
+    await waitTitle(page);
+    await shot(page, info, `title-after-home-${String(view.width)}`);
+    await tapTitle(page, 'play');
+    const again = await waitState(page, (s) => s.status === 'playing', 'same scene');
+    expect(again.level).toBe(7);
+    expect(again.sceneLevel).toBe(before.sceneLevel);
+    expect(again.theme).toBe(before.theme);
+  }
+});

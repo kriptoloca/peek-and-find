@@ -70,7 +70,7 @@ Save after every scene. Never block gameplay on save errors. `version` enables m
 ## 9. Screens
 1. **Boot**: load atlas for current theme + UI; call GameReady only when input works.
 2. **Title**: logo, PLAY (big), DAILY (streak badge), sound/music toggles. No settings screen.
-3. **Game**: scene area + HUD (targets bar, hearts, level number, hint button).
+3. **Game**: scene area + HUD (targets bar, hearts, level number, hint button, home button). Home (v1.3): back to the Title from anywhere in play, no confirmation and no menu; the abandoned scene keeps its seed, so PLAY returns to the same scene; a daily chain restarts from its first scene. The platform's own pause/exit control stays the primary way out on YouTube.
 4. **Scene Complete** overlay: stars, +score, auto-advance.
 5. **Fail** overlay: Continue (rewarded) / Retry.
 6. **Daily Complete** overlay: badge, streak, back to title.
