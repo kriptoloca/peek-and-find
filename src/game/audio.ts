@@ -37,6 +37,8 @@ export interface AudioDebug {
   played: string[];
   /** SFX requests dropped by a gate (mute, pause, lock, missing file). */
   dropped: number;
+  /** RMS of the last 2048 samples on the master bus (−1 without Web Audio). Dev checks only. */
+  level: number;
 }
 
 function isIndex(raw: unknown): raw is AudioIndex {
@@ -66,6 +68,8 @@ class AudioManager {
   private readonly played: string[] = [];
   private dropped = 0;
   private unsubscribe: (() => void) | null = null;
+  private analyser: AnalyserNode | null = null;
+  private levelBuf: Float32Array<ArrayBuffer> | null = null;
 
   /** Binds the game-wide sound manager and the platform's audio state. */
   attach(scene: Phaser.Scene, platform: Platform): void {
@@ -139,6 +143,22 @@ class AudioManager {
     }
   }
 
+  /** Signal on the master bus, so a headless test can tell "playing" from "audible". */
+  level(): number {
+    const m = this.sound;
+    if (!(m instanceof Phaser.Sound.WebAudioSoundManager)) return -1;
+    if (!this.analyser || !this.levelBuf) {
+      this.analyser = m.context.createAnalyser();
+      this.analyser.fftSize = 2048;
+      m.masterVolumeNode.connect(this.analyser);
+      this.levelBuf = new Float32Array(this.analyser.fftSize);
+    }
+    this.analyser.getFloatTimeDomainData(this.levelBuf);
+    let sum = 0;
+    for (const v of this.levelBuf) sum += v * v;
+    return Math.sqrt(sum / this.levelBuf.length);
+  }
+
   debug(): AudioDebug {
     return {
       ready: this.sound !== null,
@@ -149,6 +169,7 @@ class AudioManager {
       musicPlaying: this.music?.isPlaying ?? false,
       played: [...this.played],
       dropped: this.dropped,
+      level: this.level(),
     };
   }
 }

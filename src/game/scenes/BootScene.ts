@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { t } from '../../data/strings';
 import { THEMES, themeForLevel } from '../../data/themes';
 import { themeToPreload } from '../../gen/difficulty';
 import type { Theme } from '../../gen/types';
@@ -12,7 +13,13 @@ import {
   readAtlasIndex,
 } from '../assets';
 import { AUDIO_INDEX_KEY, AUDIO_INDEX_URL, audio, loadAudio } from '../audio';
+import { computeLayout } from '../layout';
 import { attachSaveStore, hydrateProgress, progress, resetProgress } from '../state';
+
+const BOOT_BAR_W = 360;
+const BOOT_BAR_H = 10;
+const COLOR_BAR_TRACK = 0x2e3650;
+const COLOR_BAR_FILL = 0x3b7dd8;
 
 /**
  * Boot (GDD §9 screen 1): Bridge, save, then the UI atlas and the player's current theme (plus
@@ -33,7 +40,31 @@ export class BootScene extends Phaser.Scene {
 
   create(): void {
     readAtlasIndex(this);
+    this.showLoading();
     void this.boot();
+  }
+
+  /** Our own boot screen (the Bridge loading logo is off): wordmark + a loader progress bar. */
+  private showLoading(): void {
+    const { width, height } = this.scale.gameSize;
+    const s = computeLayout(width, height).scene;
+    const cx = s.x + s.w / 2;
+    const cy = s.y + s.h / 2;
+    this.add
+      .text(cx, cy - 40, t().title, {
+        fontFamily: 'Arial, Helvetica, sans-serif',
+        fontSize: '72px',
+        fontStyle: 'bold',
+        color: '#ffffff',
+      })
+      .setOrigin(0.5);
+    this.add.rectangle(cx, cy + 50, BOOT_BAR_W, BOOT_BAR_H, COLOR_BAR_TRACK);
+    const fill = this.add
+      .rectangle(cx - BOOT_BAR_W / 2, cy + 50, 1, BOOT_BAR_H, COLOR_BAR_FILL)
+      .setOrigin(0, 0.5);
+    this.load.on(Phaser.Loader.Events.PROGRESS, (v: number) => {
+      fill.width = Math.max(1, BOOT_BAR_W * v);
+    });
   }
 
   private async boot(): Promise<void> {

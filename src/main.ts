@@ -3,6 +3,7 @@ import { designSize } from './game/layout';
 import { BootScene } from './game/scenes/BootScene';
 import { GameScene } from './game/scenes/GameScene';
 import { TitleScene } from './game/scenes/TitleScene';
+import { installIosUnmute } from './platform/ios-unmute';
 
 /**
  * Scale strategy (GDD §10, CLAUDE.md rule 5): Scale.FIT with a design size that follows the
@@ -17,6 +18,9 @@ function viewport(): { w: number; h: number } {
     h: Math.round(vv?.height ?? window.innerHeight),
   };
 }
+
+// iOS Safari: make Web Audio ignore the ringer switch after the first tap (GDD §12).
+installIosUnmute();
 
 const first = viewport();
 let current = designSize(first.w, first.h);

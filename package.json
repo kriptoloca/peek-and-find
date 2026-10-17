@@ -20,7 +20,10 @@
     "assets:check": "node scripts/assets.mjs --check",
     "audio": "node scripts/audio.mjs",
     "audio:check": "node scripts/audio.mjs --check",
-    "dev:url": "node scripts/dev-url.mjs"
+    "dev:url": "node scripts/dev-url.mjs",
+    "build:test": "npm run build && node scripts/build-test.mjs && node scripts/audit-dist.mjs",
+    "e2e": "npm run build:test && playwright test",
+    "e2e:only": "playwright test"
   },
   "dependencies": {
     "@playgama/bridge": "2.3.1",
@@ -28,6 +31,7 @@
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
+    "@playwright/test": "1.56.1",
     "@types/node": "22.20.5",
     "eslint": "10.12.0",
     "eslint-config-prettier": "10.1.8",

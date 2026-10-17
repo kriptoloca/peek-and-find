@@ -52,10 +52,22 @@ export interface PeekDebug {
   };
 }
 
+/** Title screen hooks (dev builds): tap targets in screen px, toggle state, audio state. */
+export interface PeekTitleDebug {
+  positions: () => Record<'play' | 'daily' | 'sound' | 'music', DebugPoint>;
+  state: () => { sound: boolean; music: boolean };
+  audio: () => AudioDebug;
+}
+
 declare global {
   interface Window {
     __peekDebug?: PeekDebug;
+    __peekTitle?: PeekTitleDebug;
   }
+}
+
+export function installTitleDebug(d: PeekTitleDebug): void {
+  window.__peekTitle = d;
 }
 
 export function installDebug(d: PeekDebug): void {

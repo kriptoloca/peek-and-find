@@ -6,5 +6,5 @@
     "minimumDelayBetweenInterstitial": 120,
     "useAdvertisementErrorPopup": false
   },
-  "disableLoadingLogo": false
+  "disableLoadingLogo": true
 }

@@ -34,6 +34,6 @@ Source of truth read on 2026-10-16: the SDK repository `github.com/Playgama/brid
 - Dev builds: `?fakeads=1` makes the stub simulate ads (1.5 s overlay, rewarded always earned) so the hint/continue/interstitial flows can be tested without a platform.
 
 ## Still to verify on the real platform (Epic 11)
-- Whether YouTube certification wants `disableLoadingLogo: true` (the SDK shows a Playgama loading screen until init completes).
+- ~~Whether YouTube certification wants `disableLoadingLogo: true`~~ Decided 2026-10-17: off; the game draws its own boot screen (docs/questions.md, Epic 9d). Revisit only if Playgama requires the logo.
 - Behaviour of `useAdvertisementErrorPopup: false` on YouTube when an ad fails.
 - The Playgama QA tool platform (`PLATFORM_ID.QA_TOOL`) is selected by the tool itself; our build needs no special handling.

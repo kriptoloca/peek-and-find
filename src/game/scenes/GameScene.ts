@@ -257,7 +257,15 @@ export class GameScene extends Phaser.Scene {
       seed = d.seed;
     } else {
       level = progress.level;
-      mode = this.forcedMode ?? modeForLevel(level, progress.seedSalt, canHostSpot);
+      // Dev ?mode= never bypasses the Spot layout gate (GDD §4: 1:1 cannot host two images).
+      const forced = this.forcedMode;
+      if (forced === 'spot' && !canHostSpot && import.meta.env.DEV) {
+        console.warn('peek: ?mode=spot refused, this aspect cannot host Spot; picking a mode');
+      }
+      mode =
+        forced && (forced !== 'spot' || canHostSpot)
+          ? forced
+          : modeForLevel(level, progress.seedSalt, canHostSpot);
       seed = sceneSeed(mode, level, progress.attempt, progress.seedSalt);
     }
     this.theme = themeForLevel(level);

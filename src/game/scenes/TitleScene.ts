@@ -6,6 +6,7 @@ import { getPlatform } from '../../platform/bridge';
 import { persistProgress, progress } from '../state';
 import { addImage, setImageFrame } from '../assets';
 import { audio } from '../audio';
+import { installTitleDebug } from '../../dev/debug';
 import { UI } from '../textures/placeholders';
 
 const COLOR_BG = 0x1b1f2a;
@@ -24,6 +25,13 @@ const TOGGLE = 96;
  */
 export class TitleScene extends Phaser.Scene {
   private root!: Phaser.GameObjects.Container;
+  /** Design-px centers of the tap targets (dev hooks expose them in screen px). */
+  private readonly spots = {
+    play: { x: 0, y: 0 },
+    daily: { x: 0, y: 0 },
+    sound: { x: 0, y: 0 },
+    music: { x: 0, y: 0 },
+  };
 
   constructor() {
     super('Title');
@@ -36,6 +44,7 @@ export class TitleScene extends Phaser.Scene {
       this.scale.off(Phaser.Scale.Events.RESIZE, this.build);
     });
     this.build();
+    if (import.meta.env.DEV) this.installDebugHooks();
     // CLAUDE.md rule 3: GameReady only when the player can interact (the title is up).
     const platform = getPlatform();
     platform.sendMessage('in_game_loading_stopped');
@@ -66,6 +75,7 @@ export class TitleScene extends Phaser.Scene {
 
     // PLAY
     const playY = s.y + s.h * 0.48;
+    this.spots.play = { x: cx, y: playY };
     this.button(cx, playY, PLAY_W, PLAY_H, COLOR_PLAY, UI.play, strings.play, '', () => {
       this.scene.start('Game', { daily: false });
     });
@@ -73,6 +83,7 @@ export class TitleScene extends Phaser.Scene {
     // DAILY with streak badge / check
     const status = dailyStatus(progress, todayKey());
     const dailyY = playY + PLAY_H / 2 + 50 + DAILY_H / 2;
+    this.spots.daily = { x: cx, y: dailyY };
     const badge = status.done ? '' : status.streak > 0 ? String(status.streak) : '';
     this.button(
       cx,
@@ -105,6 +116,8 @@ export class TitleScene extends Phaser.Scene {
 
     // toggles (audio arrives in epic 9; the flags are persisted now)
     const ty = s.y + s.h * 0.86;
+    this.spots.sound = { x: cx - 80, y: ty };
+    this.spots.music = { x: cx + 80, y: ty };
     this.toggle(
       cx - 80,
       ty,
@@ -122,6 +135,24 @@ export class TitleScene extends Phaser.Scene {
       UI.musicOff,
     );
   };
+
+  private installDebugHooks(): void {
+    const toScreen = (p: { x: number; y: number }): { id: string; x: number; y: number } => {
+      const rect = this.game.canvas.getBoundingClientRect();
+      const k = rect.width / this.scale.gameSize.width;
+      return { id: 'title', x: rect.left + p.x * k, y: rect.top + p.y * k };
+    };
+    installTitleDebug({
+      positions: () => ({
+        play: toScreen(this.spots.play),
+        daily: toScreen(this.spots.daily),
+        sound: toScreen(this.spots.sound),
+        music: toScreen(this.spots.music),
+      }),
+      state: () => ({ sound: progress.sound, music: progress.music }),
+      audio: () => audio.debug(),
+    });
+  }
 
   private button(
     x: number,
