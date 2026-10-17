@@ -40,11 +40,31 @@ export function isIosLike(): boolean {
   return /iPad|iPhone|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
 }
 
+export interface IosUnmuteState {
+  /** False on every non-iOS device: nothing is installed there. */
+  ios: boolean;
+  /** 'none' before the first gesture, then 'playing' (session switched) or 'paused'. */
+  element: 'none' | 'playing' | 'paused';
+  /** Message of the last rejected play(), if any (autoplay refusal, decode problem). */
+  lastError: string;
+  /** Gestures seen so far. */
+  kicks: number;
+}
+
+const state: IosUnmuteState = { ios: false, element: 'none', lastError: '', kicks: 0 };
+
+/** Dev diagnostics (`?audiodebug=1`): what the silent-loop trick is doing. */
+export function iosUnmuteState(): IosUnmuteState {
+  return { ...state };
+}
+
 /** Idempotent; call once at startup. */
 export function installIosUnmute(): void {
   if (typeof document === 'undefined' || !isIosLike()) return;
+  state.ios = true;
   let el: HTMLAudioElement | null = null;
   const kick = (): void => {
+    state.kicks += 1;
     if (!el) {
       el = document.createElement('audio');
       el.src = silentWavUrl();
@@ -52,10 +72,19 @@ export function installIosUnmute(): void {
       el.preload = 'auto';
       el.setAttribute('playsinline', '');
     }
-    if (el.paused) {
-      el.play().catch(() => {
-        /* not allowed yet: the next gesture tries again */
-      });
+    const a = el;
+    if (a.paused) {
+      a.play()
+        .then(() => {
+          state.element = a.paused ? 'paused' : 'playing';
+        })
+        .catch((e: unknown) => {
+          /* not allowed yet: the next gesture tries again */
+          state.element = 'paused';
+          state.lastError = e instanceof Error ? e.message : String(e);
+        });
+    } else {
+      state.element = 'playing';
     }
   };
   document.addEventListener('touchend', kick, { passive: true });

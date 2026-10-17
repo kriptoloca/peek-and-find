@@ -36,6 +36,7 @@ Both run on the Bridge "mock" platform (the host is not YouTube): no real ads, s
 | Ad flows (fake ads, first interstitial after 3 scenes) | `https://kriptoloca.github.io/peek-and-find/test/?fakeads=1&adfast=1` |
 | Daily chain | `https://kriptoloca.github.io/peek-and-find/test/?daily=1` |
 | Daily on another date (streaks) | `…/test/?daily=1&today=20261017` |
+| Audio diagnostics on the phone (state drawn in a corner; screenshot it) | `https://kriptoloca.github.io/peek-and-find/test/?audiodebug=1` |
 | Generator preview | `https://kriptoloca.github.io/peek-and-find/test/#gen` |
 | Dev menu | triple-tap the top-left corner in the `/test/` build |
 

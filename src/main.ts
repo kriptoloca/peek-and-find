@@ -31,6 +31,13 @@ const rendererParam = import.meta.env.DEV
   ? new URLSearchParams(window.location.search).get('renderer')
   : null;
 
+// Dev builds: ?audiodebug=1 draws the audio state in a corner (phones have no console).
+if (import.meta.env.DEV && new URLSearchParams(window.location.search).has('audiodebug')) {
+  void import('./dev/audio-overlay').then((m) => {
+    m.installAudioOverlay();
+  });
+}
+
 const game = new Phaser.Game({
   type: rendererParam === 'canvas' ? Phaser.CANVAS : Phaser.AUTO,
   parent: 'game',

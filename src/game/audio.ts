@@ -39,6 +39,17 @@ export interface AudioDebug {
   dropped: number;
   /** RMS of the last 2048 samples on the master bus (−1 without Web Audio). Dev checks only. */
   level: number;
+  /** Phaser's own unlock flag (set when the first gesture resumed the context). */
+  unlocked: boolean;
+  /** Web Audio context state ('running', 'suspended', 'interrupted' on iOS) or 'none'. */
+  contextState: string;
+  /** What the device says it can decode; Phaser picks the first format of each file in this order: ogg, m4a. */
+  formats: { ogg: boolean; m4a: boolean; webAudio: boolean };
+  /** Keys of the index that are not in the audio cache after loading (load or decode failed). */
+  missing: string[];
+  /** The player's Title toggles. */
+  soundOn: boolean;
+  musicOn: boolean;
 }
 
 function isIndex(raw: unknown): raw is AudioIndex {
@@ -46,6 +57,9 @@ function isIndex(raw: unknown): raw is AudioIndex {
   const r = raw as Record<string, unknown>;
   return r.version === 1 && typeof r.sounds === 'object' && r.sounds !== null;
 }
+
+/** Keys that did not make it into the audio cache (XHR failure or decodeAudioData failure). */
+const missingKeys: string[] = [];
 
 /** Loads every file of the index that is not in the audio cache yet. Boot calls this once. */
 export async function loadAudio(scene: Phaser.Scene): Promise<void> {
@@ -56,6 +70,10 @@ export async function loadAudio(scene: Phaser.Scene): Promise<void> {
   await runLoader(scene, (loader) => {
     for (const [key, e] of pending) loader.audio(key, [e.ogg, e.m4a]);
   });
+  // A decode failure is only logged by Phaser (not a FILE_LOAD_ERROR); the cache tells the truth.
+  for (const [key] of pending) {
+    if (!scene.cache.audio.exists(key) && !missingKeys.includes(key)) missingKeys.push(key);
+  }
 }
 
 class AudioManager {
@@ -70,11 +88,14 @@ class AudioManager {
   private unsubscribe: (() => void) | null = null;
   private analyser: AnalyserNode | null = null;
   private levelBuf: Float32Array<ArrayBuffer> | null = null;
+  private device: { ogg: boolean; m4a: boolean; webAudio: boolean } | null = null;
 
   /** Binds the game-wide sound manager and the platform's audio state. */
   attach(scene: Phaser.Scene, platform: Platform): void {
     this.sound = scene.sound;
     this.cache = scene.cache.audio;
+    const d = scene.sys.game.device.audio;
+    this.device = { ogg: d.ogg, m4a: d.m4a, webAudio: d.webAudio };
     this.platformEnabled = platform.isAudioEnabled();
     this.unsubscribe?.();
     this.unsubscribe = platform.onAudio((enabled) => {
@@ -170,6 +191,15 @@ class AudioManager {
       played: [...this.played],
       dropped: this.dropped,
       level: this.level(),
+      // Phaser sets `unlocked` on the manager once the first gesture resumed the context; it is
+      // not in the typings.
+      unlocked: (this.sound as unknown as { unlocked?: boolean } | null)?.unlocked ?? false,
+      contextState:
+        this.sound instanceof Phaser.Sound.WebAudioSoundManager ? this.sound.context.state : 'none',
+      formats: this.device ?? { ogg: false, m4a: false, webAudio: false },
+      missing: [...missingKeys],
+      soundOn: progress.sound,
+      musicOn: progress.music,
     };
   }
 }

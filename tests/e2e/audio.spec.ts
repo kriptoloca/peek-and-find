@@ -84,3 +84,15 @@ test('platform pause silences the music, resume restores it', async ({ page }) =
   const resumed = await waitState(page, (x) => x.audio.musicPlaying, 'resumed');
   expect(resumed.audio.paused).toBe(false);
 });
+
+test('?audiodebug=1 draws the audio state on screen (phone diagnostics)', async ({ page }) => {
+  await page.goto(`${TEST}?reset=1&audiodebug=1${CANVAS}`, { waitUntil: 'load' });
+  await waitTitle(page);
+  const box = page.locator('#audio-debug');
+  await expect(box).toBeVisible();
+  await expect(box).toContainText('formats: ogg=');
+  await expect(box).toContainText('missing: -'); // every file of the index decoded
+  await tapTitle(page, 'play');
+  await waitState(page, (s) => s.status === 'playing', 'playing');
+  await expect(box).toContainText('playing=true');
+});
