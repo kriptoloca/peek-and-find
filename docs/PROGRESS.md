@@ -3,7 +3,7 @@
 Single source of truth for "where did we leave off". Update at the end of every epic and whenever a decision changes the plan. Read this first at the start of every session.
 
 ## Status
-Epic: 9 done with placeholder art and sound; 10 report done (phone profile pending) · Next: Epic 11 (Playgama QA tool + certification checklist) and the real art/sound drop-in · Last update: 2026-10-17 · Branch: main
+Epic: 9 done with placeholder art and sound; 10 and 11 done except the device/QA-tool items · Next: Epic 12 (store assets, submission ZIP) and the real art/sound drop-in · Last update: 2026-10-17 · Branch: main
 Repo: https://github.com/kriptoloca/peek-and-find
 
 ## Epic board
@@ -26,7 +26,7 @@ Repo: https://github.com/kriptoloca/peek-and-find
 | 9e | Phone test 2 fixes: visible color variants (grey tint, pixel-measured in the pipeline), tap circle = whole sprite, taps during the pop-in count, rules e2e (Spot pixel diff, rim tap, early tap) | done (code) | 20 e2e + 145 unit tests |
 | 9f | Haptics (Android; iOS has no API), audio self-review (`docs/audio-review.md`) | done (code) | 4 haptics tests; 149 unit |
 | 10 | Size & performance budget | report done (code) | `docs/size-report.md`: initial load 2.24 MB OGG / 2.26 MB M4A of the 8 MB target, dist 4.61 MB; no update loops; **phone profile at L80 pending (Hasan)** |
-| 11 | Playgama QA tool, certification checklist | | |
+| 11 | Playgama QA tool, certification checklist | checklist done (code) | `docs/certification-checklist.md`: 12 rules with evidence; GameReady order and save persistence now asserted in e2e; **QA tool pending (needs the Playgama account)** |
 | 12 | Store assets, submission ZIP | | |
 
 ## Hasan's steps (outside the code)

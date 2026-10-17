@@ -77,6 +77,8 @@ export interface PeekTitleDebug {
   positions: () => Record<'play' | 'daily' | 'sound' | 'music', DebugPoint>;
   state: () => { sound: boolean; music: boolean };
   audio: () => AudioDebug;
+  /** Lifecycle messages sent to the platform so far, in order. */
+  messages: () => string[];
 }
 
 declare global {

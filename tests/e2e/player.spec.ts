@@ -32,6 +32,13 @@ test('title → PLAY → first scene → find everything → next level', async 
   await shot(page, info, 'won');
   const s2 = await waitState(page, (s) => s.level === 2 && s.status === 'playing', 'level 2');
   expect(s2.scenesPlayed).toBe(1);
+  // the save survives a fresh page load (rule 7): PLAY continues at level 2
+  await page.goto(`${TEST}?${CANVAS.slice(1)}`, { waitUntil: 'load' });
+  await waitTitle(page);
+  await tapTitle(page, 'play');
+  const again = await waitState(page, (s) => s.status === 'playing', 'after reload');
+  expect(again.level).toBe(2);
+  expect(again.scenesPlayed).toBe(1);
   expectSameOrigin(c, baseURL);
   expect(c.errors).toEqual([]);
 });

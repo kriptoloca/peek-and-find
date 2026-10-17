@@ -222,6 +222,7 @@ function realPlatform(): Platform {
         if (gameReadySent) return;
         gameReadySent = true;
       }
+      sent.push(name);
       try {
         void bridge.platform.sendMessage(MESSAGE[name]).catch(() => undefined);
       } catch {
@@ -281,6 +282,13 @@ function subscribe(eventName: string, cb: (v: unknown) => void): () => void {
 
 // ---- stub (no runtime / init failed) and dev fake ads ----------------------------------------
 
+/** Every lifecycle message sent to the platform, in order (dev checks: GameReady timing). */
+const sent: PlatformMessageName[] = [];
+
+export function sentPlatformMessages(): readonly PlatformMessageName[] {
+  return sent;
+}
+
 function stubPlatform(fake: boolean): Platform {
   const base: Platform = {
     platformId: 'none',
@@ -290,7 +298,9 @@ function stubPlatform(fake: boolean): Platform {
     language: 'en',
     isAudioEnabled: () => true,
     isPaused: () => false,
-    sendMessage: () => undefined,
+    sendMessage: (name) => {
+      sent.push(name);
+    },
     showInterstitial: () => Promise.resolve(),
     showRewarded: () => Promise.resolve(false),
     onPause: () => () => undefined,

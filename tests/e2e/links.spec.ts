@@ -77,9 +77,19 @@ for (const link of LINKS) {
         expect(await page.evaluate(() => typeof window.__peekTitle)).toBe('undefined');
         break;
       }
-      case 'title':
+      case 'title': {
         await waitTitle(page);
+        // CLAUDE.md rule 3: GameReady exactly once, last, after the loading messages.
+        const m = await page.evaluate(() => window.__peekTitle?.messages() ?? []);
+        expect(m.filter((x) => x === 'game_ready')).toHaveLength(1);
+        expect(m[m.length - 1]).toBe('game_ready');
+        expect(m.indexOf('in_game_loading_started')).toBeGreaterThanOrEqual(0);
+        expect(m.indexOf('in_game_loading_stopped')).toBeGreaterThan(
+          m.indexOf('in_game_loading_started'),
+        );
+        expect(m.indexOf('game_ready')).toBeGreaterThan(m.indexOf('in_game_loading_stopped'));
         break;
+      }
       case 'title-play': {
         await waitTitle(page);
         await tapTitle(page, 'play');

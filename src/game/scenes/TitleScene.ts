@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { t } from '../../data/strings';
 import { dailyStatus, todayKey } from '../daily';
 import { computeLayout } from '../layout';
-import { getPlatform } from '../../platform/bridge';
+import { getPlatform, sentPlatformMessages } from '../../platform/bridge';
 import { persistProgress, progress } from '../state';
 import { addImage, setImageFrame } from '../assets';
 import { audio } from '../audio';
@@ -151,6 +151,7 @@ export class TitleScene extends Phaser.Scene {
       }),
       state: () => ({ sound: progress.sound, music: progress.music }),
       audio: () => audio.debug(),
+      messages: () => [...sentPlatformMessages()],
     });
   }
 
