@@ -21,6 +21,7 @@ import {
   spriteSpecs,
   uiSpecs,
 } from './lib/manifest.mjs';
+import { contrastRatio } from './lib/color.mjs';
 import { packFrames } from './lib/packer.mjs';
 import { placeholderBackground, placeholderSprite, placeholderUi } from './lib/placeholder-svg.mjs';
 import { recolorSvg } from './lib/recolor.mjs';
@@ -44,6 +45,15 @@ const BG_BUDGET = 200 * 1024;
 /** A color variant must change at least this share of the sprite's pixels noticeably. */
 const VARIANT_MIN_CHANGED = 0.08;
 const VARIANT_PIXEL_DELTA = 24;
+/**
+ * At least SPRITE_CONTRAST_MIN_SHARE of every base sprite's visible area must reach
+ * SPRITE_BG_MIN_CONTRAST (WCAG ratio, 3:1 is the minimum for graphics) against the mean color
+ * of its theme background, so no object hides by darkness alone and the search stays fair for
+ * color-blind players (docs/visual-review.md). Outlines and shading may be darker; the body
+ * must stand out.
+ */
+const SPRITE_BG_MIN_CONTRAST = 3;
+const SPRITE_CONTRAST_MIN_SHARE = 0.35;
 
 const args = new Set(process.argv.slice(2));
 const themeArg = process.argv.includes('--theme')
@@ -109,6 +119,26 @@ async function renderSvg(svg, size, { trim }) {
     data.copy(out, y * w * 4, srcStart, srcStart + w * 4);
   }
   return { w, h, data: out };
+}
+
+/**
+ * Alpha-weighted share of a rendered frame's visible pixels whose contrast against `bg` is at
+ * least SPRITE_BG_MIN_CONTRAST.
+ * @param {{ data: Buffer }} frame
+ * @param {{ r: number, g: number, b: number }} bg
+ * @returns {number} 0..1
+ */
+function contrastShare(frame, bg) {
+  let w = 0;
+  let ok = 0;
+  for (let i = 0; i < frame.data.length; i += 4) {
+    const a = frame.data[i + 3] / 255;
+    if (a === 0) continue;
+    w += a;
+    const px = { r: frame.data[i], g: frame.data[i + 1], b: frame.data[i + 2] };
+    if (contrastRatio(px, bg) >= SPRITE_BG_MIN_CONTRAST) ok += a;
+  }
+  return w === 0 ? 0 : ok / w;
 }
 
 /**
@@ -248,15 +278,37 @@ async function buildTheme(theme) {
       `${theme.id}: color variants not visible enough: ${invisible.join(', ')}. Mark the main fills with class="fill-main" (assets/README.md).`,
     );
   }
-  const bytes = await writeAtlas(theme.id, packed, rendered);
+  // Every base sprite must stand out from the background by luminance, not only by hue
+  // (a dark object on a dark background is found by color alone: slow search, unfair for
+  // color-blind players). Placeholders pass by palette design; a pack fails loudly here.
   const bg = await buildBackground(theme);
+  const lowContrast = [];
+  let minShare = 1;
+  for (const sp of specs) {
+    const base = byName.get(sp.base);
+    if (!base) continue;
+    const share = contrastShare(base, bg.mean);
+    minShare = Math.min(minShare, share);
+    if (share < SPRITE_CONTRAST_MIN_SHARE)
+      lowContrast.push(`${sp.file} (${String(Math.round(share * 100))}% of the area at 3:1)`);
+  }
+  if (lowContrast.length > 0) {
+    throw new Error(
+      `${theme.id}: sprites too close to the background in luminance (less than ${String(Math.round(SPRITE_CONTRAST_MIN_SHARE * 100))}% of the sprite reaches ${String(SPRITE_BG_MIN_CONTRAST)}:1): ${lowContrast.join(', ')}. Lighten the sprite body or darken the background (assets/README.md).`,
+    );
+  }
+  const bytes = await writeAtlas(theme.id, packed, rendered);
   return {
     ...report,
     frames: frameSvgs.length,
     frameSize,
     atlasSize: [packed.width, packed.height],
     atlasBytes: bytes,
-    ...bg,
+    minContrastShare: Math.round(minShare * 100) / 100,
+    backgroundSource: bg.backgroundSource,
+    backgroundBytes: bg.backgroundBytes,
+    backgroundSpotBytes: bg.backgroundSpotBytes,
+    backgroundWarnings: bg.backgroundWarnings,
   };
 }
 
@@ -287,8 +339,11 @@ async function buildBackground(theme) {
     warnings.push(
       `background ${theme.id}.png is ${String(Math.round(square.length / 1024))} KB (> 200 KB budget)`,
     );
+  const stats = await sharp(square).stats();
+  const [mr, mg, mb] = stats.channels.map((c) => c.mean);
   return {
     backgroundSource: src ? 'file' : 'placeholder',
+    mean: { r: mr, g: mg, b: mb },
     backgroundBytes: square.length,
     backgroundSpotBytes: spot.length,
     backgroundWarnings: warnings,
@@ -379,6 +434,10 @@ async function main() {
     }
     for (const w of r.warnings) console.log(`  warning ${id}: ${w}`);
     for (const w of r.backgroundWarnings ?? []) console.log(`  warning ${id}: ${w}`);
+    if (r.minContrastShare !== undefined)
+      console.log(
+        `  ${id}: least contrasting sprite has ${String(Math.round(r.minContrastShare * 100))}% of its area at 3:1 against the background`,
+      );
     problems += r.warnings.length;
   }
   if (ui.present > 0 && ui.missing.length > 0)
@@ -402,6 +461,7 @@ async function main() {
             background: `backgrounds/${id}.png`,
             backgroundSpot: `backgrounds/${id}_spot.png`,
             backgroundSource: r.backgroundSource,
+            minContrastShare: r.minContrastShare,
           },
         ]),
       ),

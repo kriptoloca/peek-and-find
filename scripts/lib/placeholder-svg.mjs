@@ -4,10 +4,13 @@
 // Shapes mirror the runtime placeholders so the game looks the same with or without atlases.
 import { hslToRgb, intToHex, parseColor, rgbToHsl, scaleLightness, toHex } from './color.mjs';
 
-/** Same preview palette as src/data/themes.ts (PALETTE). */
+/**
+ * Same preview palette as src/data/themes.ts (PALETTE); a test keeps the two in sync. Entries
+ * keep ≥ 3:1 luminance contrast against every placeholder background (docs/visual-review.md).
+ */
 export const PALETTE = [
-  0xe76f51, 0x264653, 0xa8a8a8, 0xd62828, 0xf4f1de, 0xc98a3d, 0xf2c14e, 0x2a9d8f, 0x8ecae6,
-  0x5aa469, 0x6d597a, 0xb5b5b5, 0x9c6644, 0x3a86ff, 0x52b788, 0xffb703,
+  0xe76f51, 0x5a99b3, 0xa8a8a8, 0xea6a80, 0xf4f1de, 0xc98a3d, 0xf2c14e, 0x2ba193, 0x8ecae6,
+  0x5aa469, 0xa689ba, 0xb5b5b5, 0xbb8562, 0x498fff, 0x52b788, 0xffb703,
 ];
 
 export const SHAPES = [

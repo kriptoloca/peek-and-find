@@ -42,6 +42,12 @@ Themes: `kitchen`, `beach`, `city`, `forest`, `space`. Example: `assets/svg/kitc
 Low contrast, no small details that compete with objects. The pipeline quantizes to a palette PNG
 and reports when a file exceeds 200 KB.
 
+**Objects must stand out from the background by luminance, not only by hue:** at least 35 % of
+every base sprite's visible area must reach a 3:1 WCAG contrast ratio against the mean color of
+its theme background (outlines and shading may be darker; the body must read). `npm run assets`
+fails with the file names otherwise. Keep backgrounds in the lightness band 0.15–0.3 and sprite
+bodies clearly lighter (or darker) than that; see docs/visual-review.md.
+
 ## UI icons
 
 `128×128` viewBox (spark `32×32`, confetti `24×14`). White glyphs except the ones the game shows

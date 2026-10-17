@@ -21,10 +21,14 @@ interface ThemeJson {
   singletons: FamilyJson[];
 }
 
-/** Preview palette shared with the pipeline placeholders (scripts/lib/placeholder-svg.mjs). */
+/**
+ * Preview palette shared with the pipeline placeholders (scripts/lib/placeholder-svg.mjs).
+ * Every entry keeps ≥ 3:1 luminance contrast against every placeholder background (WCAG
+ * non-text minimum; tests/pipeline/contrast.test.ts), so no family hides by darkness alone.
+ */
 export const PALETTE = [
-  0xe76f51, 0x264653, 0xa8a8a8, 0xd62828, 0xf4f1de, 0xc98a3d, 0xf2c14e, 0x2a9d8f, 0x8ecae6,
-  0x5aa469, 0x6d597a, 0xb5b5b5, 0x9c6644, 0x3a86ff, 0x52b788, 0xffb703,
+  0xe76f51, 0x5a99b3, 0xa8a8a8, 0xea6a80, 0xf4f1de, 0xc98a3d, 0xf2c14e, 0x2ba193, 0x8ecae6,
+  0x5aa469, 0xa689ba, 0xb5b5b5, 0xbb8562, 0x498fff, 0x52b788, 0xffb703,
 ] as const;
 
 /** Variant letters of a regular family; singletons only have `a`. */
@@ -43,6 +47,7 @@ function makeTheme(spec: ThemeJson): Theme {
   });
   return {
     id: spec.id,
+    tone: PALETTE[spec.paletteShift % PALETTE.length] as number,
     background: `${spec.id}_bg`,
     props: [`${spec.id}_prop_a`, `${spec.id}_prop_b`],
     families: [

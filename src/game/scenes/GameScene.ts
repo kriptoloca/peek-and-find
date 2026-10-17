@@ -12,6 +12,7 @@ import { audio } from '../audio';
 import { haptic, setHapticsEnabled } from '../../platform/haptics';
 import { correctSfx, starSfx } from '../audio-keys';
 import { clearFx, confetti, popCorrect, shakeWrong, sparkle } from '../fx';
+import { TITLE_FRAME, frameColorFor, hexOf } from '../frame-color';
 import { Hud } from '../hud';
 import { computeLayout, type Layout, type Rect } from '../layout';
 import { DAILY_CHAIN_LENGTH, completeDaily, dailyScene, todayKey } from '../daily';
@@ -34,9 +35,11 @@ import { UI } from '../textures/placeholders';
 import { addImage, ensureThemes, fitImage, loadedAtlases } from '../assets';
 import { SCENE_SIZE, SPOT_H, SPOT_W } from '../../config';
 
-const COLOR_BG = 0x1b1f2a;
 const COLOR_SCENE = 0x2e3650;
 const COLOR_SPOT_RING = 0x80ed99;
+/** Fail overlay buttons (drawn discs, see onLost). */
+const COLOR_RETRY = 0x3b7dd8;
+const COLOR_CONTINUE = 0x2a9d8f;
 const POP_IN_MS = 300;
 const POP_IN_STAGGER_MAX_MS = 10;
 const POP_IN_STAGGER_TOTAL_MS = 350;
@@ -93,6 +96,8 @@ export class GameScene extends Phaser.Scene {
   /** Dev builds only: ?mode=find|odd|spot forces the mode. */
   private forcedMode: Mode | null = null;
   private theme!: Theme;
+  /** Canvas outside the scene: the theme's hue, deep and quiet (frame-color.ts). */
+  private frameColor = TITLE_FRAME;
   /** Daily chain: null in the normal chain, else the current scene index 0..4. */
   private dailyIndex: number | null = null;
   private dailyKey = '';
@@ -177,7 +182,7 @@ export class GameScene extends Phaser.Scene {
     this.layoutNow = computeLayout(width, height);
     const l = this.layoutNow;
     this.bg.clear();
-    this.bg.fillStyle(COLOR_BG, 1).fillRect(0, 0, width, height);
+    this.bg.fillStyle(this.frameColor, 1).fillRect(0, 0, width, height);
     if (this.round?.scene.mode === 'spot') {
       const sp = l.spot;
       this.bg.fillStyle(COLOR_SCENE, 1).fillRect(sp.a.x, sp.a.y, sp.a.w, sp.a.h);
@@ -271,6 +276,7 @@ export class GameScene extends Phaser.Scene {
       seed = sceneSeed(mode, level, progress.attempt, progress.seedSalt);
     }
     this.theme = themeForLevel(level);
+    this.frameColor = frameColorFor(this.theme.tone);
     // GDD §5: the theme that unlocks within three levels is loaded ahead so the chain never
     // stalls on a loader round trip. A newer startLevel() or a scene shutdown cancels this one.
     const pre = themeToPreload(level);
@@ -546,9 +552,9 @@ export class GameScene extends Phaser.Scene {
     }
     const withContinue = this.platform.rewardedSupported;
     const retryX = withContinue ? FAIL_BUTTON_DX : 0;
-    const btn = addImage(this, retryX, RETRY_OFFSET_Y, UI.badge)
-      .setDisplaySize(RETRY_RADIUS * 2, RETRY_RADIUS * 2)
-      .setTint(0x3b7dd8);
+    // Button discs are drawn, not tinted images: the Canvas renderer (a device without WebGL)
+    // ignores tint, which left a white disc with an invisible white icon.
+    const btn = this.disc(retryX, RETRY_OFFSET_Y, COLOR_RETRY);
     const icon = addImage(this, retryX, RETRY_OFFSET_Y, UI.retry).setDisplaySize(110, 110);
     ov.add([btn, icon]);
     this.tweens.add({
@@ -560,9 +566,7 @@ export class GameScene extends Phaser.Scene {
     });
     if (withContinue) {
       // Continue = rewarded ad → refill hearts, same scene (GDD §3). Heart + play icon, no text.
-      const cbtn = addImage(this, -FAIL_BUTTON_DX, RETRY_OFFSET_Y, UI.badge)
-        .setDisplaySize(RETRY_RADIUS * 2, RETRY_RADIUS * 2)
-        .setTint(0x2a9d8f);
+      const cbtn = this.disc(-FAIL_BUTTON_DX, RETRY_OFFSET_Y, COLOR_CONTINUE);
       const heart = addImage(this, -FAIL_BUTTON_DX - 28, RETRY_OFFSET_Y, UI.heart).setDisplaySize(
         70,
         70,
@@ -622,6 +626,11 @@ export class GameScene extends Phaser.Scene {
         },
       });
     }
+  }
+
+  /** Filled circle centered on (x, y) of the overlay; scales around its center like an image. */
+  private disc(x: number, y: number, color: number): Phaser.GameObjects.Graphics {
+    return this.add.graphics({ x, y }).fillStyle(color, 1).fillCircle(0, 0, RETRY_RADIUS);
   }
 
   private makeOverlay(dimAlpha: number): Phaser.GameObjects.Container {
@@ -840,6 +849,7 @@ export class GameScene extends Phaser.Scene {
         fps: Math.round(this.game.loop.actualFps),
         renderer: this.game.renderer.type === Phaser.CANVAS ? 'canvas' : 'webgl',
         hudInBand: this.hudInBand(),
+        frameColor: hexOf(this.frameColor),
       }),
     });
   }

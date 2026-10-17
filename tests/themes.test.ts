@@ -52,6 +52,13 @@ describe('themes', () => {
     }
   });
 
+  it('every theme carries a palette tone (frame tint, placeholder background hue)', () => {
+    for (const t of THEMES) {
+      expect(t.tone).toBeGreaterThan(0);
+      expect(t.tone).toBe(t.families[0]!.previewColor);
+    }
+  });
+
   it('frame helpers round-trip', () => {
     expect(colorFrame('kitchen_mug_a', 0)).toBe('kitchen_mug_a');
     expect(colorFrame('kitchen_mug_a', 2)).toBe('kitchen_mug_a_c2');

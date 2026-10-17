@@ -3,7 +3,7 @@
 Single source of truth for "where did we leave off". Update at the end of every epic and whenever a decision changes the plan. Read this first at the start of every session.
 
 ## Status
-Epic: 9 done with placeholder art and sound; 10 and 11 done except the device/QA-tool items · Next: Epic 12 (store assets, submission ZIP) and the real art/sound drop-in · Last update: 2026-10-17 · Branch: main
+Epic: 9 done with placeholder art and sound (9g visual review applied); 10 and 11 done except the device/QA-tool items · Next: Epic 12 (store assets, submission ZIP) and the real art/sound drop-in · Last update: 2026-10-17 · Branch: main
 Repo: https://github.com/kriptoloca/peek-and-find
 
 ## Epic board
@@ -25,6 +25,7 @@ Repo: https://github.com/kriptoloca/peek-and-find
 | 9d | Playwright e2e (links, player path, audio with bus measurement), own boot screen instead of the Bridge logo, iOS silent-switch unmute, GitHub Pages publishing (production + /test/) | done (code) | 15 e2e tests green locally; CI runs them on every push and on the live site after each deploy |
 | 9e | Phone test 2 fixes: visible color variants (grey tint, pixel-measured in the pipeline), tap circle = whole sprite, taps during the pop-in count, rules e2e (Spot pixel diff, rim tap, early tap) | done (code) | 20 e2e + 145 unit tests |
 | 9f | Haptics (Android; iOS has no API), audio self-review (`docs/audio-review.md`) | done (code) | 4 haptics tests; 149 unit |
+| 9g | Visual review (`docs/visual-review.md`): research + audit + screenshot tour (`npm run tour`); theme-tinted frame, palette lifted to ≥ 3:1 against the backgrounds with a pipeline gate, 1:1 HUD backing, fail buttons drawn (Canvas has no tint) | done (code) | 156 unit + 20 e2e; tour sheets reviewed in 9:16 / 16:9 / 1:1 before and after |
 | 10 | Size & performance budget | report done (code) | `docs/size-report.md`: initial load 2.24 MB OGG / 2.26 MB M4A of the 8 MB target, dist 4.61 MB; no update loops; **phone profile at L80 pending (Hasan)** |
 | 11 | Playgama QA tool, certification checklist | checklist done (code) | `docs/certification-checklist.md`: 12 rules with evidence; GameReady order and save persistence now asserted in e2e; **QA tool pending (needs the Playgama account)** |
 | 12 | Store assets, submission ZIP | | |
@@ -39,6 +40,8 @@ Repo: https://github.com/kriptoloca/peek-and-find
 - [ ] Phone test of the Bridge build (links in README.md → Test links; `https://kriptoloca.github.io/peek-and-find/test/?fakeads=1&adfast=1`). First report (2026-10-17): no sound heard on iPhone Safari; the ringer switch silences Web Audio there, now worked around (`src/platform/ios-unmute.ts`). Retest with the switch in both positions. `?fakeads=1&adfast=1` on iPhone — interstitial after 3 scenes, hint bulb, Continue on the fail screen, rotation during an ad. The build now ships atlases (sprites are tight-cropped, so they look ~15% bigger than before).
 
 ## Open design questions (decide after the phone test)
+- Theme cadence: levels 1–9 are all kitchen (second theme at 10). Early variety helps day-0 retention; unlocking beach at level 4 is one constant (`THEME_UNLOCK_EVERY`) but changes GDD §5 (visual-review.md §5).
+- Odd One Out grids read as wallpaper at 7×7; a small per-cell rotation/scale jitter would help, GDD change (visual-review.md §4).
 - Density/overlap: generator keeps centers ≥ 80–150 px apart and occlusion ≤ 40%; real hidden-object "clutter" may need more overlap at high levels. Tap resolution (nearest center) already allows it; the spacing invariant would have to change to a hit-circle rule.
 - Mirror decoys (same frame flipped, 0.85×): keep, reduce weight, or drop.
 - Empty-background taps: currently free; penalise if players spam-tap.
@@ -51,11 +54,11 @@ See `docs/questions.md` (every deviation from the spec with its reason).
 ## Measured
 | Metric | Value |
 |---|---|
-| Tests | 149 unit + 20 e2e |
-| Bundle (dist/) | 4.61 MB shipped; initial load before GameReady 2.24 MB (OGG) / 2.26 MB (M4A): bundle 1.25 + Bridge 0.30 + kitchen atlas 0.51 + UI 0.03 + backgrounds + audio 0.16 (`docs/size-report.md`) |
+| Tests | 156 unit + 20 e2e (+ `npm run tour`, 17 screenshot flows, not a gate) |
+| Bundle (dist/) | 4.6 MB shipped; initial load before GameReady 2.24 MB (OGG) / 2.26 MB (M4A): bundle 1.22 + Bridge 0.29 + kitchen atlas 0.50 + UI 0.03 + backgrounds + audio 0.16 (`docs/size-report.md`) |
 | Atlases | 2048×2048 per theme, 112 frames at 208 px; UI 1024×512 |
 | Level 80 generation | ≈ 0.4 ms |
-| Asset build | atlases ≈ 7 s, reproducible (CI diff check); audio ≈ 3 s with ffmpeg (presence checked, not bytes) |
+| Asset build | atlases ≈ 7 s, reproducible (CI diff check); sprite/background contrast gate: least contrasting sprite per theme has 39–50 % of its area at ≥ 3:1; audio ≈ 3 s with ffmpeg (presence checked, not bytes) |
 | CI | 8/8 runs green on main before this epic |
 
 ## Next steps (in order)
@@ -63,6 +66,7 @@ See `docs/questions.md` (every deviation from the spec with its reason).
 2. **Epic 10 remainder (Hasan):** 10 scenes at level 80 on the iPhone without drops; `https://kriptoloca.github.io/peek-and-find/test/?level=80` and read `fps` in the dev state if it stutters. Haptics: does an Android phone buzz on correct/wrong?
 3. **Drop-ins when they exist:** art per `assets/README.md` (`npm run assets`), sounds per the audio section (`npm run audio`); commit `assets/` + `public/` together. No code change expected.
 4. Epic 11 Playgama QA tool + certification checklist (next for me: the checklist with the e2e evidence; the QA tool needs the Playgama account), Epic 12 store assets and ZIP.
-5. Open tuning items (density/overlap, mirror decoys, empty taps, frame size) stay here until Hasan's feedback on L30/L60.
+5. Open tuning items (density/overlap, mirror decoys, empty taps, frame size, theme cadence, Odd grid jitter) stay here until Hasan's feedback on L30/L60.
+6. Visual: when the real pack lands, re-run `npm run tour` and re-check the contrast gate output; recommendations for the pack are in docs/visual-review.md §4.
 
 Dev shortcuts: `?level=N`, `?mode=find|odd|spot`, `?daily=1`, `?today=YYYYMMDD`, `?reset=1`, `?fakeads=1`, `?adfast=1`, `?debug=true` (SDK logs), `?renderer=canvas` (Canvas renderer, e2e on GPU-less machines), triple-tap top-left for the dev menu, `/#gen` (M cycles modes). `__peekDebug.state().atlasKeys` lists the loaded atlases, `.audio` the sound state (locked, music, last SFX).

@@ -69,6 +69,8 @@ export interface PeekDebug {
     /** Frame rate the game loop actually achieves (headless CI runs slowly). */
     fps: number;
     renderer: 'webgl' | 'canvas';
+    /** Frame (canvas outside the scene) as #rrggbb; follows the theme. */
+    frameColor: string;
   };
 }
 

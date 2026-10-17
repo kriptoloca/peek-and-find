@@ -23,7 +23,8 @@
     "dev:url": "node scripts/dev-url.mjs",
     "build:test": "npm run build && node scripts/build-test.mjs && node scripts/audit-dist.mjs",
     "e2e": "npm run build:test && playwright test",
-    "e2e:only": "playwright test"
+    "e2e:only": "playwright test",
+    "tour": "npm run build:test && playwright test --config tests/tour/playwright.config.ts && node scripts/tour-sheet.mjs"
   },
   "dependencies": {
     "@playgama/bridge": "2.3.1",

@@ -28,6 +28,9 @@ const LINKS: Link[] = [
     kind: 'game',
     check: (s) => {
       expect(s.sceneLevel).toBe(30);
+      // the frame takes the theme's hue in play (docs/visual-review.md), navy only on the Title
+      expect(s.frameColor).toMatch(/^#[0-9a-f]{6}$/);
+      expect(s.frameColor).not.toBe('#1b1f2a');
     },
   },
   {

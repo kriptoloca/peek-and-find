@@ -199,3 +199,28 @@ export function variantColor(value, degrees) {
   }
   return toHex(cand);
 }
+
+/**
+ * WCAG relative luminance of an sRGB color.
+ * @param {Rgb} rgb
+ * @returns {number} 0 (black) .. 1 (white)
+ */
+export function relativeLuminance({ r, g, b }) {
+  const lin = (c) => {
+    const v = c / 255;
+    return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+  };
+  return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+}
+
+/**
+ * WCAG contrast ratio between two colors (1 = same luminance, 21 = black on white).
+ * @param {Rgb} a
+ * @param {Rgb} b
+ * @returns {number}
+ */
+export function contrastRatio(a, b) {
+  const la = relativeLuminance(a);
+  const lb = relativeLuminance(b);
+  return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+}

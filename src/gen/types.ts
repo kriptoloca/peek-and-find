@@ -35,6 +35,8 @@ export interface Theme {
   families: Family[];
   background: string;
   props: string[];
+  /** Palette base color of the theme: the placeholder background hue and the frame tint. */
+  tone: number;
 }
 
 export type DecoyKind = 'color' | 'tag' | 'mirror';

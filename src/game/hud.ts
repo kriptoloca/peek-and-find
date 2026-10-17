@@ -9,6 +9,8 @@ const HEART_MAX = 72;
 const ITEM_GAP = 24;
 const BADGE_SIZE = 52;
 const HINT_SIZE = 110;
+/** 1:1 only: the HUD bars sit inside the square, over the scene; a dim strip separates them. */
+const HUD_BACKING_ALPHA = 0.45;
 const COLOR_BADGE_TEXT = '#1b1f2a';
 const COLOR_LEVEL_TEXT = '#ffffff';
 
@@ -26,6 +28,7 @@ interface PromptItemView {
 export class Hud {
   private readonly scene: Phaser.Scene;
   private readonly container: Phaser.GameObjects.Container;
+  private readonly backing: Phaser.GameObjects.Graphics;
   private readonly hearts: Phaser.GameObjects.Image[] = [];
   private readonly level: Phaser.GameObjects.Text;
   private items: PromptItemView[] = [];
@@ -38,6 +41,8 @@ export class Hud {
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
     this.container = scene.add.container(0, 0).setDepth(20);
+    this.backing = scene.add.graphics();
+    this.container.add(this.backing);
     for (let i = 0; i < 3; i++) {
       const h = addImage(scene, 0, 0, UI.heart);
       this.hearts.push(h);
@@ -65,6 +70,7 @@ export class Hud {
   setHint(visible: boolean, onTap: (() => void) | null): void {
     this.hint.setVisible(visible);
     this.onHintTap = onTap;
+    this.reapply();
   }
 
   /** True when a canvas point lands on the visible hint button (so the scene ignores it). */
@@ -177,12 +183,19 @@ export class Hud {
     const p = l.hud.primary;
     if (l.hud.placement === 'columns') this.applyColumn(p);
     else this.applyRow(p);
+    this.backing.clear();
+    if (l.hud.placement === 'overlay') {
+      this.backing.fillStyle(0x000000, HUD_BACKING_ALPHA).fillRect(p.x, p.y, p.w, p.h);
+      const sec = l.hud.secondary;
+      if (this.hint.visible) this.backing.fillRect(sec.x, sec.y, sec.w, sec.h);
+    }
   }
 
   /** Spot 5: thin bands above/below the two images, always a row. */
   applySpot(l: Layout): void {
     this.layoutCache = l;
     this.spotMode = true;
+    this.backing.clear();
     this.applyRow(l.spot.hudTop);
     this.placeHint(l.spot.hudBottom, Math.min(HINT_SIZE, Math.max(72, l.spot.hudBottom.h - 16)));
   }
