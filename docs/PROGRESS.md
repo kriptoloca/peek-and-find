@@ -3,7 +3,7 @@
 Single source of truth for "where did we leave off". Update at the end of every epic and whenever a decision changes the plan. Read this first at the start of every session.
 
 ## Status
-Epic: 9 done with placeholder art and sound (9g visual review applied); 10 and 11 done except the device/QA-tool items · Next: Epic 12 (store assets, submission ZIP) and the real art/sound drop-in · Last update: 2026-10-17 · Branch: main
+Epic: 9 done with placeholder art and sound (9g visual review applied); 10 and 11 done except the device/QA-tool items; 12 done except the uploads · Next: the real art/sound drop-in, then the uploads (Playgama console, QA tool) · Last update: 2026-10-17 · Branch: main
 Repo: https://github.com/kriptoloca/peek-and-find
 
 ## Epic board
@@ -28,7 +28,7 @@ Repo: https://github.com/kriptoloca/peek-and-find
 | 9g | Visual review (`docs/visual-review.md`): research + audit + screenshot tour (`npm run tour`); theme-tinted frame, palette lifted to ≥ 3:1 against the backgrounds with a pipeline gate, 1:1 HUD backing, fail buttons drawn (Canvas has no tint) | done (code) | 156 unit + 20 e2e; tour sheets reviewed in 9:16 / 16:9 / 1:1 before and after |
 | 10 | Size & performance budget | report done (code) | `docs/size-report.md`: initial load 2.24 MB OGG / 2.26 MB M4A of the 8 MB target, dist 4.61 MB; no update loops; **phone profile at L80 pending (Hasan)** |
 | 11 | Playgama QA tool, certification checklist | checklist done (code) | `docs/certification-checklist.md`: 12 rules with evidence; GameReady order and save persistence now asserted in e2e; **QA tool pending (needs the Playgama account)** |
-| 12 | Store assets, submission ZIP | | |
+| 12 | Store assets, submission ZIP | done (code) | `npm run zip` → deterministic `release/peek-and-find-0.1.0.zip` (3.27 MB, index.html at the root, no /test/, limits checked, SHA-256 printed); `docs/store/`: listing, thumbnail brief, video script, submission notes; `tests/store.test.ts` bans young-audience wording; **uploads and the thumbnails need the Playgama account and the art pack (Hasan)** |
 
 ## Hasan's steps (outside the code)
 - [x] Phone test started 2026-10-16 19:35–19:45: desktop 16:9 and iPhone 9:16 both render; first bug (HUD inside the Spot image) found and fixed. Still wanted: 3 lines on L30/L60 search feel, mirror decoys, Spot miss penalty, rotation.
@@ -36,7 +36,7 @@ Repo: https://github.com/kriptoloca/peek-and-find
 - [x] Repo renamed to `peek-and-find` (2026-10-16); made public and GitHub Pages switched to "GitHub Actions" (2026-10-17) so the test links in README.md are live.
 - [ ] Art pack: 2–3 candidate links, **SVG sources required** (ASSETS.md). Flat, cute but not childish, no nursery palette. Input contract and drop-in workflow: `assets/README.md`.
 - [ ] Sounds: download Kenney "Interface Sounds" / "Digital Audio" (CC0) or pick freesound CC0 clips, drop them as `assets/audio/<name>.wav|ogg` (names in `src/data/audio-manifest.json`), run `npm run audio`. Until then the synthesized placeholders play.
-- [ ] Playgama developer account (developer.playgama.com) and YouTube Playables interest form.
+- [ ] Playgama developer account (developer.playgama.com) and YouTube Playables interest form. Then `npm run zip` and the upload steps in `docs/store/submission.md`; listing text in `docs/store/listing.md`; thumbnails/icon per `docs/store/thumbnail-brief.md` once the art pack is in.
 - [ ] Phone test of the Bridge build (links in README.md → Test links; `https://kriptoloca.github.io/peek-and-find/test/?fakeads=1&adfast=1`). First report (2026-10-17): no sound heard on iPhone Safari; the ringer switch silences Web Audio there, now worked around (`src/platform/ios-unmute.ts`). Third report (2026-10-17, production link, level 10): still no music, no vibration (iPhone: expected, no API). Diagnostics screenshot received (2026-10-17 19:13): the chain works on iOS 26 (ogg decoded, context running, music playing, bus RMS 0.02); the loop was ≈ −30 dBFS, raised by ≈ 8 dB. **Retest 2026-10-17 evening: sound and music audible on the iPhone, home button works.** Still open on the phone: `?fakeads=1&adfast=1` flow, rotation, Android haptics, L80 profile. `?fakeads=1&adfast=1` on iPhone — interstitial after 3 scenes, hint bulb, Continue on the fail screen, rotation during an ad.
 - [x] Decided 2026-10-17: in-game home button back to the Title (GDD v1.3), shipped.
 
@@ -55,7 +55,7 @@ See `docs/questions.md` (every deviation from the spec with its reason).
 ## Measured
 | Metric | Value |
 |---|---|
-| Tests | 156 unit + 22 e2e (+ `npm run tour`, 17 screenshot flows, not a gate) |
+| Tests | 167 unit + 22 e2e (+ `npm run tour`, 17 screenshot flows, not a gate) |
 | Bundle (dist/) | 4.6 MB shipped; initial load before GameReady 2.24 MB (OGG) / 2.26 MB (M4A): bundle 1.22 + Bridge 0.29 + kitchen atlas 0.50 + UI 0.03 + backgrounds + audio 0.16 (`docs/size-report.md`) |
 | Atlases | 2048×2048 per theme, 112 frames at 208 px; UI 1024×512 |
 | Level 80 generation | ≈ 0.4 ms |
@@ -66,7 +66,7 @@ See `docs/questions.md` (every deviation from the spec with its reason).
 1. **Phone pass of the whole loop** (Hasan): sound on iPhone Safari after the first tap, music toggle, interstitial flow with `?fakeads=1&adfast=1`, rotation. Report in 3 lines.
 2. **Epic 10 remainder (Hasan):** 10 scenes at level 80 on the iPhone without drops; `https://kriptoloca.github.io/peek-and-find/test/?level=80` and read `fps` in the dev state if it stutters. Haptics: does an Android phone buzz on correct/wrong?
 3. **Drop-ins when they exist:** art per `assets/README.md` (`npm run assets`), sounds per the audio section (`npm run audio`); commit `assets/` + `public/` together. No code change expected.
-4. Epic 11 Playgama QA tool + certification checklist (next for me: the checklist with the e2e evidence; the QA tool needs the Playgama account), Epic 12 store assets and ZIP.
+4. Uploads (Hasan): Playgama account → `npm run zip` → QA tool → listing + thumbnails (`docs/store/`). Code side of Epics 11 and 12 is done.
 5. Open tuning items (density/overlap, mirror decoys, empty taps, frame size, theme cadence, Odd grid jitter) stay here until Hasan's feedback on L30/L60.
 6. Visual: when the real pack lands, re-run `npm run tour` and re-check the contrast gate output; recommendations for the pack are in docs/visual-review.md §4.
 

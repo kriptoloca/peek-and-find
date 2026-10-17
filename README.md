@@ -16,6 +16,7 @@ npm run size     # dist/ total and 10 largest files vs the 8 MB target / 30 MB h
 npm run build:test  # production build + development-mode build in dist/test/ (dev shortcuts, debug hooks)
 npm run e2e      # build:test, then Playwright against a local preview (tests/e2e: links, player path, audio, rules)
 npm run tour     # screenshot tour of every screen in 9:16, 16:9, 1:1 → test-results/tour/sheet-*.png (visual review, not a gate)
+npm run zip      # production build → release/peek-and-find-<version>.zip (submission package, deterministic, SHA-256 printed)
 E2E_BASE_URL=https://kriptoloca.github.io/peek-and-find/ npm run e2e:only   # the same suite on the live site
 ```
 
