@@ -81,12 +81,18 @@ describe('round flow', () => {
     const t = r.scene.targets[0]!;
     expect(t.hitRadius).toBeGreaterThanOrEqual(t.size / 2);
     expect(t.hitRadius).toBeGreaterThanOrEqual(40);
-    const edge = applyTap(r, t.x + t.hitRadius * 0.98, t.y, 10);
-    expect(edge.kind === 'correct' || edge.kind === 'wrong').toBe(true);
-    if (edge.kind === 'wrong') {
-      // only a nearer neighbour may claim the tap, never empty space
-      expect(edge.object).not.toBeNull();
+    // the rim point that keeps the most distance from every other object's circle
+    const others = r.scene.objects.filter((o) => o.id !== t.id);
+    let best = { x: t.x, y: t.y, clearance: -Infinity };
+    for (let a = 0; a < 360; a += 10) {
+      const x = t.x + Math.cos((a * Math.PI) / 180) * t.hitRadius * 0.98;
+      const y = t.y + Math.sin((a * Math.PI) / 180) * t.hitRadius * 0.98;
+      const clearance = Math.min(...others.map((o) => Math.hypot(o.x - x, o.y - y) - o.hitRadius));
+      if (clearance > best.clearance) best = { x, y, clearance };
     }
+    expect(best.clearance).toBeGreaterThan(0);
+    const edge = applyTap(r, best.x, best.y, 10);
+    expect(edge.kind).toBe('correct');
   });
 
   it('finds targets, never penalises a repeat tap, and wins on the last one', () => {

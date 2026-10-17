@@ -202,6 +202,34 @@ async function buildTheme(theme) {
       `${theme.id}: flippable sprites look the same mirrored: ${symmetric.join(', ')}. Add an asymmetric detail or drop the flippable tag (assets/README.md).`,
     );
   }
+  // A Spot "swap" shows another variant of the same family; variants that look alike make
+  // that difference invisible, so every pair of variants must differ by VARIANT_MIN_CHANGED.
+  const alike = [];
+  const byFamily = new Map();
+  for (const sp of specs) {
+    const fam = sp.base.replace(/_[a-z]$/, '');
+    if (!byFamily.has(fam)) byFamily.set(fam, []);
+    byFamily.get(fam).push(sp);
+  }
+  for (const members of byFamily.values()) {
+    for (let i = 0; i < members.length; i++) {
+      for (let j = i + 1; j < members.length; j++) {
+        const fa = byName.get(members[i].base);
+        const fb = byName.get(members[j].base);
+        if (!fa || !fb) continue;
+        const share = frameDifference(fa, fb);
+        if (share < VARIANT_MIN_CHANGED)
+          alike.push(
+            `${members[i].file} vs ${members[j].file} (${String(Math.round(share * 100))}% differ)`,
+          );
+      }
+    }
+  }
+  if (alike.length > 0) {
+    throw new Error(
+      `${theme.id}: variants of one family look alike: ${alike.join(', ')}. Variants must be different objects, not copies (assets/README.md).`,
+    );
+  }
   // Every base sprite must stand out from the background by luminance, not only by hue
   // (a dark object on a dark background is found by color alone: slow search, unfair for
   // color-blind players). Placeholders pass by palette design; a pack fails loudly here.

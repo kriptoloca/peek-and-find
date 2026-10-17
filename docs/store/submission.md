@@ -11,7 +11,7 @@ fixed timestamps), and the command prints the SHA-256 of the archive: note it in
 | --- | --- | --- | --- |
 | Single file | YouTube Playables certification page, hard | 30 MB | largest 1.23 MB (`assets/index-*.js`) |
 | Single file | same page, recommendation | 512 KB | 6 files above (the bundle and the five theme atlases); warning only |
-| Initial load (until GameReady) | same page: under 15 MB, target 5 MB; CLAUDE.md: ≤ 8 MB target | | 2.81 MB (`docs/size-report.md`) |
+| Initial load (until GameReady) | same page: under 15 MB, target 5 MB; CLAUDE.md: ≤ 8 MB target | | 3.10 MB (`docs/size-report.md`) |
 | Total package | same page: under 250 MB, target 15 MB | | ≈ 4.6 MB |
 | Save data | same page | 3 MB | one JSON string well under 1 KB |
 | Pre-compression | CLAUDE.md rule 2, audit-dist | none | none |

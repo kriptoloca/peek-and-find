@@ -81,6 +81,14 @@ async function waitConsole(lines: string[], re: RegExp, timeout: number): Promis
   }
 }
 
+test('the live site serves the commit this run was started for', async ({ page }) => {
+  const expected = process.env.E2E_EXPECT_SHA;
+  test.skip(!expected, 'only on the deployed site (E2E_EXPECT_SHA)');
+  const res = await page.request.get('version.json', { headers: { 'cache-control': 'no-cache' } });
+  expect(res.ok()).toBe(true);
+  expect(((await res.json()) as { sha: string }).sha).toBe(expected);
+});
+
 for (const link of LINKS) {
   test(`link /${link.path} opens clean`, async ({ page, guard }, info) => {
     await page.goto(link.path, { waitUntil: 'load' });
@@ -106,6 +114,17 @@ for (const link of LINKS) {
           box.y + (l.scene.y + l.scene.h * 0.48) * k,
         );
         await waitConsole(guard.console, sent('gameplay_started'), 30_000);
+        await waitConsole(guard.console, sent('level_started'), 30_000);
+        // the lifecycle order the platform expects (CLAUDE.md rule 3, docs/bridge-notes.md)
+        const first = (re: RegExp): number => guard.console.findIndex((l) => re.test(l));
+        const order = [
+          first(sent('in_game_loading_started')),
+          first(sent('in_game_loading_stopped')),
+          first(sent('game_ready')),
+          first(sent('gameplay_started')),
+        ];
+        expect(order.every((i) => i >= 0)).toBe(true);
+        expect([...order].sort((a, b) => a - b)).toEqual(order);
         await page.waitForTimeout(800);
         const after = await page.screenshot({ path: info.outputPath('prod-after-play.png') });
         expect(await changedShare(before, after)).toBeGreaterThan(0.2);

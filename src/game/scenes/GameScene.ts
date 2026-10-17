@@ -109,6 +109,8 @@ export class GameScene extends Phaser.Scene {
   /** Incremented by every startLevel(); an awaited load belongs to the latest one only. */
   private levelGen = 0;
   private levelFailedOnce = false;
+  /** True between in_game_loading_started and _stopped, so the pair always matches. */
+  private loadingOpen = false;
   private adsShown = 0;
   private hintUses = 0;
   private continueUses = 0;
@@ -123,6 +125,11 @@ export class GameScene extends Phaser.Scene {
     this.dailyIndex = data?.daily ? 0 : null;
     this.dailyKey = data?.today ?? todayKey();
     this.forcedMode = null;
+    // Phaser reuses the scene instance: nothing from a previous run may leak into this one.
+    this.paused = false;
+    this.adInProgress = false;
+    this.levelFailedOnce = false;
+    this.loadingOpen = false;
   }
 
   create(): void {
@@ -140,6 +147,9 @@ export class GameScene extends Phaser.Scene {
     this.unsubscribePause = this.platform.onPause((p) => {
       this.setPaused(p);
     });
+    // A restarted scene keeps its tween/clock managers: make sure they run, then sync pause.
+    this.tweens.resumeAll();
+    this.time.paused = false;
     if (this.platform.isPaused()) this.setPaused(true);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.unsubscribePause?.();
@@ -258,9 +268,10 @@ export class GameScene extends Phaser.Scene {
       await this.startLevelInner();
     } catch (e: unknown) {
       console.error('peek: level failed to start', e);
-      this.platform.sendMessage('in_game_loading_stopped');
+      this.sendLoading(false);
       if (!this.sys.isActive()) return;
-      if (!this.levelFailedOnce) {
+      // The normal chain retries once with a new attempt; a daily scene is fixed, so it cannot.
+      if (this.dailyIndex === null && !this.levelFailedOnce) {
         this.levelFailedOnce = true;
         progress.attempt += 1;
         persistProgress();
@@ -322,10 +333,9 @@ export class GameScene extends Phaser.Scene {
       if (t && !needed.includes(t)) needed.push(t);
     }
     const gen0 = ++this.levelGen;
-    this.platform.sendMessage('in_game_loading_started');
-    await ensureThemes(this, needed);
+    this.sendLoading(true);
+    await ensureThemes(this, [this.theme]);
     if (gen0 !== this.levelGen || !this.sys.isActive()) return;
-    releaseThemes(this, needed);
     const gen: GenScene = generateScene({
       seed,
       level,
@@ -333,13 +343,18 @@ export class GameScene extends Phaser.Scene {
       theme: this.theme,
       validate: import.meta.env.DEV,
     });
-    this.platform.sendMessage('in_game_loading_stopped');
+    this.sendLoading(false);
     this.round = newRound(gen);
     this.addBackground(gen.mode);
     this.relayout();
     this.hud.setLevel(this.dailyIndex === null ? level : this.dailyIndex + 1);
     this.hud.setHearts(this.round.hearts);
     this.hud.setPrompt(promptCounts(this.round));
+    // The next themes load in the background while this scene is played (GDD §5: no stall);
+    // once they are in, everything outside `needed` is released (GPU memory).
+    void ensureThemes(this, needed).then(() => {
+      if (this.levelGen === gen0 && this.sys.isActive()) releaseThemes(this, needed);
+    });
 
     const sorted = [...gen.objects].sort((a, b) => a.z - b.z);
     const stagger = Math.min(POP_IN_STAGGER_MAX_MS, POP_IN_STAGGER_TOTAL_MS / sorted.length);
@@ -419,7 +434,6 @@ export class GameScene extends Phaser.Scene {
     if (this.dailyIndex !== null) {
       if (this.dailyIndex + 1 < DAILY_CHAIN_LENGTH) {
         this.dailyIndex += 1;
-        progress.attempt = 0;
         persistProgress();
         void this.startLevel();
       } else {
@@ -478,7 +492,6 @@ export class GameScene extends Phaser.Scene {
   private readonly onPointer = (pointer: Phaser.Input.Pointer): void => {
     if (this.devMenuOpen || this.paused || this.adInProgress) return;
     if (this.hud.hitsHint(pointer.x, pointer.y) || this.hud.hitsHome(pointer.x, pointer.y)) return;
-    if (import.meta.env.DEV && this.checkDevTaps(pointer)) return;
     if (this.overlay) {
       this.onOverlayTap(pointer);
       return;
@@ -496,6 +509,11 @@ export class GameScene extends Phaser.Scene {
       case 'wrong':
         this.onWrong(res.object, res.hearts);
         if (res.lost) this.onLost();
+        break;
+      case 'none':
+        // Dev menu: three quick taps on empty background in the top-left corner (dev builds),
+        // so a tap that hits an object is never also a menu tap.
+        if (import.meta.env.DEV) this.checkDevTaps(pointer);
         break;
       default:
         break;
@@ -529,7 +547,8 @@ export class GameScene extends Phaser.Scene {
     const counts = promptCounts(r);
     this.hud.setPrompt(counts);
     const modeItem = counts.find((c) => c.family === 'spot' || c.family === 'odd');
-    const icon = modeItem ? modeItem.icon : (this.sprites.get(target.id)?.frame.name ?? '');
+    const placed = r.scene.objects.find((o) => o.id === target.id);
+    const icon = modeItem ? modeItem.icon : (placed?.frame ?? '');
     this.hud.pulsePrompt(icon);
   }
 
@@ -804,6 +823,12 @@ export class GameScene extends Phaser.Scene {
     if (q.get('daily') === '1') this.dailyIndex = 0;
   }
 
+  private sendLoading(open: boolean): void {
+    if (this.loadingOpen === open) return;
+    this.loadingOpen = open;
+    this.platform.sendMessage(open ? 'in_game_loading_started' : 'in_game_loading_stopped');
+  }
+
   /** Dev hooks: screen center of a fail-overlay button, null unless the round is lost. */
   private overlayButton(kind: 'retry' | 'continue'): DebugPoint | null {
     if (!this.overlay || this.round?.status !== 'lost') return null;
@@ -894,15 +919,6 @@ export class GameScene extends Phaser.Scene {
               r: d.hitRadius * this.world.scaleX * screenScale(),
             }))
           : [],
-      simulatePause: (p: boolean) => {
-        this.setPaused(p);
-      },
-      tapHint: () => {
-        void this.onHint();
-      },
-      tapContinue: () => {
-        void this.onContinue();
-      },
       home: () => {
         const rect = this.game.canvas.getBoundingClientRect();
         const k = screenScale();

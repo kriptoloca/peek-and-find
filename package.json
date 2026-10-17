@@ -9,7 +9,7 @@
   },
   "scripts": {
     "dev": "node scripts/dev-url.mjs && vite --host 0.0.0.0",
-    "build": "tsc --noEmit -p tsconfig.json && vite build && node scripts/audit-dist.mjs",
+    "build": "tsc --noEmit -p tsconfig.json && vite build && node scripts/write-version.mjs && node scripts/audit-dist.mjs",
     "preview": "vite preview --host 0.0.0.0",
     "test": "vitest run",
     "test:watch": "vitest",

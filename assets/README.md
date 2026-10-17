@@ -36,6 +36,8 @@ Themes: `kitchen`, `beach`, `city`, `forest`, `space`. Example: `assets/svg/kitc
   distinguishable in shape or detail at 100 px on a phone.
 - Flippable families need asymmetric art (mirror decoys flip the sprite): `npm run assets` fails
   when fewer than 8 % of a flippable sprite's pixels change under a horizontal mirror.
+- The three variants of a family must be different objects (a Spot "swap" shows another
+  variant): `npm run assets` fails when two variants differ in fewer than 8 % of their pixels.
 - Colors: 2–3 tone shading, 0–2 px outlines, no nursery pastels (GDD §11).
 
 ## Backgrounds

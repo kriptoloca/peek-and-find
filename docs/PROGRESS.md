@@ -26,7 +26,7 @@ Repo: https://github.com/kriptoloca/peek-and-find
 | 9e | Phone test 2 fixes: visible color variants (grey tint, pixel-measured in the pipeline), tap circle = whole sprite, taps during the pop-in count, rules e2e (Spot pixel diff, rim tap, early tap) | done (code) | 20 e2e + 145 unit tests |
 | 9f | Haptics (Android; iOS has no API), audio self-review (`docs/audio-review.md`) | done (code) | 4 haptics tests; 149 unit |
 | 9g | Visual review (`docs/visual-review.md`): research + audit + screenshot tour (`npm run tour`); theme-tinted frame, palette lifted to ≥ 3:1 against the backgrounds with a pipeline gate, 1:1 HUD backing, fail buttons drawn (Canvas has no tint) | done (code) | 156 unit + 20 e2e; tour sheets reviewed in 9:16 / 16:9 / 1:1 before and after |
-| 10 | Size & performance budget | report done (code) | `docs/size-report.md`: initial load 2.81 MB OGG / 2.83 MB M4A of the 8 MB target (5 MB YouTube target), dist 4.6 MB; no update loops; **phone profile at L80 pending (Hasan)** |
+| 10 | Size & performance budget | report done (code) | `docs/size-report.md`: initial load 3.10 MB OGG / 3.12 MB M4A of the 8 MB target (5 MB YouTube target), dist 4.6 MB; no update loops; **phone profile at L80 pending (Hasan)** |
 | 11 | Playgama QA tool, certification checklist | checklist done (code) | `docs/certification-checklist.md`: 12 rules with evidence; GameReady order and save persistence now asserted in e2e; **QA tool pending (needs the Playgama account)** |
 | 12 | Store assets, submission ZIP | done (code) | `npm run zip` → deterministic `release/peek-and-find-0.1.0.zip` (3.27 MB, index.html at the root, no /test/, limits checked, SHA-256 printed); `docs/store/`: listing, thumbnail brief, video script, submission notes; `tests/store.test.ts` bans young-audience wording; **uploads and the thumbnails need the Playgama account and the art pack (Hasan)** |
 
@@ -37,7 +37,7 @@ Repo: https://github.com/kriptoloca/peek-and-find
 | Sistem mantığı (CLAUDE.md/GDD/GENERATOR) | 0 | 2 | 6 | 17 | YÜKSEK 2/2 düzeltildi; ORTA 5 düzeltildi, 1 kayıt; DÜŞÜK 12 düzeltildi, 5 kayıt |
 | E2E (oyuncu gözünden) | 2 | 5 | 10 | 7 | KRİTİK 2/2, YÜKSEK 5/5 düzeltildi; ORTA 8 düzeltildi, 2 kayıt; DÜŞÜK 5 düzeltildi, 2 kayıt |
 
-Gerekçeli kayıtlar docs/questions.md "adversarial audit" bölümünde. İkinci koşu: düzeltmelerden sonra her iki denetim yeniden çalıştırıldı (sonuç aynı bölümde).
+Gerekçeli kayıtlar docs/questions.md "adversarial audit" bölümlerinde. İkinci koşu (3259086 üzerinde): sistem denetimi ilk tur bulgularını 14 kapandı / 5 kısmen / 1 açık / 5 kayıt olarak hükme bağladı ve 1 ORTA + 11 DÜŞÜK yeni bulgu verdi; hepsi bu commit'te düzeltildi ya da kaydedildi (questions.md "second round"). E2E ikinci turu ilk tur bulgularını 13 kapandı / 6 kısmen / 3 açık / 2 kayıt olarak hükme bağladı ve 2 YÜKSEK (Spot piksel metriği) + 4 ORTA + 6 DÜŞÜK yeni bulgu verdi; YÜKSEK ve ORTA'ların hepsi bu commit'te düzeltildi, DÜŞÜK'ler düzeltildi ya da kaydedildi (questions.md "E2E re-audit").
 
 ## Hasan's steps (outside the code)
 - [x] Phone test started 2026-10-16 19:35–19:45: desktop 16:9 and iPhone 9:16 both render; first bug (HUD inside the Spot image) found and fixed. Still wanted: 3 lines on L30/L60 search feel, mirror decoys, Spot miss penalty, rotation.
@@ -62,8 +62,8 @@ See `docs/questions.md` (every deviation from the spec with its reason).
 ## Measured
 | Metric | Value |
 |---|---|
-| Tests | 173 unit + 33 e2e (+ `npm run tour`, 17 screenshot flows, not a gate) |
-| Bundle (dist/) | 4.6 MB shipped; initial load before GameReady 2.81 MB (OGG) / 2.83 MB (M4A): bundle 1.23 + Bridge 0.29 + kitchen and beach atlases 1.05 (beach unlocks at level 4, so it preloads at boot) + UI 0.03 + backgrounds + audio 0.16 (`docs/size-report.md`) |
+| Tests | 174 unit + 36 e2e locally, +1 on the live site (+ `npm run tour`, 17 screenshot flows, not a gate) |
+| Bundle (dist/) | 4.6 MB shipped; initial load before GameReady 3.10 MB (OGG) / 3.12 MB (M4A): bundle 1.23 + Bridge 0.29 + kitchen and beach atlases 1.05 (beach unlocks at level 4, so it preloads at boot) + UI 0.03 + backgrounds + audio 0.16 (`docs/size-report.md`) |
 | Atlases | 2048×2048 per theme, 112 frames at 208 px; UI 1024×512 |
 | Level 80 generation | ≈ 0.4 ms |
 | Asset build | atlases ≈ 7 s, reproducible (CI diff check); sprite/background contrast gate: least contrasting sprite per theme has 39–50 % of its area at ≥ 3:1; audio ≈ 3 s with ffmpeg (presence checked, not bytes) |

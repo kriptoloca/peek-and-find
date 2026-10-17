@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { MIRROR_MIN_CHANGED, mirrorDifference, renderSvg } from '../../scripts/lib/frames.mjs';
+import {
+  MIRROR_MIN_CHANGED,
+  VARIANT_MIN_CHANGED,
+  frameDifference,
+  mirrorDifference,
+  renderSvg,
+} from '../../scripts/lib/frames.mjs';
 import { loadThemes, spriteSpecs } from '../../scripts/lib/manifest.mjs';
 import { placeholderSprite } from '../../scripts/lib/placeholder-svg.mjs';
 
@@ -19,6 +25,29 @@ describe('mirror difference of flippable sprites', () => {
         expect(mirrorDifference(frame), `${t.id}/${s.file}`).toBeGreaterThanOrEqual(
           MIRROR_MIN_CHANGED,
         );
+      }
+    }
+  });
+
+  it('the three variants of every family differ (a Spot swap is a visible difference)', async () => {
+    for (const t of loadThemes(ROOT)) {
+      const byFamily = new Map<string, { file: string; svg: string }[]>();
+      for (const s of spriteSpecs(t)) {
+        const fam = s.base.replace(/_[a-z]$/, '');
+        const list = byFamily.get(fam) ?? [];
+        list.push({ file: s.file, svg: placeholderSprite(s, t.paletteShift) });
+        byFamily.set(fam, list);
+      }
+      for (const members of byFamily.values()) {
+        const frames = await Promise.all(members.map((m) => renderSvg(m.svg, 96, { trim: true })));
+        for (let i = 0; i < frames.length; i++) {
+          for (let j = i + 1; j < frames.length; j++) {
+            expect(
+              frameDifference(frames[i]!, frames[j]!),
+              `${t.id}: ${members[i]!.file} vs ${members[j]!.file}`,
+            ).toBeGreaterThanOrEqual(VARIANT_MIN_CHANGED);
+          }
+        }
       }
     }
   });

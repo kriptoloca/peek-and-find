@@ -89,28 +89,44 @@ export function runLoader(
  * Makes the textures of these themes available: atlas + backgrounds from the index when packed,
  * runtime placeholders otherwise (also when a packed file fails to load).
  */
+/** Theme loads in progress (a background preload and an awaited load never queue a key twice). */
+const inFlight = new Map<string, Promise<void>>();
+
 export async function ensureThemes(scene: Phaser.Scene, themes: readonly Theme[]): Promise<void> {
   const packed = themes.filter((t) => index?.themes[t.id] !== undefined);
   for (const t of themes) if (!packed.includes(t)) ensureThemeTextures(scene, t);
-  const pending = packed.filter((t) => !scene.textures.exists(atlasKey(t.id)));
-  if (pending.length === 0) return;
-  await runLoader(scene, (loader) => {
-    for (const t of pending) {
-      const e = index?.themes[t.id];
-      if (!e) continue;
-      loader.atlas(atlasKey(t.id), e.atlas, e.data);
-      const bg = backgroundKey(t, false);
-      const spot = backgroundKey(t, true);
-      if (!scene.textures.exists(bg)) loader.image(bg, e.background);
-      if (!scene.textures.exists(spot)) loader.image(spot, e.backgroundSpot);
-    }
-  });
-  for (const t of pending) {
-    if (!scene.textures.exists(atlasKey(t.id))) {
-      console.error(`atlas ${t.id} unavailable, using placeholders`);
-      ensureThemeTextures(scene, t);
-    }
+  const waits: Promise<void>[] = [];
+  const pending: Theme[] = [];
+  for (const t of packed) {
+    if (scene.textures.exists(atlasKey(t.id))) continue;
+    const running = inFlight.get(t.id);
+    if (running) waits.push(running);
+    else pending.push(t);
   }
+  if (pending.length > 0) {
+    const run = runLoader(scene, (loader) => {
+      for (const t of pending) {
+        const e = index?.themes[t.id];
+        if (!e) continue;
+        loader.atlas(atlasKey(t.id), e.atlas, e.data);
+        const bg = backgroundKey(t, false);
+        const spot = backgroundKey(t, true);
+        if (!scene.textures.exists(bg)) loader.image(bg, e.background);
+        if (!scene.textures.exists(spot)) loader.image(spot, e.backgroundSpot);
+      }
+    }).then(() => {
+      for (const t of pending) {
+        inFlight.delete(t.id);
+        if (!scene.textures.exists(atlasKey(t.id))) {
+          console.error(`atlas ${t.id} unavailable, using placeholders`);
+          ensureThemeTextures(scene, t);
+        }
+      }
+    });
+    for (const t of pending) inFlight.set(t.id, run);
+    waits.push(run);
+  }
+  await Promise.all(waits);
 }
 
 /**

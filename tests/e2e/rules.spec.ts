@@ -14,37 +14,64 @@ import { CANVAS, SALT, TEST, state, test, waitState, winScene, wrongTap } from '
  * Scenes are pinned with ?salt= so a failure reproduces.
  */
 
-/** Share of pixels that differ noticeably between two same-size crops of a screenshot. */
-async function cropShare(
+/** Raw RGB of a square crop; `left/top` are clamped so the crop stays inside the screenshot. */
+async function cropRaw(
   png: Buffer,
-  a: { x: number; y: number },
-  b: { x: number; y: number },
-  r: number,
+  left: number,
+  top: number,
+  side: number,
+  bounds: { w: number; h: number },
+): Promise<{ data: Buffer; left: number; top: number }> {
+  const l = Math.max(0, Math.min(bounds.w - side, left));
+  const t = Math.max(0, Math.min(bounds.h - side, top));
+  const data = await sharp(png)
+    .extract({ left: l, top: t, width: side, height: side })
+    .removeAlpha()
+    .raw()
+    .toBuffer();
+  return { data, left: l, top: t };
+}
+
+interface Circle {
+  x: number;
+  y: number;
+  r: number;
+}
+
+/**
+ * Share of the pixels inside `disc` (and outside every `mask` circle) that differ noticeably
+ * between image A and the same spot in image B (`offset`, an integer number of pixels).
+ */
+async function discShare(
+  png: Buffer,
+  disc: Circle,
+  offset: { x: number; y: number },
+  masks: Circle[],
   bounds: { w: number; h: number },
 ): Promise<number> {
-  const side = Math.max(8, Math.round(r * 2));
-  const crop = (p: { x: number; y: number }): { left: number; top: number } => ({
-    left: Math.max(0, Math.min(bounds.w - side, Math.round(p.x - r))),
-    top: Math.max(0, Math.min(bounds.h - side, Math.round(p.y - r))),
-  });
-  const raw = async (p: { x: number; y: number }): Promise<Buffer> =>
-    sharp(png)
-      .extract({ ...crop(p), width: side, height: side })
-      .removeAlpha()
-      .raw()
-      .toBuffer();
-  const [ra, rb] = await Promise.all([raw(a), raw(b)]);
+  const r = Math.max(6, disc.r);
+  const side = Math.round(r * 2);
+  const a = await cropRaw(png, Math.round(disc.x - r), Math.round(disc.y - r), side, bounds);
+  const b = await cropRaw(png, a.left + offset.x, a.top + offset.y, side, bounds);
+  let counted = 0;
   let changed = 0;
-  const n = side * side;
-  for (let i = 0; i < n; i++) {
-    const d = Math.max(
-      Math.abs((ra[i * 3] ?? 0) - (rb[i * 3] ?? 0)),
-      Math.abs((ra[i * 3 + 1] ?? 0) - (rb[i * 3 + 1] ?? 0)),
-      Math.abs((ra[i * 3 + 2] ?? 0) - (rb[i * 3 + 2] ?? 0)),
-    );
-    if (d > 32) changed += 1;
+  for (let y = 0; y < side; y++) {
+    for (let x = 0; x < side; x++) {
+      const sx = a.left + x;
+      const sy = a.top + y;
+      if (Math.hypot(sx - disc.x, sy - disc.y) > r) continue;
+      if (masks.some((m) => Math.hypot(sx - m.x, sy - m.y) <= m.r)) continue;
+      counted += 1;
+      const i = (y * side + x) * 3;
+      const d = Math.max(
+        Math.abs((a.data[i] ?? 0) - (b.data[i] ?? 0)),
+        Math.abs((a.data[i + 1] ?? 0) - (b.data[i + 1] ?? 0)),
+        Math.abs((a.data[i + 2] ?? 0) - (b.data[i + 2] ?? 0)),
+      );
+      if (d > 32) changed += 1;
+    }
   }
-  return changed / n;
+  return counted === 0 ? 0 : changed / counted;
 }
 
 for (const level of [12, 30, 55]) {
@@ -57,6 +84,7 @@ for (const level of [12, 30, 55]) {
     await page.goto(`${TEST}?level=${String(level)}&mode=spot&reset=1${SALT}${CANVAS}`, {
       waitUntil: 'load',
     });
+    expect(await page.evaluate(() => window.devicePixelRatio)).toBe(1);
     const s = await waitState(page, (x) => x.status === 'playing', 'spot');
     expect(s.mode).toBe('spot');
     await page.waitForTimeout(1000); // pop-in tweens (≤ 650 ms) settle in both images
@@ -73,43 +101,37 @@ for (const level of [12, 30, 55]) {
     const offset = { x: first.b.x - first.a.x, y: first.b.y - first.a.y };
     expect(Math.abs(offset.x - Math.round(offset.x))).toBeLessThan(0.01);
     expect(Math.abs(offset.y - Math.round(offset.y))).toBeLessThan(0.01);
+    const off = { x: Math.round(offset.x), y: Math.round(offset.y) };
+    const circles: Circle[] = diffs.map((d) => ({ x: d.a.x, y: d.a.y, r: d.r }));
 
-    // noise floor: objects that are the same in both images and sit clear of every difference
-    // (a removed or rescaled object changes what its neighbours overlap; a swap partner changes
-    // too), measured as the median so one contaminated control cannot hide a real difference
+    // Noise floor: objects that are the same in both images and whose discs stay clear of every
+    // difference (a removed or rescaled neighbour changes what overlaps them); the median share
+    // inside their discs. No clean control → the fixed 2 % floor.
     const diffIds = new Set(diffs.map((d) => d.id));
-    const clearance = (o: DebugPoint): number =>
-      Math.min(...diffs.map((d) => Math.hypot(d.a.x - o.x, d.a.y - o.y) - d.r - (o.r ?? 24)));
-    const controls = objects
+    const clean = objects
       .filter((o) => !diffIds.has(o.id))
-      .sort((a, b) => clearance(b) - clearance(a)) // farthest from any difference first
+      .filter((o) => circles.every((c) => Math.hypot(c.x - o.x, c.y - o.y) > c.r + (o.r ?? 24)))
       .slice(0, 12);
-    expect(controls.length).toBeGreaterThanOrEqual(2);
     const shares: number[] = [];
-    for (const c of controls) {
-      shares.push(
-        await cropShare(
-          png,
-          c,
-          { x: c.x + offset.x, y: c.y + offset.y },
-          Math.max(12, c.r ?? 24),
-          bounds,
-        ),
-      );
+    for (const o of clean) {
+      shares.push(await discShare(png, { x: o.x, y: o.y, r: o.r ?? 24 }, off, circles, bounds));
     }
     shares.sort((a, b) => a - b);
     const noise = shares[Math.floor(shares.length / 2)] ?? 0;
     const threshold = Math.max(0.02, 3 * noise);
     for (const d of diffs) {
-      const share = await cropShare(png, d.a, d.b, Math.max(12, d.r), bounds);
+      const masks = circles.filter((c) => c.x !== d.a.x || c.y !== d.a.y);
+      const share = await discShare(png, { x: d.a.x, y: d.a.y, r: d.r }, off, masks, bounds);
       expect(
         share,
-        `${d.id} (${d.kind}) vs noise median ${noise.toFixed(3)} max ${String(shares[shares.length - 1]?.toFixed(3))}`,
+        `${d.id} (${d.kind}) share ${share.toFixed(3)} vs noise median ${noise.toFixed(3)} over ${String(clean.length)} clean controls`,
       ).toBeGreaterThan(threshold);
     }
 
-    for (const d of diffs) {
-      await page.mouse.click(d.a.x, d.a.y);
+    // Found by tapping: alternate between the two images (both are tappable).
+    for (const [i, d] of diffs.entries()) {
+      const p = i % 2 === 0 ? d.a : d.b;
+      await page.mouse.click(p.x, p.y);
       await page.waitForTimeout(150);
     }
     const done = await waitState(page, (x) => x.status === 'won', 'all five found');

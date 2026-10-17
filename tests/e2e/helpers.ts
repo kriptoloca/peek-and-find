@@ -47,7 +47,11 @@ export function collect(page: Page): Collected {
     c.paths.add(u.pathname);
   });
   page.on('websocket', (ws) => c.errors.push(`websocket: ${ws.url()}`));
-  page.on('requestfailed', (r) => c.errors.push(`requestfailed: ${r.url()}`));
+  page.on('requestfailed', (r) => {
+    // a navigation cancels the previous page's requests; that is not a failed asset
+    if (r.failure()?.errorText === 'net::ERR_ABORTED') return;
+    c.errors.push(`requestfailed: ${r.url()} ${r.failure()?.errorText ?? ''}`);
+  });
   return c;
 }
 
@@ -186,6 +190,26 @@ export async function setHidden(page: Page, hidden: boolean): Promise<void> {
     Object.defineProperty(document, 'hidden', { configurable: true, get: () => h });
     document.dispatchEvent(new Event('visibilitychange'));
   }, hidden);
+}
+
+/** Mean luminance (0–255) of a screenshot: the pause dim must darken the screen visibly. */
+export async function meanLuma(png: Buffer): Promise<number> {
+  const st = await sharp(png).removeAlpha().stats();
+  const [r, g, b] = st.channels.map((c) => c.mean) as [number, number, number];
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+/**
+ * Flips the SDK's own audio state (what the YouTube adapter's onAudioEnabledChange feeds), so
+ * "platform mute wins" is tested without a pause. Reaches into the pinned Bridge 2.3.1 runtime.
+ */
+export async function setSdkAudio(page: Page, enabled: boolean): Promise<void> {
+  await page.evaluate((on) => {
+    const w = window as unknown as {
+      bridge: { platform: { _platformBridge: { _setAudioState: (v: boolean) => void } } };
+    };
+    w.bridge.platform._platformBridge._setAudioState(on);
+  }, enabled);
 }
 
 /** Saves a screenshot next to the test results and returns how much is drawn (0 = blank). */

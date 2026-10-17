@@ -70,7 +70,9 @@ test('the WebGL renderer plays the same loop (?fpsmin=1 keeps timers on wall-clo
 test('fake ads: the interstitial blocks taps, hint and Continue are real button taps', async ({
   page,
 }, info) => {
-  await page.goto(`${TEST}?level=5&mode=find&fakeads=1&adfast=1${CANVAS}`, { waitUntil: 'load' });
+  await page.goto(`${TEST}?level=5&mode=find&fakeads=1&adfast=1&reset=1${SALT}${CANVAS}`, {
+    waitUntil: 'load',
+  });
   await waitState(page, (s) => s.status === 'playing', 'level 5');
   for (let i = 0; i < 3; i++) {
     await winScene(page);
@@ -81,14 +83,17 @@ test('fake ads: the interstitial blocks taps, hint and Continue are real button 
   // CLAUDE.md rule 4 / GDD: nothing reacts while an ad runs (the fake ad lets taps through to
   // the canvas, so this is the game's own guard, not the DOM overlay): home is tapped at once
   await tapButton(page, 'home');
+  await tapButton(page, 'hintCenter');
   await page.waitForTimeout(150);
   const during = await state(page);
   expect(during?.adInProgress).toBe(true);
+  expect(during?.hintUses).toBe(0);
   expect(await page.evaluate(() => typeof window.__peekDebug)).toBe('object');
   await expect(page.locator('#fake-ad')).toBeVisible();
   await shot(page, info, 'interstitial');
   const after = await waitState(page, (s) => s.level === 8 && s.status === 'playing', 'after ad');
   expect(after.hearts).toBe(3);
+  expect(after.hintUses).toBe(0);
 
   const before = after.remaining;
   await tapButton(page, 'hintCenter');
@@ -108,7 +113,9 @@ test('fake ads: the interstitial blocks taps, hint and Continue are real button 
 });
 
 test('no interstitial before 120 s even after four scenes (CLAUDE.md rule 6)', async ({ page }) => {
-  await page.goto(`${TEST}?level=5&mode=find&fakeads=1&reset=1${CANVAS}`, { waitUntil: 'load' });
+  await page.goto(`${TEST}?level=5&mode=find&fakeads=1&reset=1${SALT}${CANVAS}`, {
+    waitUntil: 'load',
+  });
   await waitState(page, (s) => s.status === 'playing', 'level 5');
   for (let i = 0; i < 4; i++) {
     const s = await winScene(page);
@@ -159,8 +166,17 @@ test('hearts step down on wrong taps, three of them lose the scene; a fast win e
   expect(won.stars).toBe(3);
 });
 
+test('the theme that unlocks at 20 is already loaded at 19 (no stall at the unlock)', async ({
+  page,
+}) => {
+  await page.goto(`${TEST}?level=19&mode=find&reset=1${CANVAS}`, { waitUntil: 'load' });
+  await waitState(page, (s) => s.status === 'playing', 'level 19');
+  const s = await waitState(page, (x) => x.atlasKeys.includes('atlas_city'), 'city preloaded');
+  expect(s.atlasKeys.length).toBeLessThanOrEqual(4);
+});
+
 test('level 25 is a big scene with seven targets', async ({ page }) => {
-  await page.goto(`${TEST}?level=25&mode=find&reset=1${CANVAS}`, { waitUntil: 'load' });
+  await page.goto(`${TEST}?level=25&mode=find&reset=1${SALT}${CANVAS}`, { waitUntil: 'load' });
   const s = await waitState(page, (x) => x.status === 'playing', 'level 25');
   expect(s.bigScene).toBe(true);
   expect(s.remaining).toBe(7);
@@ -185,7 +201,7 @@ test('sound and music toggles are real taps and survive a reload', async ({ page
 test('rotation keeps the HUD out of the images, a tap after rotating counts, 1:1 never hosts Spot', async ({
   page,
 }, info) => {
-  await page.goto(`${TEST}?level=12&mode=spot`, { waitUntil: 'load' });
+  await page.goto(`${TEST}?level=12&mode=spot&reset=1${SALT}`, { waitUntil: 'load' });
   const portrait = await waitState(page, (s) => s.status === 'playing', 'spot');
   expect(portrait.mode).toBe('spot');
   expect(portrait.hudInBand).toBe(true);
@@ -210,7 +226,7 @@ test('rotation keeps the HUD out of the images, a tap after rotating counts, 1:1
   expect((await state(page))?.hudInBand).toBe(true);
 
   await page.setViewportSize({ width: 700, height: 700 });
-  await page.goto(`${TEST}?level=12&mode=spot`, { waitUntil: 'load' });
+  await page.goto(`${TEST}?level=12&mode=spot&reset=1${SALT}`, { waitUntil: 'load' });
   const square = await waitState(page, (s) => s.status === 'playing', 'square');
   expect(square.mode).not.toBe('spot');
   expect(square.hudInBand).toBe(true);
@@ -264,6 +280,7 @@ test('home button: back to the Title from play, PLAY returns to the same scene',
     await page.setViewportSize(view);
     await page.goto(`${TEST}?level=7&mode=find&reset=1${CANVAS}`, { waitUntil: 'load' });
     const before = await waitState(page, (s) => s.status === 'playing', 'playing');
+    const layout = await page.evaluate(() => window.__peekDebug?.objects() ?? []);
     await tapButton(page, 'home');
     await waitTitle(page);
     await shot(page, info, `title-after-home-${String(view.width)}`);
@@ -272,5 +289,7 @@ test('home button: back to the Title from play, PLAY returns to the same scene',
     expect(again.level).toBe(7);
     expect(again.sceneLevel).toBe(before.sceneLevel);
     expect(again.theme).toBe(before.theme);
+    await page.waitForTimeout(800);
+    expect(await page.evaluate(() => window.__peekDebug?.objects() ?? [])).toEqual(layout);
   }
 });

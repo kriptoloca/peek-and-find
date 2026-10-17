@@ -222,10 +222,10 @@ function drawFrame(
   // variant markers: a plain, b white dot, c dark stripe
   if (variant === 1) {
     g.fillStyle(0xffffff, 0.95);
-    g.fillCircle(c + 10, c + 20, 22);
+    g.fillCircle(c, c, 36);
   } else if (variant === 2) {
     g.fillStyle(darken(color, 40), 1);
-    g.fillRect(c - 70, c + 24, 140, 20);
+    g.fillRect(c - 100, c - 16, 200, 34);
   }
   // asymmetry marker so flipX is visible on placeholders
   if (asymmetric) {

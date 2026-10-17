@@ -14,6 +14,7 @@ import {
 } from '../assets';
 import { AUDIO_INDEX_KEY, AUDIO_INDEX_URL, audio, loadAudio } from '../audio';
 import { computeLayout } from '../layout';
+import { ensureUiTextures } from '../textures/placeholders';
 import {
   attachSaveStore,
   hydrateProgress,
@@ -50,6 +51,7 @@ export class BootScene extends Phaser.Scene {
     this.boot().catch((e: unknown) => {
       // A failed boot still shows the Title with whatever loaded (placeholders fill the gaps).
       console.error('peek: boot failed', e);
+      ensureUiTextures(this);
       this.scene.start('Title');
     });
   }

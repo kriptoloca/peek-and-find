@@ -32,10 +32,6 @@ export interface PeekDebug {
   objects: () => DebugPoint[];
   /** The five Spot differences in both images; empty outside Spot. */
   differences: () => DebugDifference[];
-  /** Dev-only levers for the headless checks. */
-  simulatePause: (paused: boolean) => void;
-  tapHint: () => void;
-  tapContinue: () => void;
   /** Screen center of the HUD home button (back to the Title). */
   home: () => DebugPoint;
   /** Screen center of the hint bulb, null while hidden (no rewarded ads). */

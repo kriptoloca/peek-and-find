@@ -12,7 +12,7 @@
       "backgroundSpot": "backgrounds/kitchen_spot.png",
       "backgroundSource": "placeholder",
       "minContrastShare": 0.46,
-      "minMirrorShare": 0.15
+      "minMirrorShare": 0.17
     },
     "beach": {
       "atlas": "atlases/beach.png",
@@ -38,7 +38,7 @@
       "backgroundSpot": "backgrounds/city_spot.png",
       "backgroundSource": "placeholder",
       "minContrastShare": 0.36,
-      "minMirrorShare": 0.15
+      "minMirrorShare": 0.17
     },
     "forest": {
       "atlas": "atlases/forest.png",
@@ -64,7 +64,7 @@
       "backgroundSpot": "backgrounds/space_spot.png",
       "backgroundSource": "placeholder",
       "minContrastShare": 0.45,
-      "minMirrorShare": 0.12
+      "minMirrorShare": 0.15
     }
   },
   "ui": {

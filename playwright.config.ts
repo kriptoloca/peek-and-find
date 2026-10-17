@@ -17,6 +17,8 @@ export default defineConfig({
   timeout: 120_000,
   expect: { timeout: 20_000 },
   retries: live ? 1 : 0,
+  // A live retry may pass against a stale CDN copy; a flaky live run is reported as a failure.
+  failOnFlakyTests: Boolean(live),
   workers: process.env.CI ? 1 : 2,
   reporter: [['list']],
   outputDir: 'test-results',

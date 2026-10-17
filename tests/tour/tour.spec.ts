@@ -1,7 +1,7 @@
 import { mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { test, type Page } from '@playwright/test';
-import { CANVAS, TEST, loseScene, waitState, waitTitle, winScene } from '../e2e/helpers';
+import { CANVAS, TEST, loseScene, setHidden, waitState, waitTitle, winScene } from '../e2e/helpers';
 
 /**
  * Visual tour (docs/visual-review.md): every screen a player meets, in the three aspect
@@ -87,14 +87,15 @@ test('feedback: wrong tap, correct tap, hint, pause, won, lost with and without 
     await page.waitForTimeout(120);
     await snap(page, 'fx-correct');
   }
-  await page.evaluate(() => window.__peekDebug?.tapHint());
+  const hint = await page.evaluate(() => window.__peekDebug?.hintCenter());
+  if (hint) await page.mouse.click(hint.x, hint.y);
   await waitState(page, (x) => x.hintUses === 1 && !x.adInProgress, 'hint');
   await page.waitForTimeout(300);
   await snap(page, 'fx-hint');
-  await page.evaluate(() => window.__peekDebug?.simulatePause(true));
-  await page.waitForTimeout(200);
+  await setHidden(page, true);
+  await page.waitForTimeout(300);
   await snap(page, 'fx-pause');
-  await page.evaluate(() => window.__peekDebug?.simulatePause(false));
+  await setHidden(page, false);
   await winScene(page);
   await page.waitForTimeout(700);
   await snap(page, 'fx-won');

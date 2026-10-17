@@ -2,13 +2,17 @@ import { expect } from '@playwright/test';
 import {
   CANVAS,
   TEST,
+  meanLuma,
   setHidden,
+  setSdkAudio,
   state,
   tapTitle,
   test,
   titleAudio,
+  titleState,
   waitState,
   waitTitle,
+  winScene,
 } from './helpers';
 
 /**
@@ -72,6 +76,49 @@ test('the music toggle on the Title silences the loop and persists', async ({ pa
   expect((await page.evaluate(() => window.__peekTitle?.state()))?.music).toBe(false);
 });
 
+test('the sound toggle on the Title silences the SFX (taps play nothing)', async ({ page }) => {
+  await page.goto(`${TEST}?reset=1${CANVAS}`, { waitUntil: 'load' });
+  await waitTitle(page);
+  await tapTitle(page, 'sound');
+  await page.waitForTimeout(300);
+  expect((await titleState(page)).sound).toBe(false);
+  await tapTitle(page, 'play');
+  await waitState(page, (x) => x.status === 'playing', 'playing');
+  await winScene(page);
+  const s = await state(page);
+  expect(s?.audio.played.filter((n) => n.startsWith('tap_'))).toEqual([]);
+  expect(s?.audio.dropped ?? 0).toBeGreaterThan(0);
+});
+
+test('platform mute alone (the SDK audio state) silences the game while play goes on', async ({
+  page,
+}) => {
+  await page.goto(`${TEST}?reset=1${CANVAS}`, { waitUntil: 'load' });
+  await waitTitle(page);
+  await tapTitle(page, 'play');
+  const playing = await waitState(page, (x) => x.status === 'playing', 'playing');
+  await waitLevel(page, (l) => l > 0.002, 'music audible');
+  // YouTube's onAudioEnabledChange reaches the SDK's _setAudioState; the mock platform exposes
+  // the same entry, so this is the SDK's own AUDIO_STATE_CHANGED path without a pause.
+  await setSdkAudio(page, false);
+  const muted = await waitState(
+    page,
+    (x) => !x.audio.platformEnabled && !x.audio.musicPlaying && !x.paused,
+    'muted, not paused',
+  );
+  expect(muted.audio.musicOn).toBe(true);
+  await waitLevel(page, (l) => l >= 0 && l < 0.0005, 'silent bus');
+  const t = await page.evaluate(() => window.__peekDebug?.targets() ?? []);
+  if (!t[0]) throw new Error('no target');
+  await page.mouse.click(t[0].x, t[0].y);
+  const after = await waitState(page, (x) => x.remaining === playing.remaining - 1, 'tap counted');
+  expect(after.audio.played.filter((n) => n.startsWith('tap_'))).toEqual([]);
+  expect(after.audio.dropped).toBeGreaterThan(muted.audio.dropped);
+  await setSdkAudio(page, true);
+  await waitState(page, (x) => x.audio.platformEnabled && x.audio.musicPlaying, 'music back');
+  await waitLevel(page, (l) => l > 0.002, 'audible again');
+});
+
 test('platform pause and mute in play come through the host path and win over the toggles', async ({
   page,
 }) => {
@@ -83,8 +130,9 @@ test('platform pause and mute in play come through the host path and win over th
   await waitLevel(page, (l) => l > 0.002, 'music audible');
   const remaining = playing.remaining;
 
-  // The host hides the page: the SDK flips its pause and audio state; the game must freeze
-  // and fall silent although the player's toggles are on.
+  // The host hides the page: the SDK flips its pause and audio state; the game must freeze,
+  // dim (CLAUDE.md rule 4) and fall silent although the player's toggles are on.
+  const bright = await page.screenshot();
   await setHidden(page, true);
   const paused = await waitState(
     page,
@@ -94,6 +142,8 @@ test('platform pause and mute in play come through the host path and win over th
   expect(paused.audio.musicOn).toBe(true);
   expect(paused.audio.soundOn).toBe(true);
   await waitLevel(page, (l) => l >= 0 && l < 0.0005, 'silent while paused');
+  await page.waitForTimeout(300);
+  expect(await meanLuma(await page.screenshot())).toBeLessThan((await meanLuma(bright)) * 0.75);
   const t = await page.evaluate(() => window.__peekDebug?.targets() ?? []);
   if (t[0]) await page.mouse.click(t[0].x, t[0].y);
   await page.waitForTimeout(300);
@@ -112,9 +162,11 @@ test('platform pause and mute in play come through the host path and win over th
 test('platform pause on the Title: PLAY does nothing until the host resumes', async ({ page }) => {
   await page.goto(`${TEST}?reset=1${CANVAS}`, { waitUntil: 'load' });
   await waitTitle(page);
+  const bright = await page.screenshot();
   await setHidden(page, true);
   await page.waitForTimeout(300);
   expect((await titleAudio(page)).paused).toBe(true);
+  expect(await meanLuma(await page.screenshot())).toBeLessThan((await meanLuma(bright)) * 0.75);
   await tapTitle(page, 'play');
   await page.waitForTimeout(800);
   expect(await page.evaluate(() => typeof window.__peekDebug)).toBe('undefined');

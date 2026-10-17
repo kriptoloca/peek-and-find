@@ -155,10 +155,20 @@ export function placeholderSprite(spec, paletteShift) {
   parts.push(
     `<g clip-path="url(#clip)"><rect x="0" y="150" width="256" height="106" fill="#000000" opacity="0.18"/>`,
   );
+  // Variant markers are large on purpose: a Spot "swap" shows variant b or c instead of a, and
+  // the pipeline requires ≥ 8 % of the pixels to differ between the variants of a family.
+  // The markers follow the shape's own edge (an inner outline, clipped to the shape), so every
+  // silhouette, thin bolts and knives included, shows them.
   if (spec.variant === 'b') {
-    parts.push(`<circle cx="138" cy="148" r="22" fill="#ffffff" opacity="0.95"/>`);
+    parts.push(shapeElement(shape, `fill="none" stroke="#ffffff" stroke-width="22" opacity="0.9"`));
   } else if (spec.variant === 'c') {
-    parts.push(`<rect x="58" y="152" width="140" height="20" fill="${dark}"/>`);
+    // dashed, so it differs from b without darkening the body (contrast gate)
+    parts.push(
+      shapeElement(
+        shape,
+        `fill="none" stroke="#ffffff" stroke-width="26" stroke-dasharray="26 26" opacity="0.9"`,
+      ),
+    );
   }
   if (spec.tags.includes('flippable')) {
     // Mirror decoys and Spot flips must read: a bar on the right third, clipped to the shape,
