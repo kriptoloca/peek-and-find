@@ -4,6 +4,7 @@ import bridge, {
   PLATFORM_MESSAGE,
   REWARDED_STATE,
 } from '@playgama/bridge';
+import { hostedByYoutube } from './host';
 import { LocalStorageBackend, type StorageBackend } from './storage';
 
 /**
@@ -45,6 +46,11 @@ export interface Platform {
 /** CLAUDE.md rule 6: second guard next to our own AdGate. */
 export const BRIDGE_MIN_INTERSTITIAL_DELAY_S = 120;
 const INIT_TIMEOUT_MS = 6000;
+/**
+ * Inside the YouTube host the SDK waits for the host's own handshake; a 6 s cut-off would drop
+ * the game to the stub and GameReady would never reach YouTube. Wait much longer there.
+ */
+const INIT_TIMEOUT_YOUTUBE_MS = 60_000;
 /** If the SDK emits no state after a show() call, give up waiting after this long. */
 const AD_SILENT_TIMEOUT_MS = 4000;
 /** Upper bound for an open ad; real ads end long before. */
@@ -110,7 +116,10 @@ async function create(): Promise<Platform> {
     import.meta.env.DEV && new URLSearchParams(window.location.search).get('fakeads') === '1';
   if (!runtimePresent()) return stubPlatform(fake);
   try {
-    await withTimeout(bridge.initialize(), INIT_TIMEOUT_MS);
+    await withTimeout(
+      bridge.initialize(),
+      hostedByYoutube() ? INIT_TIMEOUT_YOUTUBE_MS : INIT_TIMEOUT_MS,
+    );
   } catch {
     return stubPlatform(fake);
   }
@@ -299,6 +308,10 @@ function stubPlatform(fake: boolean): Platform {
     isAudioEnabled: () => true,
     isPaused: () => false,
     sendMessage: (name) => {
+      if (name === 'game_ready') {
+        if (gameReadySent) return;
+        gameReadySent = true;
+      }
       sent.push(name);
     },
     showInterstitial: () => Promise.resolve(),
@@ -318,8 +331,10 @@ function withFakeAds(p: Platform): Platform {
       el.textContent = label;
       el.setAttribute(
         'style',
+        // pointer-events:none: taps reach the canvas, so the game's own ad guard is what blocks
+        // them (a real ad does not sit in our DOM either).
         'position:fixed;inset:0;background:#000c;color:#fff;display:flex;align-items:center;' +
-          'justify-content:center;font:bold 48px sans-serif;z-index:99999',
+          'justify-content:center;font:bold 48px sans-serif;z-index:99999;pointer-events:none',
       );
       document.body.appendChild(el);
       window.setTimeout(() => {

@@ -6,7 +6,7 @@ import { getPlatform, sentPlatformMessages } from '../../platform/bridge';
 import { persistProgress, progress } from '../state';
 import { addImage, setImageFrame } from '../assets';
 import { audio } from '../audio';
-import { installTitleDebug } from '../../dev/debug';
+import { installTitleDebug, uninstallTitleDebug } from '../../dev/debug';
 import { UI } from '../textures/placeholders';
 
 const COLOR_BG = 0x1b1f2a;
@@ -18,6 +18,8 @@ const PLAY_H = 170;
 const DAILY_W = 520;
 const DAILY_H = 130;
 const TOGGLE = 96;
+/** GameReady goes to the platform once per page load; a return from play is not a load. */
+let readySent = false;
 
 /**
  * Title (GDD §9 screen 2): logo, PLAY, DAILY with streak badge and check mark, sound/music
@@ -25,6 +27,10 @@ const TOGGLE = 96;
  */
 export class TitleScene extends Phaser.Scene {
   private root!: Phaser.GameObjects.Container;
+  private paused = false;
+  private dailyDone = false;
+  private pauseDim: Phaser.GameObjects.Graphics | null = null;
+  private unsubscribePause: (() => void) | null = null;
   /** Design-px centers of the tap targets (dev hooks expose them in screen px). */
   private readonly spots = {
     play: { x: 0, y: 0 },
@@ -45,10 +51,44 @@ export class TitleScene extends Phaser.Scene {
     });
     this.build();
     if (import.meta.env.DEV) this.installDebugHooks();
-    // CLAUDE.md rule 3: GameReady only when the player can interact (the title is up).
     const platform = getPlatform();
-    platform.sendMessage('in_game_loading_stopped');
-    platform.sendMessage('game_ready');
+    // CLAUDE.md rule 4: platform pause freezes the Title too (tweens, input, a dim overlay).
+    this.unsubscribePause = platform.onPause((p) => {
+      this.setPaused(p);
+    });
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.unsubscribePause?.();
+      this.unsubscribePause = null;
+      if (import.meta.env.DEV) uninstallTitleDebug();
+    });
+    if (platform.isPaused()) this.setPaused(true);
+    // CLAUDE.md rule 3: GameReady only when the player can interact (the title is up), once.
+    if (!readySent) {
+      readySent = true;
+      platform.sendMessage('in_game_loading_stopped');
+      platform.sendMessage('game_ready');
+    }
+  }
+
+  private setPaused(paused: boolean): void {
+    if (this.paused === paused) return;
+    this.paused = paused;
+    this.input.enabled = !paused;
+    if (paused) {
+      this.tweens.pauseAll();
+      this.drawPauseDim();
+    } else {
+      this.tweens.resumeAll();
+      this.pauseDim?.destroy();
+      this.pauseDim = null;
+    }
+  }
+
+  private drawPauseDim(): void {
+    const { width, height } = this.scale.gameSize;
+    this.pauseDim?.destroy();
+    this.pauseDim = this.add.graphics().setDepth(50);
+    this.pauseDim.fillStyle(0x000000, 0.55).fillRect(0, 0, width, height);
   }
 
   private readonly build = (): void => {
@@ -81,7 +121,13 @@ export class TitleScene extends Phaser.Scene {
     });
 
     // DAILY with streak badge / check
-    const status = dailyStatus(progress, todayKey());
+    // Dev builds: ?today=YYYYMMDD moves the calendar for the daily tests (same key as the Game).
+    const devToday = import.meta.env.DEV
+      ? new URLSearchParams(window.location.search).get('today')
+      : null;
+    const today = devToday && /^\d{8}$/.test(devToday) ? devToday : todayKey();
+    const status = dailyStatus(progress, today);
+    this.dailyDone = status.done;
     const dailyY = playY + PLAY_H / 2 + 50 + DAILY_H / 2;
     this.spots.daily = { x: cx, y: dailyY };
     const badge = status.done ? '' : status.streak > 0 ? String(status.streak) : '';
@@ -95,7 +141,7 @@ export class TitleScene extends Phaser.Scene {
       strings.daily,
       badge,
       () => {
-        if (!status.done) this.scene.start('Game', { daily: true });
+        if (!status.done) this.scene.start('Game', { daily: true, today });
       },
     );
     if (status.done && status.streak > 0) {
@@ -134,6 +180,7 @@ export class TitleScene extends Phaser.Scene {
       UI.musicOn,
       UI.musicOff,
     );
+    if (this.paused) this.drawPauseDim();
   };
 
   private installDebugHooks(): void {
@@ -149,7 +196,12 @@ export class TitleScene extends Phaser.Scene {
         sound: toScreen(this.spots.sound),
         music: toScreen(this.spots.music),
       }),
-      state: () => ({ sound: progress.sound, music: progress.music }),
+      state: () => ({
+        sound: progress.sound,
+        music: progress.music,
+        dailyDone: this.dailyDone,
+        streak: progress.streak,
+      }),
       audio: () => audio.debug(),
       messages: () => [...sentPlatformMessages()],
     });

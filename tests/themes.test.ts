@@ -43,6 +43,16 @@ describe('themes', () => {
     expect(seen.size).toBe(5);
   });
 
+  it('never cuts a rotation block into one-level islands at an unlock boundary', () => {
+    for (let L = 1; L <= 120; L++) {
+      const blockStart = Math.floor((L - 1) / 3) * 3 + 1;
+      expect(themeForLevel(L).id, `level ${String(L)}`).toBe(themeForLevel(blockStart).id);
+    }
+    // forest unlocks at 30 inside a block; it first appears with the block that starts at 34
+    expect(themeForLevel(30).id).toBe(themeForLevel(28).id);
+    expect(themeForLevel(34).id).toBe('forest');
+  });
+
   it('every theme generates valid scenes in all three modes', () => {
     for (const t of THEMES) {
       for (const [mode, level] of [

@@ -83,7 +83,7 @@ Decoys never count as targets. Tapping a decoy = wrong tap. Targets in Find alwa
 
 ### Spot 5
 - Own scene size **1080×840**. objectCount = `max(8, round(params.objectCount × 0.5))`, object scale × 1.3, objects spaced like Find (`params.minSpacing`, floor 82). Difference hit circles: `r = max(60, objectSize / 2)`.
-- Generate the base scene with Find placement (no targets), then clone and apply exactly 5 mutations, each on a different object, each above the visibility threshold: a changed area ≥ **1600 px²** (40×40 design px) or a bounding-box shift/size change ≥ 40 px on one side.
+- Generate the base scene with Find placement (no targets), then clone and apply exactly 5 mutations, each on a different object, each above the visibility threshold: the mutated object's visible area ≥ **1600 px²** (40×40 design px) or a bounding-box shift/size change ≥ 40 px on one side. Whether the pixels inside that area actually differ is guaranteed per difference kind by the asset gates: color variants change ≥ 8 % of a sprite's pixels and flippable sprites change ≥ 8 % when mirrored (`npm run assets`), so a recolor or flip of a visible object is a visible difference.
   Mutations: `remove`, `add` (new object in a free Poisson slot), `recolor` (switch to another baked color frame), `flipX` (flippable families only, asymmetric frames), `scale` (×1.3 or ×0.7), `swapFrame` (different variant of the same family).
 - Difference hit areas: circle r = max(objectRadius, 60), same id in both images. Taps on either image resolve to the same difference id.
 - Prompt: `{ kind: "spot", count: 5 }`.

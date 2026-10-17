@@ -230,6 +230,7 @@ function drawFrame(
   // asymmetry marker so flipX is visible on placeholders
   if (asymmetric) {
     g.fillStyle(darken(color, 60), 1);
+    g.fillRect(c + 44, c - 70, 28, 120); // same bar as the pipeline placeholder
     g.fillCircle(c + 58, c - 4, 12);
   }
   g.generateTexture(key, TEX_SIZE, TEX_SIZE);

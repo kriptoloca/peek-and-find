@@ -22,7 +22,7 @@ You are building a YouTube Playables game published via Playgama Bridge. Read GD
 9. **No timers before interstitials, no banners, no IAP, no off-platform links of any kind.**
 
 ## Rendering rule that follows from the platform
-- **Color variation is baked at build time, never produced with runtime tint.** Phaser `setTint` is multiplicative: it can only darken channels and cannot shift hue, so look-alike decoys, odd items and recolor differences must exist as separate atlas frames (`_c1`, `_c2`, see ASSETS.md). Runtime `setTint`/`setTintFill` is allowed only for feedback flashes (white/red) and the hint glow.
+- **Color variation is baked at build time, never produced with runtime tint.** Phaser `setTint` is multiplicative: it can only darken channels and cannot shift hue, so look-alike decoys, odd items and recolor differences must exist as separate atlas frames (`_c1`, `_c2`, see ASSETS.md). Runtime `setTint`/`setTintFill` is allowed only for feedback effects: flashes (white/red), the hint glow, the Spot found-ring, sparkle and confetti particles. Never for a gameplay difference, never for buttons (the Canvas renderer ignores tint).
 
 ## Playgama Bridge SDK
 Do NOT implement Bridge integration from memory. Before epic 8, fetch and read the current docs:

@@ -1,4 +1,4 @@
-import { expect, type Page, type TestInfo } from '@playwright/test';
+import { expect, test as base, type Page, type TestInfo } from '@playwright/test';
 import sharp from 'sharp';
 import type { PeekDebug, PeekTitleDebug } from '../../src/dev/debug';
 
@@ -11,23 +11,34 @@ export const TEST = 'test/';
  * Flows that wait on Phaser timers (intro, auto-advance, stars) run on the Canvas renderer:
  * CI machines have no GPU and SwiftShader WebGL drops to a few fps, where Phaser caps the
  * delta per frame and its clock falls far behind the wall clock. The links suite keeps the
- * default (WebGL) renderer, so both paths are covered.
+ * default (WebGL) renderer, and one player-path test runs WebGL with `?fpsmin=1`.
  */
 export const CANVAS = '&renderer=canvas';
+/** Pins the per-player seed salt, so a failing scene can be reproduced (dev builds). */
+export const SALT = '&salt=7';
 
 export interface Collected {
   errors: string[];
   origins: Set<string>;
   paths: Set<string>;
+  /** Every console line (the SDK's own log with ?debug=true, dev warnings). */
+  console: string[];
 }
+
+/** Console warnings the development build emits on purpose. */
+const EXPECTED_WARNINGS = [/peek: \?mode=spot refused/];
 
 /** Records page errors, console errors/warnings and every request's origin. */
 export function collect(page: Page): Collected {
-  const c: Collected = { errors: [], origins: new Set(), paths: new Set() };
+  const c: Collected = { errors: [], origins: new Set(), paths: new Set(), console: [] };
   page.on('pageerror', (e) => c.errors.push(`pageerror: ${e.message}`));
   page.on('console', (m) => {
+    const text = m.text();
+    c.console.push(text);
     if (m.type() === 'error' || m.type() === 'warning') {
-      c.errors.push(`${m.type()}: ${m.text().slice(0, 200)}`);
+      if (!EXPECTED_WARNINGS.some((re) => re.test(text))) {
+        c.errors.push(`${m.type()}: ${text.slice(0, 200)}`);
+      }
     }
   });
   page.on('request', (r) => {
@@ -35,6 +46,8 @@ export function collect(page: Page): Collected {
     c.origins.add(u.origin);
     c.paths.add(u.pathname);
   });
+  page.on('websocket', (ws) => c.errors.push(`websocket: ${ws.url()}`));
+  page.on('requestfailed', (r) => c.errors.push(`requestfailed: ${r.url()}`));
   return c;
 }
 
@@ -43,6 +56,22 @@ export function expectSameOrigin(c: Collected, baseURL: string | undefined): voi
   const origin = new URL(baseURL ?? 'http://127.0.0.1:4173/').origin;
   expect([...c.origins].filter((o) => o !== origin)).toEqual([]);
 }
+
+/**
+ * Every test gets the collector automatically and ends with the same-origin and no-error
+ * checks, so a stray request or console error fails whichever test caused it.
+ */
+export const test = base.extend<{ guard: Collected }>({
+  guard: [
+    async ({ page, baseURL }, use) => {
+      const c = collect(page);
+      await use(c);
+      expectSameOrigin(c, baseURL);
+      expect(c.errors).toEqual([]);
+    },
+    { auto: true },
+  ],
+});
 
 export function state(page: Page): Promise<GameState | undefined> {
   return page.evaluate(() => window.__peekDebug?.state());
@@ -76,6 +105,12 @@ export async function titlePositions(page: Page): Promise<ReturnType<PeekTitleDe
   return p;
 }
 
+export async function titleState(page: Page): Promise<ReturnType<PeekTitleDebug['state']>> {
+  const s = await page.evaluate(() => window.__peekTitle?.state());
+  if (!s) throw new Error('title hooks missing');
+  return s;
+}
+
 export async function titleAudio(page: Page): Promise<ReturnType<PeekTitleDebug['audio']>> {
   const a = await page.evaluate(() => window.__peekTitle?.audio());
   if (!a) throw new Error('title hooks missing');
@@ -84,6 +119,16 @@ export async function titleAudio(page: Page): Promise<ReturnType<PeekTitleDebug[
 
 export async function tapTitle(page: Page, spot: TitleSpot): Promise<void> {
   const p = (await titlePositions(page))[spot];
+  await page.mouse.click(p.x, p.y);
+}
+
+/** Taps a HUD/overlay button at the screen position the dev hook reports (a real tap). */
+export async function tapButton(
+  page: Page,
+  which: 'home' | 'hintCenter' | 'retryCenter' | 'continueCenter',
+): Promise<void> {
+  const p = await page.evaluate((w) => window.__peekDebug?.[w](), which);
+  if (!p) throw new Error(`${which}: no button on screen`);
   await page.mouse.click(p.x, p.y);
 }
 
@@ -102,6 +147,18 @@ export async function winScene(page: Page): Promise<GameState> {
   return waitState(page, (s) => s.status === 'won', 'won');
 }
 
+/** One wrong tap (a non-target object); returns the state after it. */
+export async function wrongTap(page: Page): Promise<GameState> {
+  const w = await page.evaluate(() => window.__peekDebug?.wrong() ?? []);
+  const first = w[0];
+  if (!first) throw new Error('no wrong object to tap');
+  await page.mouse.click(first.x, first.y);
+  await page.waitForTimeout(300);
+  const s = await state(page);
+  if (!s) throw new Error('state missing');
+  return s;
+}
+
 /** Taps non-target objects until the round is lost (three hearts). */
 export async function loseScene(page: Page): Promise<GameState> {
   for (let k = 0; k < 6; k++) {
@@ -116,6 +173,21 @@ export async function loseScene(page: Page): Promise<GameState> {
   return waitState(page, (s) => s.status === 'lost', 'lost');
 }
 
+/**
+ * Hides or shows the page the way the host does: the Bridge SDK listens to visibilitychange
+ * and flips its pause and audio state, which is the real path into the game's pause handling.
+ */
+export async function setHidden(page: Page, hidden: boolean): Promise<void> {
+  await page.evaluate((h) => {
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      get: () => (h ? 'hidden' : 'visible'),
+    });
+    Object.defineProperty(document, 'hidden', { configurable: true, get: () => h });
+    document.dispatchEvent(new Event('visibilitychange'));
+  }, hidden);
+}
+
 /** Saves a screenshot next to the test results and returns how much is drawn (0 = blank). */
 export async function shot(page: Page, info: TestInfo, name: string): Promise<number> {
   const file = info.outputPath(`${name}.png`);
@@ -123,4 +195,25 @@ export async function shot(page: Page, info: TestInfo, name: string): Promise<nu
   await info.attach(name, { path: file, contentType: 'image/png' });
   const st = await sharp(png).stats();
   return Math.max(...st.channels.map((c) => c.stdev));
+}
+
+/** Share of pixels that differ noticeably between two same-size screenshots. */
+export async function changedShare(a: Buffer, b: Buffer): Promise<number> {
+  const [ra, rb] = await Promise.all(
+    [a, b].map((p) => sharp(p).removeAlpha().raw().toBuffer({ resolveWithObject: true })),
+  );
+  if (!ra || !rb || ra.info.width !== rb.info.width || ra.info.height !== rb.info.height) {
+    throw new Error('screenshots differ in size');
+  }
+  const n = ra.info.width * ra.info.height;
+  let changed = 0;
+  for (let i = 0; i < n; i++) {
+    const d = Math.max(
+      Math.abs((ra.data[i * 3] ?? 0) - (rb.data[i * 3] ?? 0)),
+      Math.abs((ra.data[i * 3 + 1] ?? 0) - (rb.data[i * 3 + 1] ?? 0)),
+      Math.abs((ra.data[i * 3 + 2] ?? 0) - (rb.data[i * 3 + 2] ?? 0)),
+    );
+    if (d > 32) changed += 1;
+  }
+  return changed / n;
 }

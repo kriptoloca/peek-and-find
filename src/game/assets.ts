@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { backgroundKey } from '../data/themes';
+import { backgroundKey, THEMES } from '../data/themes';
 import type { Theme } from '../gen/types';
 import { ensureThemeTextures, ensureUiTextures } from './textures/placeholders';
 
@@ -111,6 +111,25 @@ export async function ensureThemes(scene: Phaser.Scene, themes: readonly Theme[]
       ensureThemeTextures(scene, t);
     }
   }
+}
+
+/**
+ * Removes the atlas and backgrounds of every theme not in `keep`, so at most a few atlases sit
+ * in GPU memory (five 2048² atlases with mipmaps are ≈ 110 MB). Returns the removed keys.
+ */
+export function releaseThemes(scene: Phaser.Scene, keep: readonly Theme[]): string[] {
+  const keepIds = new Set(keep.map((t) => t.id));
+  const removed: string[] = [];
+  for (const t of THEMES) {
+    if (keepIds.has(t.id)) continue;
+    for (const key of [atlasKey(t.id), backgroundKey(t, false), backgroundKey(t, true)]) {
+      if (scene.textures.exists(key)) {
+        scene.textures.remove(key);
+        removed.push(key);
+      }
+    }
+  }
+  return removed;
 }
 
 /** UI atlas when packed, runtime placeholders otherwise. */

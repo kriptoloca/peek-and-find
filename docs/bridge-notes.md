@@ -22,7 +22,7 @@ Source of truth read on 2026-10-16: the SDK repository `github.com/Playgama/brid
 
 ## Advertisement module
 - `bridge.advertisement.isInterstitialSupported`, `.isRewardedSupported` (both `true` on YouTube, `false` on the mock platform).
-- `bridge.advertisement.setMinimumDelayBetweenInterstitial(seconds)` (default 60; we set 120, and our own `AdGate` also requires 3 completed scenes).
+- `bridge.advertisement.setMinimumDelayBetweenInterstitial(seconds)` (default 60). The config file carries `minimumDelayBetweenInterstitial: 120`, and when the config has a value the SDK ignores the runtime call (`if (null !== config) return` in the advertisement module), so the config is the effective setting; the call stays as a no-op guard. The SDK counts its 120 s from the moment the previous interstitial closed, our `AdGate` from the moment the previous one was requested and also requires 3 completed scenes, so the SDK can only make ads rarer, never more frequent.
 - `bridge.advertisement.showInterstitial()`; `showRewarded(placement?)`; results arrive through the state events above. YouTube maps them to `ytgame.ads.requestInterstitialAd()` and `ytgame.ads.requestRewardedAd(placement)`; a resolved rewarded promise with `true` yields `REWARDED` then `CLOSED`, a rejection yields `FAILED`.
 - Placements we use: `hint`, `continue`.
 

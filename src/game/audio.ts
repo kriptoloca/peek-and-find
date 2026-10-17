@@ -90,6 +90,9 @@ class AudioManager {
   private analyser: AnalyserNode | null = null;
   private levelBuf: Float32Array<ArrayBuffer> | null = null;
   private device: { ogg: boolean; m4a: boolean; webAudio: boolean } | null = null;
+  /** SFX asked for while the context was still locked; played the moment it unlocks. */
+  private pendingSfx: SfxName | null = null;
+  private unsubscribePause: (() => void) | null = null;
 
   /** Binds the game-wide sound manager and the platform's audio state. */
   attach(scene: Phaser.Scene, platform: Platform): void {
@@ -103,8 +106,19 @@ class AudioManager {
       this.platformEnabled = enabled;
       this.refresh();
     });
+    // Platform pause silences the audio in every scene (CLAUDE.md rule 4), the Title included.
+    this.unsubscribePause?.();
+    this.paused = platform.isPaused();
+    this.unsubscribePause = platform.onPause((p) => {
+      this.setPaused(p);
+    });
     this.sound.once(Phaser.Sound.Events.UNLOCKED, () => {
       this.refresh();
+      // The tap that unlocked the context (PLAY on iOS) asked for its click before the unlock
+      // resolved; play it now instead of dropping it.
+      const pending = this.pendingSfx;
+      this.pendingSfx = null;
+      if (pending) this.play(pending);
     });
     this.refresh();
   }
@@ -124,8 +138,12 @@ class AudioManager {
   }
 
   play(name: SfxName): void {
-    if (!this.sound || !this.cache || !this.sfxAllowed() || this.sound.locked) {
+    if (!this.sound || !this.cache || !this.sfxAllowed()) {
       this.dropped += 1;
+      return;
+    }
+    if (this.sound.locked) {
+      this.pendingSfx = name;
       return;
     }
     if (!this.cache.exists(name)) {

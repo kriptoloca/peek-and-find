@@ -119,7 +119,10 @@ export function unlockedThemes(level: number, total = THEME_COUNT): number {
 /** Theme index for a level (GENERATOR.md §2). */
 export function themeIndex(level: number, total = THEME_COUNT): number {
   const L = Math.max(1, Math.floor(level));
-  return Math.floor((L - 1) / THEME_ROTATE_EVERY) % unlockedThemes(L, total);
+  const block = Math.floor((L - 1) / THEME_ROTATE_EVERY);
+  // The unlock count of the block's first level: a theme that unlocks mid-block waits for the
+  // next block, so no block is cut into one-level islands (audit 2026-10-17).
+  return block % unlockedThemes(block * THEME_ROTATE_EVERY + 1, total);
 }
 
 /** Index of a theme that unlocks within the lookahead window and is not unlocked yet, else null. */

@@ -14,7 +14,13 @@ import {
 } from '../assets';
 import { AUDIO_INDEX_KEY, AUDIO_INDEX_URL, audio, loadAudio } from '../audio';
 import { computeLayout } from '../layout';
-import { attachSaveStore, hydrateProgress, progress, resetProgress } from '../state';
+import {
+  attachSaveStore,
+  hydrateProgress,
+  progress,
+  resetProgress,
+  persistProgress,
+} from '../state';
 
 const BOOT_BAR_W = 360;
 const BOOT_BAR_H = 10;
@@ -41,7 +47,11 @@ export class BootScene extends Phaser.Scene {
   create(): void {
     readAtlasIndex(this);
     this.showLoading();
-    void this.boot();
+    this.boot().catch((e: unknown) => {
+      // A failed boot still shows the Title with whatever loaded (placeholders fill the gaps).
+      console.error('peek: boot failed', e);
+      this.scene.start('Title');
+    });
   }
 
   /** Our own boot screen (the Bridge loading logo is off): wordmark + a loader progress bar. */
@@ -79,6 +89,12 @@ export class BootScene extends Phaser.Scene {
     if (import.meta.env.DEV) {
       const q = new URLSearchParams(window.location.search);
       if (q.get('reset') === '1') resetProgress();
+      // ?salt=N pins the per-player seed salt so a scene can be reproduced in a test.
+      const salt = q.get('salt');
+      if (salt !== null && /^\d+$/.test(salt)) {
+        progress.seedSalt = Number(salt) >>> 0;
+        persistProgress();
+      }
       // Dev shortcuts skip the title: ?level=, ?mode=, ?daily=1
       if (q.has('level') || q.has('mode') || q.get('daily') === '1') {
         target = {

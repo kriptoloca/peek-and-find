@@ -21,7 +21,17 @@ import {
   spriteSpecs,
   uiSpecs,
 } from './lib/manifest.mjs';
-import { contrastRatio } from './lib/color.mjs';
+import {
+  MIRROR_MIN_CHANGED,
+  SPRITE_BG_MIN_CONTRAST,
+  SPRITE_CONTRAST_MIN_SHARE,
+  VARIANT_MIN_CHANGED,
+  contrastShare,
+  frameDifference,
+  mirrorDifference,
+  renderSvg,
+  svgLongestSide,
+} from './lib/frames.mjs';
 import { packFrames } from './lib/packer.mjs';
 import { placeholderBackground, placeholderSprite, placeholderUi } from './lib/placeholder-svg.mjs';
 import { recolorSvg } from './lib/recolor.mjs';
@@ -42,18 +52,6 @@ const SPOT_W = 1080;
 const SPOT_H = 840;
 /** Budget checks (ASSETS.md "Budget"), reported, not enforced. */
 const BG_BUDGET = 200 * 1024;
-/** A color variant must change at least this share of the sprite's pixels noticeably. */
-const VARIANT_MIN_CHANGED = 0.08;
-const VARIANT_PIXEL_DELTA = 24;
-/**
- * At least SPRITE_CONTRAST_MIN_SHARE of every base sprite's visible area must reach
- * SPRITE_BG_MIN_CONTRAST (WCAG ratio, 3:1 is the minimum for graphics) against the mean color
- * of its theme background, so no object hides by darkness alone and the search stays fair for
- * color-blind players (docs/visual-review.md). Outlines and shading may be darker; the body
- * must stand out.
- */
-const SPRITE_BG_MIN_CONTRAST = 3;
-const SPRITE_CONTRAST_MIN_SHARE = 0.35;
 
 const args = new Set(process.argv.slice(2));
 const themeArg = process.argv.includes('--theme')
@@ -70,98 +68,6 @@ const p = (url) => fileURLToPath(url);
 function sourcePath(theme, file) {
   const url = new URL(`${theme}/${file}`, SRC);
   return existsSync(url) ? url : null;
-}
-
-/** Longest side of the SVG's intrinsic box (viewBox first, then width/height). */
-function svgLongestSide(svg) {
-  const vb = /viewBox\s*=\s*["']\s*[-\d.]+[\s,]+[-\d.]+[\s,]+([\d.]+)[\s,]+([\d.]+)\s*["']/.exec(
-    svg,
-  );
-  if (vb) return Math.max(Number(vb[1]), Number(vb[2]));
-  const w = /\swidth\s*=\s*["']([\d.]+)/.exec(svg);
-  const h = /\sheight\s*=\s*["']([\d.]+)/.exec(svg);
-  if (w && h) return Math.max(Number(w[1]), Number(h[1]));
-  return 256;
-}
-
-/**
- * Renders an SVG so its longest side is `size` px, then crops to the opaque bounding box.
- * @returns {Promise<{ w: number, h: number, data: Buffer }>} raw RGBA
- */
-async function renderSvg(svg, size, { trim }) {
-  const density = Math.max(1, Math.min(2400, (72 * size) / svgLongestSide(svg)));
-  const { data, info } = await sharp(Buffer.from(svg), { density })
-    .resize(size, size, { fit: 'inside', withoutEnlargement: false })
-    .ensureAlpha()
-    .raw()
-    .toBuffer({ resolveWithObject: true });
-  if (!trim) return { w: info.width, h: info.height, data };
-  let minX = info.width;
-  let minY = info.height;
-  let maxX = -1;
-  let maxY = -1;
-  for (let y = 0; y < info.height; y++) {
-    for (let x = 0; x < info.width; x++) {
-      if (data[(y * info.width + x) * 4 + 3] > 0) {
-        if (x < minX) minX = x;
-        if (x > maxX) maxX = x;
-        if (y < minY) minY = y;
-        if (y > maxY) maxY = y;
-      }
-    }
-  }
-  if (maxX < 0) return { w: 1, h: 1, data: Buffer.alloc(4) };
-  const w = maxX - minX + 1;
-  const h = maxY - minY + 1;
-  const out = Buffer.alloc(w * h * 4);
-  for (let y = 0; y < h; y++) {
-    const srcStart = ((y + minY) * info.width + minX) * 4;
-    data.copy(out, y * w * 4, srcStart, srcStart + w * 4);
-  }
-  return { w, h, data: out };
-}
-
-/**
- * Alpha-weighted share of a rendered frame's visible pixels whose contrast against `bg` is at
- * least SPRITE_BG_MIN_CONTRAST.
- * @param {{ data: Buffer }} frame
- * @param {{ r: number, g: number, b: number }} bg
- * @returns {number} 0..1
- */
-function contrastShare(frame, bg) {
-  let w = 0;
-  let ok = 0;
-  for (let i = 0; i < frame.data.length; i += 4) {
-    const a = frame.data[i + 3] / 255;
-    if (a === 0) continue;
-    w += a;
-    const px = { r: frame.data[i], g: frame.data[i + 1], b: frame.data[i + 2] };
-    if (contrastRatio(px, bg) >= SPRITE_BG_MIN_CONTRAST) ok += a;
-  }
-  return w === 0 ? 0 : ok / w;
-}
-
-/**
- * Share of pixels (opaque in either frame) whose color differs noticeably. Frames of different
- * size count as fully different (the silhouette changed).
- * @returns {number} 0..1
- */
-function frameDifference(a, b) {
-  if (a.w !== b.w || a.h !== b.h) return 1;
-  let opaque = 0;
-  let changed = 0;
-  for (let i = 0; i < a.data.length; i += 4) {
-    if (a.data[i + 3] === 0 && b.data[i + 3] === 0) continue;
-    opaque += 1;
-    const d = Math.max(
-      Math.abs(a.data[i] - b.data[i]),
-      Math.abs(a.data[i + 1] - b.data[i + 1]),
-      Math.abs(a.data[i + 2] - b.data[i + 2]),
-      Math.abs(a.data[i + 3] - b.data[i + 3]),
-    );
-    if (d > VARIANT_PIXEL_DELTA) changed += 1;
-  }
-  return opaque === 0 ? 0 : changed / opaque;
 }
 
 /** Composes placed frames into one PNG and the matching Phaser JSON-hash atlas data. */
@@ -278,6 +184,24 @@ async function buildTheme(theme) {
       `${theme.id}: color variants not visible enough: ${invisible.join(', ')}. Mark the main fills with class="fill-main" (assets/README.md).`,
     );
   }
+  // Mirror decoys (Find) and the Spot "flip" difference show the sprite mirrored; a symmetric
+  // sprite makes that difference invisible, so every flippable family must read mirrored.
+  const symmetric = [];
+  let minMirror = 1;
+  for (const sp of specs) {
+    if (!sp.tags.includes('flippable')) continue;
+    const base = byName.get(sp.base);
+    if (!base) continue;
+    const share = mirrorDifference(base);
+    minMirror = Math.min(minMirror, share);
+    if (share < MIRROR_MIN_CHANGED)
+      symmetric.push(`${sp.file} (${String(Math.round(share * 100))}% changes when mirrored)`);
+  }
+  if (symmetric.length > 0) {
+    throw new Error(
+      `${theme.id}: flippable sprites look the same mirrored: ${symmetric.join(', ')}. Add an asymmetric detail or drop the flippable tag (assets/README.md).`,
+    );
+  }
   // Every base sprite must stand out from the background by luminance, not only by hue
   // (a dark object on a dark background is found by color alone: slow search, unfair for
   // color-blind players). Placeholders pass by palette design; a pack fails loudly here.
@@ -305,6 +229,7 @@ async function buildTheme(theme) {
     atlasSize: [packed.width, packed.height],
     atlasBytes: bytes,
     minContrastShare: Math.round(minShare * 100) / 100,
+    minMirrorShare: Math.round(minMirror * 100) / 100,
     backgroundSource: bg.backgroundSource,
     backgroundBytes: bg.backgroundBytes,
     backgroundSpotBytes: bg.backgroundSpotBytes,
@@ -438,6 +363,10 @@ async function main() {
       console.log(
         `  ${id}: least contrasting sprite has ${String(Math.round(r.minContrastShare * 100))}% of its area at 3:1 against the background`,
       );
+    if (r.minMirrorShare !== undefined)
+      console.log(
+        `  ${id}: least asymmetric flippable sprite changes ${String(Math.round(r.minMirrorShare * 100))}% of its pixels when mirrored`,
+      );
     problems += r.warnings.length;
   }
   if (ui.present > 0 && ui.missing.length > 0)
@@ -462,6 +391,7 @@ async function main() {
             backgroundSpot: `backgrounds/${id}_spot.png`,
             backgroundSource: r.backgroundSource,
             minContrastShare: r.minContrastShare,
+            minMirrorShare: r.minMirrorShare,
           },
         ]),
       ),

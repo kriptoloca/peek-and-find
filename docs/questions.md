@@ -80,7 +80,7 @@ Format: date · question · decision taken (simplest reading) · needs confirmat
 - **Audit exemption.** The SDK file embeds the hosts of every platform adapter it supports (CrazyGames, Poki, AdSense …); on YouTube only `ytgame` is used. `scripts/audit-dist.mjs` skips that one file by name and still scans `index.html` and our bundle. Allowlisting the hosts individually would have hidden real regressions.
 - **Wiki unreachable from the cloud session.** All API names come from the SDK source at 2.3.1 (docs/bridge-notes.md cites the files). If the wiki disagrees, the source wins until the package is bumped.
 - **Interstitial gate uses the wall clock** (`performance.now()`), not Phaser's clock, so a pause or a slow frame never shortens the 120 s. The SDK's own minimum delay is set to 120 as the second guard.
-- **Ad results.** An ad call that produces no state within 4 s is treated as finished (the SDK declines silently when its delay guard blocks); an open ad is capped at 120 s. Rewarded = `rewarded` state seen before `closed`/`failed`.
+- **Ad results.** An ad call that produces no state within 4 s is treated as finished (a fallback; the SDK normally reports `FAILED` when its delay guard blocks, which the wrapper also treats as finished); an open ad is capped at 120 s. Rewarded = `rewarded` state seen before `closed`/`failed`.
 - **`game_ready`** is sent once, when the Title is up (rule 3); `in_game_loading_*` wraps boot and each scene generation; `gameplay_started/stopped` and `level_*` follow the round.
 - **Pause** (platform pause, hidden tab, open ad — the SDK aggregates them) pauses tweens and timers, dims the screen and ignores input; resume reverses it. Audio arrives in Epic 9 and will read `platform.isAudioEnabled()`.
 - **Fail overlay** shows Continue (heart + play) left and Retry right when rewarded ads are supported; only Retry otherwise. The hint bulb exists only when rewarded ads are supported.
@@ -170,3 +170,31 @@ Format: date · question · decision taken (simplest reading) · needs confirmat
 
 - **Second theme at level 4** (GDD v1.4, `THEME_SECOND_UNLOCK_LEVEL`). Levels 1–3 kitchen, 4–6 beach, 7–9 kitchen, then the usual rotation; city/forest/space keep 20/30/40. Reason: the first session is where churn is highest and the research favours early palette variety with a fixed structure (docs/visual-review.md). Consequence: the preload lookahead (3 levels) now loads the beach atlas at boot for a new player, so the initial load grows by the beach atlas and backgrounds (`docs/size-report.md`, counted by `npm run size`); still far under the 5 MB target.
 - **Odd One Out rotation jitter** (GDD v1.4, `ODD_ROTATION_JITTER_DEG = 3`). Every cell, the odd one included, carries a seeded angle within ±3° (`Placed.rotation`, radians); frame, size and flip stay the only attributes that can differ, so the angle is never the tell (validator and test). Scale jitter was considered and dropped: it would blur the `scale` kind (odd item at 0.8×) and break "all regular items identical". Seeds now draw one more random number per cell, so Odd layouts differ from earlier builds (no saved scenes depend on them).
+
+## 2026-10-17 (adversarial audit — two independent reviews, all findings answered)
+
+Two fresh-context auditors reviewed HEAD dcfa024: one the system against CLAUDE.md/GDD/GENERATOR, one the Playwright suite from the player's side. Counts: system KRİTİK 0 · YÜKSEK 2 · ORTA 6 · DÜŞÜK 17; e2e KRİTİK 2 · YÜKSEK 5 · ORTA 10 · DÜŞÜK 7. Every KRİTİK and YÜKSEK is fixed with a test; ORTA/DÜŞÜK are fixed or recorded here. Summary table in docs/PROGRESS.md.
+
+**Fixed in code**
+- Platform pause now reaches every scene: the audio manager subscribes to `onPause` itself and reads `isPaused()` at attach; the Title dims, pauses tweens and disables input on pause; the Game reads the initial pause state at create. E2E: the host path (`document.visibilityState` → SDK → pause + audio off) in play and on the Title.
+- Mirror visibility: flippable placeholder sprites carry a bar on one side; `npm run assets` fails when fewer than 8 % of a flippable sprite's pixels change under a horizontal mirror (`MIRROR_MIN_CHANGED`, `scripts/lib/frames.mjs`); unit test over every flippable placeholder.
+- Bridge init: inside the YouTube host (`ytgame` global or `*.usercontent.goog`) the SDK gets 60 s instead of 6 s before the stub fallback, so a slow handshake cannot lose GameReady.
+- `startLevel()` failures no longer freeze the game: loading message closed, one retry with a new attempt, then the Title; a failed boot still opens the Title.
+- Fail overlay tweens (`repeat: -1`) are killed with the overlay; the prompt badge pulse uses the frame name (it was a no-op with atlases); daily Retry no longer bumps the attempt; the hint ad is wrapped in `gameplay_stopped/started`; the dev tap zone no longer swallows the first two taps; `game_ready` is sent once per page load on the stub too and the Title sends it only on its first create.
+- First-tap SFX: a click requested while the context is still locked plays on unlock instead of being dropped (iOS PLAY click).
+- Atlas memory: at most three theme atlases stay loaded (current, next scene/block, upcoming unlock); the rest are released (`releaseThemes`); e2e asserts ≤ 4 atlas keys through the daily chain.
+- Theme rotation uses the unlock count of the block's first level: no one-level theme islands at level 30 (forest first appears at 34).
+- iOS silent-loop trick is not installed inside the YouTube host. `audit-dist` also rejects `ws://`/`wss://`. The fake ad overlay lets taps through so the game's own ad guard is what the test exercises. The submission ZIP is built and uploaded as a CI artifact.
+
+**E2E suite rebuilt from the player's side**
+- A guard fixture puts same-origin and no-console-error checks on every test. Production link: SDK `?debug=true` log shows `game_ready` once, PLAY is tapped at the layout's own position, `gameplay_started` follows and ≥ 20 % of the screen changes. Full loop in 9:16, 16:9 and 1:1; once on WebGL (`?fpsmin=1`). Hint, Continue, Retry, DAILY, toggles, home are real taps at hook-reported positions; the interstitial is shown to block taps; no interstitial before 120 s; Odd One Out played; hearts step 3→2→1→lost; stars; big scene; daily chain started from the Title, Daily Complete tapped, streak 1 → 2 → reset; a tap after rotating counts. Spot pixel test: integer image offset (540×960 viewport), a noise floor from unchanged objects, threshold = 2 × noise; scenes pinned with `?salt=`; the early-tap test demands the intro state.
+
+**Recorded, not changed**
+- Spot "changed area" is the mutated object's visible area; pixel visibility per kind comes from the asset gates (GENERATOR.md updated).
+- Feedback effects (hint ring, Spot ring, sparkle, confetti) use runtime tint; CLAUDE.md wording updated to name them. On the Canvas renderer they draw white.
+- The daily key is fixed when the chain starts (a chain begun at 23:59 completes under that day), the Title reads the key once per create; both intended.
+- Save version change resets instead of migrating: there is only version 1; a migration lands with version 2 (`storage.ts`).
+- Theme props (GENERATOR §4 step 8) and mirror-decoy occlusion are not implemented; both wait for the real art pack (ASSETS.md props).
+- `hudInBand` is a layout self-check, screenshots are "something drawn": no pixel-level visual regression yet (needs a fixed salt and real art; `npm run tour` is the human review).
+- Level 50 (daily scene 5) is always a big scene by the difficulty curve; acceptable as the finale.
+- The SDK counts its interstitial delay from the previous ad's close; docs/bridge-notes.md says so.

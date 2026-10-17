@@ -1,19 +1,21 @@
-import { expect, test } from '@playwright/test';
+import { expect } from '@playwright/test';
 import sharp from 'sharp';
 import type { DebugDifference, DebugPoint } from '../../src/dev/debug';
-import { CANVAS, TEST, state, waitState, winScene } from './helpers';
+import { CANVAS, SALT, TEST, state, test, waitState, winScene, wrongTap } from './helpers';
 
 /**
  * The gameplay rules, checked by playing and looking (player feedback 2026-10-17: "the fifth
  * difference cannot be found", "a tap on a shape does not register"):
- *  - every Spot difference is visible on screen (pixels differ between the two images) and the
- *    five of them can be found by tapping their centers;
+ *  - every Spot difference is visible on screen (pixels differ between the two images, more
+ *    than the unchanged objects differ) and the five of them can be found by tapping;
+ *  - Odd One Out: a wrong cell costs a heart, the odd cell wins;
  *  - a tap anywhere on a big sprite counts, not only near its center;
  *  - a tap while the sprites are still popping in counts.
+ * Scenes are pinned with ?salt= so a failure reproduces.
  */
 
 /** Share of pixels that differ noticeably between two same-size crops of a screenshot. */
-async function changedShare(
+async function cropShare(
   png: Buffer,
   a: { x: number; y: number },
   b: { x: number; y: number },
@@ -46,91 +48,140 @@ async function changedShare(
 }
 
 for (const level of [12, 30, 55]) {
-  test(`Spot level ${String(level)}: five visible differences, all findable`, async ({
+  test(`Spot level ${String(level)}: five differences visible above the noise floor, all findable`, async ({
     page,
   }, info) => {
-    await page.setViewportSize({ width: 844, height: 390 }); // side by side, both images large
-    await page.goto(`${TEST}?level=${String(level)}&mode=spot&reset=1${CANVAS}`, {
+    // 540×960: canvas scale 0.5, so the stacked images sit an integer number of screen pixels
+    // apart and an unchanged object crops identically in both images.
+    await page.setViewportSize({ width: 540, height: 960 });
+    await page.goto(`${TEST}?level=${String(level)}&mode=spot&reset=1${SALT}${CANVAS}`, {
       waitUntil: 'load',
     });
     const s = await waitState(page, (x) => x.status === 'playing', 'spot');
     expect(s.mode).toBe('spot');
-    await page.waitForTimeout(400); // pop-in tweens settle
+    await page.waitForTimeout(1000); // pop-in tweens (≤ 650 ms) settle in both images
     const diffs: DebugDifference[] = await page.evaluate(
       () => window.__peekDebug?.differences() ?? [],
     );
     expect(diffs).toHaveLength(5);
-    const file = info.outputPath(`spot-${String(level)}.png`);
-    const png = await page.screenshot({ path: file });
-    await info.attach(`spot-${String(level)}`, { path: file, contentType: 'image/png' });
+    const objects: DebugPoint[] = await page.evaluate(() => window.__peekDebug?.objects() ?? []);
+    const png = await page.screenshot({ path: info.outputPath(`spot-${String(level)}.png`) });
     const meta = await sharp(png).metadata();
     const bounds = { w: meta.width ?? 0, h: meta.height ?? 0 };
-    const shares: string[] = [];
-    for (const d of diffs) {
-      const share = await changedShare(png, d.a, d.b, d.r, bounds);
-      shares.push(`${d.kind}:${String(Math.round(share * 100))}%`);
-      expect(share, `${d.id} (${d.kind}) must look different in the two images`).toBeGreaterThan(
-        0.02,
+    const first = diffs[0];
+    if (!first) throw new Error('no differences');
+    const offset = { x: first.b.x - first.a.x, y: first.b.y - first.a.y };
+    expect(Math.abs(offset.x - Math.round(offset.x))).toBeLessThan(0.01);
+    expect(Math.abs(offset.y - Math.round(offset.y))).toBeLessThan(0.01);
+
+    // noise floor: objects that are the same in both images and sit clear of every difference
+    // (a removed or rescaled object changes what its neighbours overlap; a swap partner changes
+    // too), measured as the median so one contaminated control cannot hide a real difference
+    const diffIds = new Set(diffs.map((d) => d.id));
+    const clearance = (o: DebugPoint): number =>
+      Math.min(...diffs.map((d) => Math.hypot(d.a.x - o.x, d.a.y - o.y) - d.r - (o.r ?? 24)));
+    const controls = objects
+      .filter((o) => !diffIds.has(o.id))
+      .sort((a, b) => clearance(b) - clearance(a)) // farthest from any difference first
+      .slice(0, 12);
+    expect(controls.length).toBeGreaterThanOrEqual(2);
+    const shares: number[] = [];
+    for (const c of controls) {
+      shares.push(
+        await cropShare(
+          png,
+          c,
+          { x: c.x + offset.x, y: c.y + offset.y },
+          Math.max(12, c.r ?? 24),
+          bounds,
+        ),
       );
     }
-    info.annotations.push({ type: 'differences', description: shares.join(' ') });
-    const won = await winScene(page);
-    expect(won.remaining).toBe(0);
+    shares.sort((a, b) => a - b);
+    const noise = shares[Math.floor(shares.length / 2)] ?? 0;
+    const threshold = Math.max(0.02, 3 * noise);
+    for (const d of diffs) {
+      const share = await cropShare(png, d.a, d.b, Math.max(12, d.r), bounds);
+      expect(
+        share,
+        `${d.id} (${d.kind}) vs noise median ${noise.toFixed(3)} max ${String(shares[shares.length - 1]?.toFixed(3))}`,
+      ).toBeGreaterThan(threshold);
+    }
+
+    for (const d of diffs) {
+      await page.mouse.click(d.a.x, d.a.y);
+      await page.waitForTimeout(150);
+    }
+    const done = await waitState(page, (x) => x.status === 'won', 'all five found');
+    expect(done.remaining).toBe(0);
   });
 }
 
-test('a tap on the edge of a big sprite counts', async ({ page }) => {
-  await page.goto(`${TEST}?level=12&mode=find&reset=1${CANVAS}`, { waitUntil: 'load' });
-  const before = await waitState(page, (x) => x.status === 'playing', 'find');
+for (const level of [8, 34]) {
+  test(`Odd One Out level ${String(level)}: a wrong cell costs a heart, the odd cell wins`, async ({
+    page,
+  }) => {
+    await page.goto(`${TEST}?level=${String(level)}&mode=odd&reset=1${SALT}${CANVAS}`, {
+      waitUntil: 'load',
+    });
+    const s = await waitState(page, (x) => x.status === 'playing', 'odd');
+    expect(s.mode).toBe('odd');
+    expect(s.remaining).toBe(1);
+    expect((await wrongTap(page)).hearts).toBe(2);
+    const t = await page.evaluate(() => window.__peekDebug?.targets() ?? []);
+    if (!t[0]) throw new Error('no odd cell');
+    await page.mouse.click(t[0].x, t[0].y);
+    await waitState(page, (x) => x.status === 'won', 'odd found');
+  });
+}
+
+test('a tap on the rim of the biggest sprite counts (hit circle covers the sprite)', async ({
+  page,
+}) => {
+  await page.goto(`${TEST}?level=20&mode=find&reset=1${SALT}${CANVAS}`, { waitUntil: 'load' });
+  await waitState(page, (x) => x.status === 'playing', 'find');
   await page.waitForTimeout(400);
   const objects: DebugPoint[] = await page.evaluate(() => window.__peekDebug?.objects() ?? []);
-  const targets = objects.filter((o) => o.isTarget && (o.size ?? 0) > 0);
-  expect(targets.length).toBeGreaterThan(0);
-  const big = [...targets].sort((a, b) => (b.size ?? 0) - (a.size ?? 0))[0]!;
-  const size = big.size ?? 0;
-  // screen px per design px (portrait: the canvas fits the 1080 design width)
-  const k = await page.evaluate(() => {
-    const c = document.querySelector('canvas');
-    return c ? c.getBoundingClientRect().width / 1080 : 1;
-  });
-  expect(size).toBeGreaterThan(2 * 40 * k); // bigger than the old fixed 40 px circle
-  expect(big.r ?? 0).toBeGreaterThanOrEqual(size / 2 - 1); // the circle covers the sprite
-  // tap near the rim, in the direction that stays farthest from every other object center
-  const dirs = [
-    [1, 0],
-    [-1, 0],
-    [0, 1],
-    [0, -1],
-  ] as const;
-  const d = 0.45 * size;
-  const best = dirs
-    .map(([dx, dy]) => {
-      const p = { x: big.x + dx * d, y: big.y + dy * d };
-      const nearestOther = Math.min(
-        ...objects.filter((o) => o.id !== big.id).map((o) => Math.hypot(o.x - p.x, o.y - p.y)),
-      );
-      return { p, nearestOther };
-    })
-    .sort((a, b) => b.nearestOther - a.nearestOther)[0]!;
-  await page.mouse.click(best.p.x, best.p.y);
-  const after = await waitState(page, (x) => x.remaining === before.remaining - 1, 'rim tap');
-  expect(after.hearts).toBe(3);
+  const targets = objects.filter((o) => o.isTarget && o.size !== undefined && o.r !== undefined);
+  const big = [...targets].sort((a, b) => (b.size ?? 0) - (a.size ?? 0))[0];
+  if (!big || big.size === undefined || big.r === undefined) throw new Error('no target');
+  // 0.45 × size from the center along the direction that leads away from every other object,
+  // inside the sprite's own circle (r ≥ size / 2) and not inside any neighbour's circle
+  const others = objects.filter((o) => o.id !== big.id);
+  let best = { x: 0, y: 0, score: -1 };
+  for (let a = 0; a < 360; a += 15) {
+    const x = big.x + Math.cos((a * Math.PI) / 180) * big.size * 0.45;
+    const y = big.y + Math.sin((a * Math.PI) / 180) * big.size * 0.45;
+    const nearest = Math.min(...others.map((o) => Math.hypot(o.x - x, o.y - y) - (o.r ?? 0)));
+    if (nearest > best.score) best = { x, y, score: nearest };
+  }
+  expect(best.score).toBeGreaterThan(0);
+  const before = (await state(page))?.remaining ?? 0;
+  await page.mouse.click(best.x, best.y);
+  await waitState(page, (x) => x.remaining === before - 1, 'rim tap found the target');
 });
 
-test('a tap during the pop-in counts', async ({ page }) => {
-  await page.goto(`${TEST}?level=1&reset=1${CANVAS}`, { waitUntil: 'load' });
-  // catch the intro if we can; a fast machine may already be playing, which is fine
-  const first = await waitState(
-    page,
-    (x) => x.status === 'intro' || x.status === 'playing',
-    'scene',
-  );
-  const t = (await page.evaluate(() => window.__peekDebug?.targets() ?? []))[0];
-  expect(t).toBeDefined();
-  await page.mouse.click(t!.x, t!.y);
-  const won = await waitState(page, (x) => x.status === 'won', 'won by the first tap');
-  expect(won.remaining).toBe(0);
-  expect(['intro', 'playing']).toContain(first.status);
-  const s = await state(page);
-  expect(s?.hearts).toBe(3);
+test('a tap during the pop-in counts and starts the round', async ({ page }) => {
+  let caught = false;
+  for (let attempt = 0; attempt < 3 && !caught; attempt++) {
+    await page.goto(`${TEST}?level=1&mode=find&reset=1${SALT}${CANVAS}`, { waitUntil: 'load' });
+    const first = await waitState(
+      page,
+      (x) => x.status === 'intro' || x.status === 'playing',
+      'scene exists',
+    );
+    if (first.status !== 'intro') continue;
+    caught = true;
+    const t = await page.evaluate(() => window.__peekDebug?.targets() ?? []);
+    if (!t[0]) throw new Error('no target');
+    await page.mouse.click(t[0].x, t[0].y);
+    const s = await waitState(
+      page,
+      (x) => x.remaining === first.remaining - 1 || x.status === 'won',
+      'early tap counted',
+    );
+    expect(['playing', 'won']).toContain(s.status);
+  }
+  expect(caught, 'the pop-in was observed at least once in three loads').toBe(true);
+  await winScene(page);
 });

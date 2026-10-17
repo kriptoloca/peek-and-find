@@ -160,6 +160,13 @@ export function placeholderSprite(spec, paletteShift) {
   } else if (spec.variant === 'c') {
     parts.push(`<rect x="58" y="152" width="140" height="20" fill="${dark}"/>`);
   }
+  if (spec.tags.includes('flippable')) {
+    // Mirror decoys and Spot flips must read: a bar on the right third, clipped to the shape,
+    // moves ≥ 8 % of the pixels when the sprite is mirrored (the pipeline measures it).
+    parts.push(
+      `<rect x="172" y="40" width="26" height="140" rx="8" fill="${dark}" opacity="0.85"/>`,
+    );
+  }
   parts.push(`</g>`);
   parts.push(`<circle cx="92" cy="84" r="16" fill="#ffffff" opacity="0.55"/>`);
   if (spec.tags.includes('flippable')) {

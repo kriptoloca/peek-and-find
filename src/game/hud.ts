@@ -105,6 +105,11 @@ export class Hud {
     this.reapply();
   }
 
+  /** Canvas center of the hint button, null while it is hidden (dev hooks). */
+  hintCenter(): { x: number; y: number } | null {
+    return this.hint.visible ? { x: this.hint.x, y: this.hint.y } : null;
+  }
+
   /** True when a canvas point lands on the visible hint button (so the scene ignores it). */
   hitsHint(x: number, y: number): boolean {
     if (!this.hint.visible) return false;

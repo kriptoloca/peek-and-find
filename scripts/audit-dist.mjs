@@ -46,7 +46,7 @@ for (const file of files) {
   if (!TEXT_EXT.has(ext)) continue;
   if (SKIP_FILES.has(basename(rel))) continue;
   const text = readFileSync(file, 'utf8');
-  const re = /https?:\/\/[^\s"'`<>)\\]+/g;
+  const re = /(?:https?|wss?):\/\/[^\s"'`<>)\\]+/g;
   let m;
   while ((m = re.exec(text)) !== null) {
     const url = m[0];

@@ -38,6 +38,12 @@ if (import.meta.env.DEV && new URLSearchParams(window.location.search).has('audi
   });
 }
 
+// Dev builds: ?fpsmin=N lowers Phaser's minimum fps (default 5), i.e. raises the per-frame delta
+// cap, so timers keep wall-clock time on a GPU-less machine running WebGL through SwiftShader.
+const fpsMin = import.meta.env.DEV
+  ? Number(new URLSearchParams(window.location.search).get('fpsmin'))
+  : NaN;
+
 const game = new Phaser.Game({
   type: rendererParam === 'canvas' ? Phaser.CANVAS : Phaser.AUTO,
   parent: 'game',
@@ -51,6 +57,7 @@ const game = new Phaser.Game({
   },
   // Atlases are power-of-two, so mipmaps smooth the 208 px frames drawn at ~100 px (Epic 9).
   render: { antialias: true, roundPixels: false, mipmapFilter: 'LINEAR_MIPMAP_LINEAR' },
+  fps: Number.isFinite(fpsMin) && fpsMin >= 1 ? { min: fpsMin } : undefined,
   scene: [BootScene, TitleScene, GameScene],
 });
 

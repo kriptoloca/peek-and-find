@@ -34,7 +34,8 @@ Themes: `kitchen`, `beach`, `city`, `forest`, `space`. Example: `assets/svg/kitc
   saturated mid-tone fill rotates. Check the atlas PNG after the first build.
 - A family's variants a/b/c share the silhouette class (tags in themes.json) but must be
   distinguishable in shape or detail at 100 px on a phone.
-- Flippable families need asymmetric art (mirror decoys flip the sprite).
+- Flippable families need asymmetric art (mirror decoys flip the sprite): `npm run assets` fails
+  when fewer than 8 % of a flippable sprite's pixels change under a horizontal mirror.
 - Colors: 2–3 tone shading, 0–2 px outlines, no nursery pastels (GDD §11).
 
 ## Backgrounds

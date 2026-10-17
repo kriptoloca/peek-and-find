@@ -1,10 +1,11 @@
-import { expect, test } from '@playwright/test';
+import { expect } from '@playwright/test';
+import { computeLayout, designSize } from '../../src/game/layout';
 import {
   TEST,
-  collect,
-  expectSameOrigin,
+  changedShare,
   shot,
   tapTitle,
+  test,
   waitState,
   waitTitle,
   type GameState,
@@ -12,7 +13,9 @@ import {
 
 /**
  * Every link of README.md "Test links" opens clean: no page/console errors, only same-origin
- * requests, something drawn on the canvas, and the expected screen or scene behind the query.
+ * requests (the guard fixture), something drawn on the canvas, and the expected screen or
+ * scene behind the query. The production link is played: Title → PLAY → scene, judged only by
+ * what a player sees (pixels) and what the SDK logs with its own ?debug=true switch.
  */
 interface Link {
   path: string;
@@ -21,7 +24,7 @@ interface Link {
 }
 
 const LINKS: Link[] = [
-  { path: '', kind: 'prod' },
+  { path: '?debug=true', kind: 'prod' },
   { path: `${TEST}?reset=1`, kind: 'title' },
   {
     path: `${TEST}?level=30`,
@@ -67,22 +70,51 @@ const LINKS: Link[] = [
   { path: `${TEST}#gen`, kind: 'gen' },
 ];
 
+/** Waits until an SDK console line matches (the SDK logs every platform message with ?debug=true). */
+async function waitConsole(lines: string[], re: RegExp, timeout: number): Promise<number> {
+  const t0 = Date.now();
+  for (;;) {
+    const n = lines.filter((l) => re.test(l)).length;
+    if (n > 0) return n;
+    if (Date.now() - t0 > timeout) throw new Error(`console never matched ${String(re)}`);
+    await new Promise((r) => setTimeout(r, 100));
+  }
+}
+
 for (const link of LINKS) {
-  test(`link /${link.path} opens clean`, async ({ page, baseURL }, info) => {
-    const c = collect(page);
+  test(`link /${link.path} opens clean`, async ({ page, guard }, info) => {
     await page.goto(link.path, { waitUntil: 'load' });
     await expect(page.locator('canvas')).toBeVisible();
     switch (link.kind) {
       case 'prod': {
-        await page.waitForTimeout(3000);
         // Production never exposes the dev hooks or the dev menu chunk.
+        // the SDK logs each message twice (sendMessage() and the platform_message_sent event)
+        const sent = (name: string): RegExp => new RegExp(`sendMessage\\(\\).*${name}`, 'i');
+        await waitConsole(guard.console, sent('game_ready'), 30_000);
         expect(await page.evaluate(() => typeof window.__peekDebug)).toBe('undefined');
         expect(await page.evaluate(() => typeof window.__peekTitle)).toBe('undefined');
+        expect(guard.console.filter((l) => sent('game_ready').test(l))).toHaveLength(1);
+        // PLAY sits where the Title layout puts it: the same pure layout math, no hooks.
+        const box = await page.locator('canvas').boundingBox();
+        if (!box) throw new Error('no canvas');
+        const d = designSize(390, 844);
+        const l = computeLayout(d.width, d.height);
+        const k = box.width / d.width;
+        const before = await page.screenshot();
+        await page.mouse.click(
+          box.x + (l.scene.x + l.scene.w / 2) * k,
+          box.y + (l.scene.y + l.scene.h * 0.48) * k,
+        );
+        await waitConsole(guard.console, sent('gameplay_started'), 30_000);
+        await page.waitForTimeout(800);
+        const after = await page.screenshot({ path: info.outputPath('prod-after-play.png') });
+        expect(await changedShare(before, after)).toBeGreaterThan(0.2);
+        expect(guard.console.filter((l) => sent('game_ready').test(l))).toHaveLength(1);
         break;
       }
       case 'title': {
         await waitTitle(page);
-        // CLAUDE.md rule 3: GameReady exactly once, last, after the loading messages.
+        // CLAUDE.md rule 3: GameReady exactly once, last, after the loading messages …
         const m = await page.evaluate(() => window.__peekTitle?.messages() ?? []);
         expect(m.filter((x) => x === 'game_ready')).toHaveLength(1);
         expect(m[m.length - 1]).toBe('game_ready');
@@ -91,6 +123,9 @@ for (const link of LINKS) {
           m.indexOf('in_game_loading_started'),
         );
         expect(m.indexOf('game_ready')).toBeGreaterThan(m.indexOf('in_game_loading_stopped'));
+        // … and the game is interactive at that moment: the very next tap starts play.
+        await tapTitle(page, 'play');
+        await waitState(page, (x) => x.status === 'playing', 'playing right after GameReady');
         break;
       }
       case 'title-play': {
@@ -111,9 +146,7 @@ for (const link of LINKS) {
     }
     const drawn = await shot(page, info, 'screen');
     expect(drawn, 'canvas shows something').toBeGreaterThan(6);
-    expectSameOrigin(c, baseURL);
-    expect(c.errors).toEqual([]);
     // the Bridge runtime is shipped next to the page, never fetched from a CDN
-    expect([...c.paths].some((p) => p.endsWith('/playgama-bridge.js'))).toBe(true);
+    expect([...guard.paths].some((p) => p.endsWith('/playgama-bridge.js'))).toBe(true);
   });
 }

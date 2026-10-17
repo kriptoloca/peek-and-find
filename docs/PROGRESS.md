@@ -30,6 +30,15 @@ Repo: https://github.com/kriptoloca/peek-and-find
 | 11 | Playgama QA tool, certification checklist | checklist done (code) | `docs/certification-checklist.md`: 12 rules with evidence; GameReady order and save persistence now asserted in e2e; **QA tool pending (needs the Playgama account)** |
 | 12 | Store assets, submission ZIP | done (code) | `npm run zip` → deterministic `release/peek-and-find-0.1.0.zip` (3.27 MB, index.html at the root, no /test/, limits checked, SHA-256 printed); `docs/store/`: listing, thumbnail brief, video script, submission notes; `tests/store.test.ts` bans young-audience wording; **uploads and the thumbnails need the Playgama account and the art pack (Hasan)** |
 
+## Denetim özeti (2026-10-17, düşman denetçi, HEAD dcfa024 → bu commit)
+
+| Denetim | KRİTİK | YÜKSEK | ORTA | DÜŞÜK | Durum |
+| --- | --- | --- | --- | --- | --- |
+| Sistem mantığı (CLAUDE.md/GDD/GENERATOR) | 0 | 2 | 6 | 17 | YÜKSEK 2/2 düzeltildi; ORTA 5 düzeltildi, 1 kayıt; DÜŞÜK 12 düzeltildi, 5 kayıt |
+| E2E (oyuncu gözünden) | 2 | 5 | 10 | 7 | KRİTİK 2/2, YÜKSEK 5/5 düzeltildi; ORTA 8 düzeltildi, 2 kayıt; DÜŞÜK 5 düzeltildi, 2 kayıt |
+
+Gerekçeli kayıtlar docs/questions.md "adversarial audit" bölümünde. İkinci koşu: düzeltmelerden sonra her iki denetim yeniden çalıştırıldı (sonuç aynı bölümde).
+
 ## Hasan's steps (outside the code)
 - [x] Phone test started 2026-10-16 19:35–19:45: desktop 16:9 and iPhone 9:16 both render; first bug (HUD inside the Spot image) found and fixed. Still wanted: 3 lines on L30/L60 search feel, mirror decoys, Spot miss penalty, rotation.
 - [x] Phone test 2 (2026-10-17): "fifth difference not findable" (grey recolor was invisible) and "tap on a shape not registering" (40 px circle under big sprites, taps during pop-in) → fixed in 9e.
@@ -53,7 +62,7 @@ See `docs/questions.md` (every deviation from the spec with its reason).
 ## Measured
 | Metric | Value |
 |---|---|
-| Tests | 167 unit + 22 e2e (+ `npm run tour`, 17 screenshot flows, not a gate) |
+| Tests | 173 unit + 33 e2e (+ `npm run tour`, 17 screenshot flows, not a gate) |
 | Bundle (dist/) | 4.6 MB shipped; initial load before GameReady 2.81 MB (OGG) / 2.83 MB (M4A): bundle 1.23 + Bridge 0.29 + kitchen and beach atlases 1.05 (beach unlocks at level 4, so it preloads at boot) + UI 0.03 + backgrounds + audio 0.16 (`docs/size-report.md`) |
 | Atlases | 2048×2048 per theme, 112 frames at 208 px; UI 1024×512 |
 | Level 80 generation | ≈ 0.4 ms |

@@ -1,3 +1,4 @@
+import { hostedByYoutube } from './host';
 /**
  * iOS Safari plays Web Audio through the "ambient" audio session, which the ringer (silent)
  * switch mutes; the moment any HTMLMediaElement plays, WebKit moves the page to the "playback"
@@ -60,7 +61,8 @@ export function iosUnmuteState(): IosUnmuteState {
 
 /** Idempotent; call once at startup. */
 export function installIosUnmute(): void {
-  if (typeof document === 'undefined' || !isIosLike()) return;
+  // Inside the YouTube app the host owns the audio session; the trick is for Safari tests only.
+  if (typeof document === 'undefined' || !isIosLike() || hostedByYoutube()) return;
   state.ios = true;
   let el: HTMLAudioElement | null = null;
   const kick = (): void => {

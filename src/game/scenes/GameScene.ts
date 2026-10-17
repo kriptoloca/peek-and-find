@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { THEMES, backgroundKey, themeForLevel } from '../../data/themes';
-import { themeToPreload } from '../../gen/difficulty';
-import { installDebug, type DebugPoint } from '../../dev/debug';
+import { THEME_ROTATE_EVERY, themeToPreload } from '../../gen/difficulty';
+import { installDebug, uninstallDebug, type DebugPoint } from '../../dev/debug';
 import { Rng, hashSeed, sceneSeed } from '../../gen/rng';
 import { pickMode } from '../../gen/difficulty';
 import { generateScene } from '../../gen/scene-gen';
@@ -32,7 +32,7 @@ import {
 } from '../rules';
 import { persistProgress, progress, resetProgress } from '../state';
 import { UI } from '../textures/placeholders';
-import { addImage, ensureThemes, fitImage, loadedAtlases } from '../assets';
+import { addImage, ensureThemes, fitImage, loadedAtlases, releaseThemes } from '../assets';
 import { SCENE_SIZE, SPOT_H, SPOT_W } from '../../config';
 
 const COLOR_SCENE = 0x2e3650;
@@ -108,6 +108,7 @@ export class GameScene extends Phaser.Scene {
   private adInProgress = false;
   /** Incremented by every startLevel(); an awaited load belongs to the latest one only. */
   private levelGen = 0;
+  private levelFailedOnce = false;
   private adsShown = 0;
   private hintUses = 0;
   private continueUses = 0;
@@ -139,9 +140,11 @@ export class GameScene extends Phaser.Scene {
     this.unsubscribePause = this.platform.onPause((p) => {
       this.setPaused(p);
     });
+    if (this.platform.isPaused()) this.setPaused(true);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.unsubscribePause?.();
       this.unsubscribePause = null;
+      if (import.meta.env.DEV) uninstallDebug();
     });
     this.hud.setHint(this.platform.rewardedSupported, () => {
       void this.onHint();
@@ -245,7 +248,30 @@ export class GameScene extends Phaser.Scene {
 
   // ---- level lifecycle ----------------------------------------------------------------------
 
+  /**
+   * Starts the level; a thrown error (missing frame in a pack, generator invariant) never
+   * freezes the game: the loading message is closed, the level is retried once with a new
+   * attempt, and the Title is the last resort.
+   */
   private async startLevel(): Promise<void> {
+    try {
+      await this.startLevelInner();
+    } catch (e: unknown) {
+      console.error('peek: level failed to start', e);
+      this.platform.sendMessage('in_game_loading_stopped');
+      if (!this.sys.isActive()) return;
+      if (!this.levelFailedOnce) {
+        this.levelFailedOnce = true;
+        progress.attempt += 1;
+        persistProgress();
+        void this.startLevel();
+        return;
+      }
+      this.scene.start('Title');
+    }
+  }
+
+  private async startLevelInner(): Promise<void> {
     this.clearOverlay();
     this.round = null;
     clearFx(this, this.fx);
@@ -283,10 +309,23 @@ export class GameScene extends Phaser.Scene {
     // GDD §5: the theme that unlocks within three levels is loaded ahead so the chain never
     // stalls on a loader round trip. A newer startLevel() or a scene shutdown cancels this one.
     const pre = themeToPreload(level);
+    // At most three atlases stay in GPU memory: this theme, the theme of the next scene or
+    // rotation block, and the one that unlocks soon; everything else is released.
+    const next =
+      this.dailyIndex !== null
+        ? this.dailyIndex + 1 < DAILY_CHAIN_LENGTH
+          ? themeForLevel(dailyScene(this.dailyKey, this.dailyIndex + 1).level)
+          : null
+        : themeForLevel(level + THEME_ROTATE_EVERY);
+    const needed: Theme[] = [this.theme];
+    for (const t of [next, pre === null ? null : (THEMES[pre] as Theme)]) {
+      if (t && !needed.includes(t)) needed.push(t);
+    }
     const gen0 = ++this.levelGen;
     this.platform.sendMessage('in_game_loading_started');
-    await ensureThemes(this, pre === null ? [this.theme] : [this.theme, THEMES[pre] as Theme]);
+    await ensureThemes(this, needed);
     if (gen0 !== this.levelGen || !this.sys.isActive()) return;
+    releaseThemes(this, needed);
     const gen: GenScene = generateScene({
       seed,
       level,
@@ -345,6 +384,7 @@ export class GameScene extends Phaser.Scene {
       this.platform.sendMessage('gameplay_started');
       if (level <= TEACH_PULSE_UNTIL_LEVEL) this.hud.teachPulse();
     });
+    this.levelFailedOnce = false;
   }
 
   /** Theme background inside the world containers; without an atlas the flat fill stays. */
@@ -425,7 +465,9 @@ export class GameScene extends Phaser.Scene {
 
   private retryLevel(): void {
     audio.play('button');
-    progress.attempt += 1;
+    // Daily scenes ignore the attempt (Retry replays the same scene, GDD §7); the normal chain
+    // reseeds so a stuck player gets a fresh layout.
+    if (this.dailyIndex === null) progress.attempt += 1;
     progress.scenesPlayed += 1;
     persistProgress();
     void this.startLevel();
@@ -487,7 +529,7 @@ export class GameScene extends Phaser.Scene {
     const counts = promptCounts(r);
     this.hud.setPrompt(counts);
     const modeItem = counts.find((c) => c.family === 'spot' || c.family === 'odd');
-    const icon = modeItem ? modeItem.icon : (this.sprites.get(target.id)?.texture.key ?? '');
+    const icon = modeItem ? modeItem.icon : (this.sprites.get(target.id)?.frame.name ?? '');
     this.hud.pulsePrompt(icon);
   }
 
@@ -606,8 +648,10 @@ export class GameScene extends Phaser.Scene {
     const r = this.round;
     if (!r || r.status !== 'playing' || this.adInProgress || this.paused) return;
     this.adInProgress = true;
+    this.platform.sendMessage('gameplay_stopped');
     const earned = await this.platform.showRewarded('hint');
     this.adInProgress = false;
+    if (this.round === r && r.status === 'playing') this.platform.sendMessage('gameplay_started');
     if (!earned || this.round !== r || r.status !== 'playing') return;
     const t = hintTarget(r);
     if (!t) return;
@@ -655,6 +699,8 @@ export class GameScene extends Phaser.Scene {
       this.advanceTimer = null;
     }
     if (this.overlay) {
+      // destroy() leaves looping tweens alive (Phaser 3.90); kill them with their targets.
+      this.tweens.killTweensOf(this.overlay.getAll());
       this.overlay.destroy(true);
       this.overlay = null;
     }
@@ -714,7 +760,8 @@ export class GameScene extends Phaser.Scene {
     const now = this.time.now;
     this.devTaps = this.devTaps.filter((t) => now - t < DEV_TAP_WINDOW_MS);
     this.devTaps.push(now);
-    if (this.devTaps.length < 3) return true;
+    // The first two taps are ordinary game taps (a 1:1 layout has objects in this corner).
+    if (this.devTaps.length < 3) return false;
     this.devTaps = [];
     this.devMenuOpen = true;
     void import('../../dev/DevMenu').then(({ openDevMenu }) => {
@@ -755,6 +802,21 @@ export class GameScene extends Phaser.Scene {
     const today = q.get('today');
     if (today && /^\d{8}$/.test(today)) this.dailyKey = today;
     if (q.get('daily') === '1') this.dailyIndex = 0;
+  }
+
+  /** Dev hooks: screen center of a fail-overlay button, null unless the round is lost. */
+  private overlayButton(kind: 'retry' | 'continue'): DebugPoint | null {
+    if (!this.overlay || this.round?.status !== 'lost') return null;
+    const withContinue = this.platform.rewardedSupported;
+    if (kind === 'continue' && !withContinue) return null;
+    const dx = kind === 'retry' ? (withContinue ? FAIL_BUTTON_DX : 0) : -FAIL_BUTTON_DX;
+    const rect = this.game.canvas.getBoundingClientRect();
+    const k = rect.width / this.scale.gameSize.width;
+    return {
+      id: kind,
+      x: rect.left + (this.overlay.x + dx) * k,
+      y: rect.top + (this.overlay.y + RETRY_OFFSET_Y) * k,
+    };
   }
 
   /** Dev check: the HUD row must be inside the band the current layout reserves for it. */
@@ -847,6 +909,15 @@ export class GameScene extends Phaser.Scene {
         const c = this.hud.homeCenter();
         return { id: 'home', x: rect.left + c.x * k, y: rect.top + c.y * k };
       },
+      hintCenter: () => {
+        const c = this.hud.hintCenter();
+        if (!c) return null;
+        const rect = this.game.canvas.getBoundingClientRect();
+        const k = screenScale();
+        return { id: 'hint', x: rect.left + c.x * k, y: rect.top + c.y * k };
+      },
+      retryCenter: () => this.overlayButton('retry'),
+      continueCenter: () => this.overlayButton('continue'),
       state: () => ({
         level: progress.level,
         sceneLevel: this.round?.scene.level ?? 0,
@@ -869,6 +940,7 @@ export class GameScene extends Phaser.Scene {
         hearts: this.round?.hearts ?? 0,
         status: this.round?.status ?? 'none',
         remaining: this.round ? remainingTargets(this.round) : 0,
+        stars: this.round ? starsEarned(this.round, this.time.now) : 0,
         now: this.time.now,
         atlasKeys: loadedAtlases(this),
         audio: audio.debug(),
