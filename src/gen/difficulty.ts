@@ -34,6 +34,8 @@ export const SPOT_FROM_LEVEL = 11;
 export const THEME_COUNT = 5;
 export const THEME_ROTATE_EVERY = 3;
 export const THEME_UNLOCK_EVERY = 10;
+/** The second theme arrives early (GDD v1.4): variety in the first session; the rest keep the cadence. */
+export const THEME_SECOND_UNLOCK_LEVEL = 4;
 export const THEME_PRELOAD_LOOKAHEAD = 3;
 
 function lerpColumns(values: readonly number[], level: number): number {
@@ -108,7 +110,10 @@ export function pickMode(rng: Rng, level: number, canHostSpot: boolean): Mode {
 }
 
 export function unlockedThemes(level: number, total = THEME_COUNT): number {
-  return Math.min(total, 1 + Math.floor(Math.max(0, level) / THEME_UNLOCK_EVERY));
+  const L = Math.max(0, level);
+  const byCadence = 1 + Math.floor(L / THEME_UNLOCK_EVERY);
+  const early = L >= THEME_SECOND_UNLOCK_LEVEL ? 2 : 1;
+  return Math.min(total, Math.max(byCadence, early));
 }
 
 /** Theme index for a level (GENERATOR.md §2). */

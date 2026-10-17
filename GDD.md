@@ -29,7 +29,7 @@ Stars: 3★ if solved under `t3`, 2★ under `t2`, else 1★. `t3/t2` scale with
 | Mode | Prompt (icon-only) | Win | Rotation |
 |---|---|---|---|
 | **Find** | target icon + ×N | tap all N targets | 60% of scenes |
-| **Odd One Out** | "≠" icon | tap the single different item among near-identical ones | 20% |
+| **Odd One Out** | "≠" icon | tap the single different item among near-identical ones; every cell sits at a seeded ±3° angle (v1.4) so the grid never reads as wallpaper, and the angle is never the tell | 20% |
 | **Spot 5** | "5 ⟷" icon, two images stacked (portrait) or side by side (landscape) | tap all 5 differences on either image | 20% |
 
 First 5 levels are Find only. Odd One Out appears at level 6, Spot 5 at level 11.
@@ -41,7 +41,7 @@ Spot 5 is only scheduled when the current layout can show both images at ≥ 0.8
 - Target scale: 1.0 → 0.6
 - Decoy ratio (look-alikes): 0 → 0.5
 - Occlusion: none → partial (target ≥ 60% visible)
-- Theme rotates every 3 levels; new theme unlocks every 10 levels. The next theme's atlas is preloaded in the background 3 levels before it unlocks, so the chain never stalls.
+- Theme rotates every 3 levels; the second theme unlocks at level 4 (v1.4: variety inside the first session), the others every 10 levels (20, 30, 40). The next theme's atlas is preloaded in the background 3 levels before it unlocks, so the chain never stalls.
 - Every 25th level is a "big scene": 7 targets, max density, 2× star time, bonus confetti.
 Levels are infinite; curves plateau at level 80.
 
@@ -121,5 +121,5 @@ No accounts, no leaderboards, no multiplayer, no IAP, no level editor, no locali
 - Interstitial rule is scene count AND ≥ 120 s.
 - Hit radius unified (40 / 60) with a spacing guarantee instead of overlap handling.
 - Spot 5 visibility threshold corrected to 1600 px² (40×40) or a 40 px shift.
-- Next theme preloads 3 levels before unlock.
+- Next theme preloads 3 levels before unlock (the second theme therefore loads at boot for a new player).
 - Code budget stated honestly at 1.5 MB.

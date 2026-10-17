@@ -3,6 +3,7 @@ import { HIT_RADIUS_FIND } from '../src/config';
 import { KITCHEN } from '../src/data/themes';
 import {
   ODD_CORNER_FREE_UNTIL_LEVEL,
+  ODD_ROTATION_JITTER_DEG,
   ODD_SCALE_DELTA,
   generateOdd,
   oddCount,
@@ -45,6 +46,21 @@ describe('generateOdd', () => {
       expect(scene.targets.length).toBe(1);
       expect(scene.prompt.kind).toBe('odd');
     }
+  });
+
+  it('every cell turns by a seeded angle within the jitter; the odd one is not the only one', () => {
+    const max = (ODD_ROTATION_JITTER_DEG * Math.PI) / 180;
+    for (let s = 0; s < 30; s++) {
+      const scene = generateOdd(900 + s, 20, KITCHEN);
+      const rotations = scene.objects.map((o) => o.rotation ?? 0);
+      expect(rotations.every((r) => Math.abs(r) <= max)).toBe(true);
+      expect(new Set(rotations.map((r) => r.toFixed(4))).size).toBeGreaterThan(3);
+      const odd = scene.targets[0]!;
+      const regularTurned = scene.objects.filter((o) => !o.isTarget && (o.rotation ?? 0) !== 0);
+      expect(regularTurned.length).toBeGreaterThan(0);
+      expect(Math.abs(odd.rotation ?? 0)).toBeLessThanOrEqual(max);
+    }
+    expect(generateOdd(1234, 12, KITCHEN)).toEqual(generateOdd(1234, 12, KITCHEN));
   });
 
   it('exactly one item differs, in exactly one attribute, and all others are identical', () => {

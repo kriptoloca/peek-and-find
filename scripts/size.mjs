@@ -26,6 +26,8 @@ const kb = (n) => Math.round(n / 1024) + ' KB';
 
 /** Files fetched before GameReady, in load order (src/game/scenes/BootScene.ts). */
 const FIRST_THEME = 'kitchen';
+// Unlocks at level 4 (GDD v1.4), so Boot preloads it for a fresh player (lookahead 3 levels).
+const SECOND_THEME = 'beach';
 const INITIAL = [
   /^index\.html$/,
   /^assets\/index-[^/]+\.js$/,
@@ -35,6 +37,8 @@ const INITIAL = [
   /^atlases\/ui\.(png|json)$/,
   new RegExp(`^atlases/${FIRST_THEME}\\.(png|json)$`),
   new RegExp(`^backgrounds/${FIRST_THEME}(_spot)?\\.png$`),
+  new RegExp(`^atlases/${SECOND_THEME}\\.(png|json)$`),
+  new RegExp(`^backgrounds/${SECOND_THEME}(_spot)?\\.png$`),
   /^audio\/index\.json$/,
 ];
 const AUDIO_OGG = /^audio\/.+\.ogg$/;

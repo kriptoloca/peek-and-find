@@ -27,10 +27,14 @@ describe('themes', () => {
     }
   });
 
-  it('rotates every 3 levels among unlocked themes and unlocks one every 10 levels', () => {
-    for (let L = 1; L <= 9; L++) expect(themeForLevel(L).id).toBe('kitchen');
-    expect(unlockedThemeList(9).length).toBe(1);
-    expect(unlockedThemeList(10).length).toBe(2);
+  it('rotates every 3 levels among unlocked themes; beach from level 4, then one every 10', () => {
+    for (let L = 1; L <= 3; L++) expect(themeForLevel(L).id).toBe('kitchen');
+    for (let L = 4; L <= 6; L++) expect(themeForLevel(L).id).toBe('beach');
+    for (let L = 7; L <= 9; L++) expect(themeForLevel(L).id).toBe('kitchen');
+    expect(unlockedThemeList(3).length).toBe(1);
+    expect(unlockedThemeList(4).length).toBe(2);
+    expect(unlockedThemeList(19).length).toBe(2);
+    expect(unlockedThemeList(20).length).toBe(3);
     expect(themeForLevel(10).id).toBe('beach');
     expect(themeForLevel(13).id).toBe('kitchen');
     expect(unlockedThemeList(40).length).toBe(5);

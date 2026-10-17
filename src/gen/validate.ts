@@ -1,7 +1,12 @@
 import { familyById, splitFrame } from '../data/themes';
 import { FILLER_FAMILY_SHARE, FLIPPABLE_TAG } from './constants';
 import { aabb, dist2, rectContainsPoint, rectInside, visibleFraction } from './geometry';
-import { ODD_CORNER_FREE_UNTIL_LEVEL, ODD_SCALE_DELTA, oddCount } from './modes/odd-one-out';
+import {
+  ODD_CORNER_FREE_UNTIL_LEVEL,
+  ODD_ROTATION_JITTER_DEG,
+  ODD_SCALE_DELTA,
+  oddCount,
+} from './modes/odd-one-out';
 import {
   SPOT_DIFFERENCES,
   differenceVisible,
@@ -217,6 +222,10 @@ function validateOdd(scene: Scene, errs: string[]): void {
     if (o.flipX) errs.push(`${o.id}: regular item flipped`);
     if (Math.abs(o.size - ref.size) > 1e-6) errs.push(`${o.id}: regular size differs`);
     if (o.isDecoy) errs.push(`${o.id}: regular item flagged as decoy`);
+  }
+  const maxRot = (ODD_ROTATION_JITTER_DEG * Math.PI) / 180 + 1e-9;
+  for (const o of scene.objects) {
+    if (Math.abs(o.rotation ?? 0) > maxRot) errs.push(`${o.id}: rotation beyond the jitter`);
   }
   const frameDiff = odd.frame !== info.baseFrame;
   const flipDiff = odd.flipX;

@@ -19,6 +19,11 @@ const CELL_FILL = 0.7;
 const MAX_BASE_MULT = 1.25;
 /** Jitter uses this fraction of the spacing budget so neighbours stay ≥ 2 × hitRadius apart. */
 const JITTER_BUDGET = 0.5;
+/**
+ * Every cell (the odd one included) turns by a seeded angle within this many degrees, so the
+ * grid stops reading as wallpaper (docs/visual-review.md §4); rotation is never the tell.
+ */
+export const ODD_ROTATION_JITTER_DEG = 3;
 
 export function oddCount(level: number): number {
   return Math.min(ODD_MAX, Math.max(ODD_MIN, ODD_MIN + Math.floor(level)));
@@ -97,6 +102,7 @@ export function generateOdd(seed: number, level: number, theme: Theme): Scene {
     const isOdd = i === oddIndex;
     const jx = rng.float(-maxJitter, maxJitter);
     const jy = rng.float(-maxJitter, maxJitter);
+    const rotation = (rng.float(-1, 1) * ODD_ROTATION_JITTER_DEG * Math.PI) / 180;
     const x = Math.round(x0 + c.col * cell + cell / 2 + jx);
     const y = Math.round(y0 + c.row * cell + cell / 2 + jy);
     const itemSize = isOdd && kind === 'scale' ? size * ODD_SCALE_DELTA : size;
@@ -114,6 +120,7 @@ export function generateOdd(seed: number, level: number, theme: Theme): Scene {
       isTarget: isOdd,
       isDecoy: false,
       hitRadius: Math.max(hitRadius, itemSize / 2),
+      rotation,
     };
   });
 

@@ -310,7 +310,9 @@ export class GameScene extends Phaser.Scene {
       map: SpriteMap,
     ): void => {
       list.forEach((o, i) => {
-        const img = fitImage(addImage(this, o.x, o.y, o.frame), o.size).setFlipX(o.flipX);
+        const img = fitImage(addImage(this, o.x, o.y, o.frame), o.size)
+          .setFlipX(o.flipX)
+          .setRotation(o.rotation ?? 0);
         const sx = img.scaleX;
         const sy = img.scaleY;
         img.setScale(0);

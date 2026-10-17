@@ -62,6 +62,8 @@ export interface Placed {
   isDecoy: boolean;
   decoyKind?: DecoyKind;
   hitRadius: number;
+  /** Radians; Odd One Out cells only (±3°, seeded), so a grid never reads as wallpaper. */
+  rotation?: number;
 }
 
 export interface PromptItem {

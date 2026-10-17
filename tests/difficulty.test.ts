@@ -94,23 +94,30 @@ describe('modes', () => {
 });
 
 describe('themes and daily', () => {
-  it('unlocks a theme every 10 levels up to 5 and rotates every 3 levels', () => {
+  it('unlocks the second theme at level 4, then one every 10 levels up to 5', () => {
     expect(unlockedThemes(1)).toBe(1);
-    expect(unlockedThemes(9)).toBe(1);
-    expect(unlockedThemes(10)).toBe(2);
+    expect(unlockedThemes(3)).toBe(1);
+    expect(unlockedThemes(4)).toBe(2);
+    expect(unlockedThemes(9)).toBe(2);
+    expect(unlockedThemes(19)).toBe(2);
+    expect(unlockedThemes(20)).toBe(3);
     expect(unlockedThemes(40)).toBe(5);
     expect(unlockedThemes(400)).toBe(5);
-    for (let L = 1; L <= 9; L++) expect(themeIndex(L)).toBe(0);
+    for (let L = 1; L <= 3; L++) expect(themeIndex(L)).toBe(0);
+    for (let L = 4; L <= 6; L++) expect(themeIndex(L)).toBe(1); // floor(3/3)=1, 1 % 2 = 1
+    for (let L = 7; L <= 9; L++) expect(themeIndex(L)).toBe(0);
     expect(themeIndex(10)).toBe(1); // floor(9/3)=3, 3 % 2 = 1
     expect(themeIndex(13)).toBe(0);
     expect(themeIndex(40)).toBe(Math.floor(39 / 3) % 5);
   });
 
   it('preloads the next theme three levels ahead, once', () => {
-    expect(themeToPreload(6)).toBe(null);
-    expect(themeToPreload(7)).toBe(1);
-    expect(themeToPreload(9)).toBe(1);
-    expect(themeToPreload(10)).toBe(null);
+    expect(themeToPreload(1)).toBe(1); // beach, three levels before level 4
+    expect(themeToPreload(3)).toBe(1);
+    expect(themeToPreload(4)).toBe(null);
+    expect(themeToPreload(9)).toBe(null);
+    expect(themeToPreload(17)).toBe(2); // city at 20
+    expect(themeToPreload(20)).toBe(null);
     expect(themeToPreload(37)).toBe(4);
     expect(themeToPreload(47)).toBe(null);
   });

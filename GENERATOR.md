@@ -27,7 +27,7 @@ Teaching levels: for levels 1–5 target slots are taken from the front band fir
 
 Mode weights by level: L1–5 Find 100%; L6–10 Find 80 / Odd 20; L11+ Find 60 / Odd 20 / Spot 20. If the layout cannot host Spot (see §11), Spot's weight goes to Find. "Big scene" every 25th level: objectCount ×1.3 (cap 80), targetCount 7, thresholds ×2.
 
-Theme: `themes[floor((level-1)/3) % unlockedThemes]`, `unlockedThemes = min(5, 1 + floor(level/10))`. The atlas for the theme that unlocks at level 10k is preloaded from level 10k−3.
+Theme: `themes[floor((level-1)/3) % unlockedThemes]`, `unlockedThemes = min(5, max(1 + floor(level/10), level ≥ 4 ? 2 : 1))` (second theme at level 4, GDD v1.4). The atlas for a theme that unlocks at level U is preloaded from level U−3.
 
 ## 3. Object model
 ```ts
@@ -75,7 +75,7 @@ Decoys never count as targets. Tapping a decoy = wrong tap. Targets in Find alwa
 - Prompt: `{ kind: "find", items: [{ family, icon: targetFrame, count }] }`.
 
 ### Odd One Out
-- Jittered grid (not Poisson): `n = clamp(8 + level, 8, 36)` instances of one frame, identical scale; cell size ≥ 2 × hitRadius + jitter, so spacing holds.
+- Jittered grid (not Poisson): `n = clamp(8 + level, 8, 36)` instances of one frame, identical scale; cell size ≥ 2 × hitRadius + jitter, so spacing holds. Every cell also carries a seeded rotation within ±3° (`rotation`, radians), the odd one included; hit circles are unaffected.
 - Exactly one "odd" instance differs by one attribute chosen from: baked color variant (`_c1`/`_c2`), flipX (only for `flippable` families), scale ×0.8, missing-part variant (family `odd` frame, if present).
 - Difficulty: larger n and subtler attribute (scale/odd-frame before color) at higher levels; the odd item is never in the 4 corners before level 15.
 - hitRadius = 40.
