@@ -49,12 +49,21 @@ describe('placeholder synth', () => {
     }
   });
 
-  it('music loop is exactly 16 s and quiet', () => {
+  it('music loop is exactly 16 s, below the SFX peaks and loud enough for a phone speaker', () => {
     const m = renderMusic();
     expect(m.length).toBe(16 * SAMPLE_RATE);
     let peak = 0;
-    for (const v of m) peak = Math.max(peak, Math.abs(v));
-    expect(peak).toBeLessThanOrEqual(0.5001);
+    let sum = 0;
+    for (const v of m) {
+      peak = Math.max(peak, Math.abs(v));
+      sum += v * v;
+    }
+    // Peak 0.85 under the SFX peak (0.8 pre-gain × 0.6 vs 0.85 × 0.5 in game); the first phone
+    // test could not hear the loop at peak 0.5 (docs/audio-review.md).
+    expect(peak).toBeLessThanOrEqual(0.8501);
+    expect(peak).toBeGreaterThan(0.8);
+    const rmsDb = 20 * Math.log10(Math.sqrt(sum / m.length));
+    expect(rmsDb).toBeGreaterThan(-20); // ≈ −16 dBFS pre-gain
   });
 
   it('writes a valid 16-bit mono WAV', () => {

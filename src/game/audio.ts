@@ -17,7 +17,8 @@ import { progress } from './state';
 export const AUDIO_INDEX_KEY = 'audio-index';
 export const AUDIO_INDEX_URL = 'audio/index.json';
 const SFX_VOLUME = 0.6;
-const MUSIC_VOLUME = 0.35;
+/** 0.35 was inaudible on an iPhone speaker (docs/audio-review.md, phone test 3). */
+const MUSIC_VOLUME = 0.5;
 const DEBUG_HISTORY = 8;
 
 export interface AudioIndex {

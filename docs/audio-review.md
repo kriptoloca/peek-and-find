@@ -25,8 +25,8 @@ Measured levels (full scale = 1.0):
 
 | Clip | Length | Peak | RMS |
 | --- | --- | --- | --- |
-| music_loop (pre-gain) | 16.0 s | 0.50 | −21 dBFS |
-| music_loop in game (gain 0.35) | | | ≈ −30 dBFS |
+| music_loop (pre-gain, since phone test 3) | 16.0 s | 0.85 | ≈ −16 dBFS |
+| music_loop in game (gain 0.5) | | | ≈ −22 dBFS |
 | tap_correct_1 | 0.16 s | 0.80 | 0.13 |
 | tap_wrong | 0.22 s | 0.80 | 0.17 |
 | scene_complete | 0.87 s | 0.80 | 0.15 |
@@ -34,7 +34,7 @@ Measured levels (full scale = 1.0):
 | button | 0.05 s | 0.79 | 0.17 |
 
 - **The loop is placeholder-grade.** Sine pads plus a triangle arpeggio, four bars of four seconds,
-  repeating every 16 s. It is inoffensive at −30 dBFS, but after a few minutes the 16 s repeat is
+  repeating every 16 s. It is inoffensive at −22 dBFS, but after a few minutes the 16 s repeat is
   noticeable, and the texture reads as "chiptune demo", not as the mellow bed the GDD asks for.
   ASSETS.md wants 20–30 s; it is 16 s to stay under 150 KB in AAC. Replace with a licensed or
   CC0 loop before launch; the pipeline takes any `assets/audio/music_loop.wav`.
@@ -45,9 +45,11 @@ Measured levels (full scale = 1.0):
   they do their job (distinct, short, pitched feedback) and are honest about being synthetic.
   `heart_lose` is the loudest by RMS; `tap_wrong` immediately followed by `heart_lose` is the
   busiest moment. `sparkle` is loaded but unused.
-- **Mix balance.** SFX peak −4 dBFS after gain versus the loop at −30 dBFS: feedback cuts through
-  the music clearly, which is right for a tap game; if the real loop is denser, lower
-  `MUSIC_VOLUME` rather than raising SFX.
+- **Mix balance.** SFX peak −4 dBFS after gain versus the loop at −22 dBFS: feedback still cuts
+  through the music, which is right for a tap game; if the real loop is denser, lower
+  `MUSIC_VOLUME` rather than raising SFX. The first mix (loop peak 0.5, gain 0.35, ≈ −30 dBFS)
+  was measured as "playing" on an iPhone 2026-10-17 (`?audiodebug=1`: context running, music
+  playing, bus RMS 0.02) and still not heard on the speaker; raised by ≈ 8 dB.
 - **What a reviewer would flag first:** the music, not the SFX. The SFX could ship; the loop
   should not.
 

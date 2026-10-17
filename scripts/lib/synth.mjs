@@ -245,7 +245,9 @@ export function renderMusic() {
   });
   // trim to the exact loop length so the tail never spills past the bar
   const exact = out.subarray(0, Math.round(BAR_SEC * CHORDS.length * SAMPLE_RATE));
-  return fadeEdges(normalize(new Float32Array(exact), 0.5), 12);
+  // Peak 0.85: the first iPhone test could not hear the loop at peak 0.5 × gain 0.35 (≈ −30 dBFS
+  // on the bus); phone speakers need the bed near −22 dBFS to read under the SFX.
+  return fadeEdges(normalize(new Float32Array(exact), 0.85), 12);
 }
 
 /** 16-bit PCM mono WAV. */
