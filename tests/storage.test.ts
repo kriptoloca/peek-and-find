@@ -44,8 +44,16 @@ describe('migrate', () => {
       sound: false,
       music: true,
       scenesPlayed: 120,
+      hearts: 3,
       seedSalt: 123456,
     });
+  });
+
+  it('carries the hearts (GDD v1.7 §6): one to three, full for a save from before v1.7', () => {
+    expect(migrate({ version: 1, hearts: 2, seedSalt: 1 }).hearts).toBe(2);
+    expect(migrate({ version: 1, hearts: 7, seedSalt: 1 }).hearts).toBe(3);
+    expect(migrate({ version: 1, hearts: 0, seedSalt: 1 }).hearts).toBe(1);
+    expect(migrate({ version: 1, level: 12, seedSalt: 1 }).hearts).toBe(3);
   });
 
   it('starts fresh on an unknown version but keeps the salt', () => {

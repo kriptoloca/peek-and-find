@@ -1,10 +1,8 @@
 import { starsFor } from '../gen/difficulty';
+import { HEARTS_MAX, clampHearts } from './hearts';
 import { dist2 } from '../gen/geometry';
 import type { Placed, Scene } from '../gen/types';
 import { UI } from './ui-keys';
-
-/** Hearts per scene (GDD §6). Reset every scene, no global lives. */
-export const HEARTS_PER_SCENE = 3;
 
 export type RoundStatus = 'intro' | 'playing' | 'won' | 'lost';
 
@@ -87,10 +85,11 @@ export function totalTargets(scene: Scene): number {
   return scene.spot ? scene.spot.differences.length : scene.targets.length;
 }
 
-export function newRound(scene: Scene): Round {
+/** A round starts with the hearts the player carries (GDD v1.7 §6), full by default. */
+export function newRound(scene: Scene, hearts: number = HEARTS_MAX): Round {
   return {
     scene,
-    hearts: HEARTS_PER_SCENE,
+    hearts: clampHearts(hearts),
     found: new Set(),
     wrongTaps: 0,
     startedAt: null,
@@ -221,7 +220,7 @@ export function promptCounts(r: Round): PromptCount[] {
 /** Rewarded Continue (GDD §3): refill hearts and resume the same scene. */
 export function continueRound(r: Round): boolean {
   if (r.status !== 'lost') return false;
-  r.hearts = HEARTS_PER_SCENE;
+  r.hearts = HEARTS_MAX;
   r.status = 'playing';
   return true;
 }

@@ -25,9 +25,9 @@ hidden object, spot the difference, puzzle, casual, relaxing
 
 ## How to play (required field of the Playgama form)
 
-The icon at the top shows what to find: tap it in the picture. A wrong tap costs a heart; you have three per scene.
+The icon at the top shows what to find: tap it in the picture. A wrong tap costs a heart; hearts carry over from scene to scene, and one comes back every 20 levels.
 Odd One Out: tap the one item that differs from the rest. Spot 5: tap the five differences between the two images, on either one.
-Pause with the button at the bottom left (sound, music, home). Lost all hearts? Watch a short ad to continue, or retry with a fresh scene.
+Pause with the button at the bottom left (sound, music, home). Lost all hearts? Watch a short ad to continue with three, or retry the scene with one.
 
 ## Copy review (2026-10-18, `/ux-copy`)
 

@@ -136,7 +136,7 @@ test('Retry: a fresh layout in the chain, the same scene in the daily', async ({
   const first = await page.evaluate(() => window.__peekDebug?.objects() ?? []);
   await loseScene(page);
   await tapButton(page, 'retryCenter');
-  const again = await waitState(page, (s) => s.status === 'playing' && s.hearts === 3, 'retried');
+  const again = await waitState(page, (s) => s.status === 'playing' && s.hearts === 1, 'retried');
   expect(again.level).toBe(7);
   const second = await page.evaluate(() => window.__peekDebug?.objects() ?? []);
   expect(second.map((o) => `${String(o.x)},${String(o.y)}`)).not.toEqual(
@@ -148,7 +148,7 @@ test('Retry: a fresh layout in the chain, the same scene in the daily', async ({
   const d1 = await page.evaluate(() => window.__peekDebug?.objects() ?? []);
   await loseScene(page);
   await tapButton(page, 'retryCenter');
-  await waitState(page, (s) => s.status === 'playing' && s.hearts === 3, 'daily retried');
+  await waitState(page, (s) => s.status === 'playing' && s.hearts === 1, 'daily retried');
   const d2 = await page.evaluate(() => window.__peekDebug?.objects() ?? []);
   expect(d2).toEqual(d1);
 });
@@ -164,7 +164,7 @@ test('hearts step down on wrong taps, three of them lose the scene; a fast win e
   expect(lost.hearts).toBe(0);
   expect(lost.status).toBe('lost');
   await tapButton(page, 'retryCenter');
-  await waitState(page, (s) => s.status === 'playing' && s.hearts === 3, 'retried');
+  await waitState(page, (s) => s.status === 'playing' && s.hearts === 1, 'retried');
   const won = await winScene(page);
   expect(won.stars).toBe(3);
 });

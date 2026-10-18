@@ -1,6 +1,6 @@
 {
   "name": "peek-and-find",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": true,
   "description": "Peek & Find — text-free hidden-object game for YouTube Playables (Pebblit)",
   "type": "module",

@@ -19,9 +19,9 @@ A crowded, colorful scene. Find what the icon at the top asks for. Tap it. Next 
 1. Scene pops in (0.3 s). Top bar shows target icon(s) with count badges (e.g. cat ×3).
 2. Player taps objects.
    - Correct: object pops + sparkle + rising "ding", badge count decrements.
-   - Wrong: small shake, soft "nope", lose 1 heart (3 hearts per scene).
+   - Wrong: small shake, soft "nope", lose 1 heart (hearts carry over from scene to scene, §6).
 3. All targets found → confetti, stars by speed, auto-advance after 1.2 s (tap to skip).
-4. Hearts = 0 → Fail overlay: **Continue** (rewarded ad → refill hearts, same scene) or **Retry** (new seed, same level).
+4. Hearts = 0 → Fail overlay: **Continue** (rewarded ad → three hearts, same scene) or **Retry** (new seed, same level, one heart; §6).
 
 Stars: 3★ if solved under `t3`, 2★ under `t2`, else 1★. `t3/t2` scale with difficulty (see GENERATOR.md).
 
@@ -54,7 +54,7 @@ Late-game modifiers that change how a scene is played without changing what coun
 - Tuning knobs live in `src/gen/twist.ts`; phone feedback on level 30–60 decides whether the chance or the cadence fraction moves.
 
 ## 6. Hearts, hints, ads
-- 3 hearts per scene, reset every scene. No global lives, no timers.
+- **Hearts carry over (v1.7):** three at the start; a scene begins with the hearts the previous one ended with. One heart comes back on entering every 20th level (20, 40, 60 …), never above three, so a player who spent none gets nothing. Hearts are a run resource: they are written on every change (a reload or Home mid-scene keeps the mistakes of the scene), a loss leaves one heart for the Retry, and the only ways back are the 20th-level return and the rewarded Continue (three, in place). The daily chain carries hearts across its five scenes, starts every chain with three and leaves the normal chain's hearts untouched. No timers.
 - **Hint** button (bottom right): rewarded ad → one target glows for 2 s. Shown only when `rewarded` is supported by the platform.
 - **Interstitial**: requested only when both conditions hold: ≥ 3 scenes completed since the last interstitial (or session start) AND ≥ 120 s since the last interstitial (or session start). Never a countdown timer (platform rule). Skip silently if unsupported. Rationale: early levels last ~10 s, so a scene-count rule alone would show an ad every 30–40 s; Playgama's guidance for web games is 120–240 s between interstitials.
 - All ad calls check platform support first; the game must be fully playable with ads disabled.
@@ -143,4 +143,7 @@ No accounts, no leaderboards, no multiplayer, no IAP, no level editor, no locali
 
 ## 19. Changes in v1.6.1 (2026-10-18, host focus)
 - After an ad the game asks the host for focus back, and the first 350 ms after any resume take no taps (§9 Pause). Sandbox report: the board stayed dim after an ad until a tap, and that tap cost a heart; cause and decision in docs/questions.md (host focus).
+
+## 20. Changes in v1.7 (2026-10-18, hearts carry over)
+- Hearts are no longer reset every scene (§3, §6): they carry over, one returns on entering every 20th level, never above three; a loss leaves one heart for the Retry, the rewarded Continue gives three; the daily chain keeps its own hearts. Hasan's brief: "don't renew the hearts every level; every 20 levels give one back, never above three; nothing if none were spent".
 - Brand in the game: the Title and the boot screen show the wordmark texture, the Title carries the studio mark (docs/store/brand).

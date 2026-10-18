@@ -20,6 +20,7 @@ import {
   sentPlatformMessages,
   type Platform,
 } from '../../platform/bridge';
+import { HEARTS_MAX, clampHearts, heartsForLevel } from '../hearts';
 import { ResumeGrace } from '../resume-grace';
 import { audio } from '../audio';
 import { haptic, setHapticsEnabled } from '../../platform/haptics';
@@ -146,6 +147,8 @@ export class GameScene extends Phaser.Scene {
   private frameColor = TITLE_FRAME;
   /** Daily chain: null in the normal chain, else the current scene index 0..4. */
   private dailyIndex: number | null = null;
+  /** Hearts carried across the five daily scenes; every chain starts full (GDD v1.7 §6). */
+  private dailyHearts = HEARTS_MAX;
   private dailyKey = '';
   private platform!: Platform;
   private unsubscribePause: (() => void) | null = null;
@@ -180,6 +183,7 @@ export class GameScene extends Phaser.Scene {
   init(data: { daily?: boolean; today?: string } | undefined): void {
     this.dailyIndex = data?.daily ? 0 : null;
     this.dailyKey = data?.today ?? todayKey();
+    this.dailyHearts = HEARTS_MAX;
     this.forcedMode = null;
     // Phaser reuses the scene instance: nothing from a previous run may leak into this one.
     this.paused = false;
@@ -563,7 +567,8 @@ export class GameScene extends Phaser.Scene {
       twist: this.dailyIndex !== null ? 'none' : (this.forcedTwist ?? 'auto'),
     });
     this.sendLoading(false);
-    this.round = newRound(gen);
+    // GDD v1.7 §6: the scene starts with the hearts the player carries.
+    this.round = newRound(gen, this.dailyIndex === null ? progress.hearts : this.dailyHearts);
     this.addBackground(gen.mode);
     this.relayout();
     this.hud.setLevel(this.dailyIndex === null ? level : this.dailyIndex + 1);
@@ -653,7 +658,10 @@ export class GameScene extends Phaser.Scene {
 
   private nextLevel(): void {
     progress.scenesPlayed += 1;
+    // Hearts left when the scene was won travel to the next one (GDD v1.7 §6).
+    const carried = clampHearts(this.round?.hearts ?? HEARTS_MAX);
     if (this.dailyIndex !== null) {
+      this.dailyHearts = carried;
       if (this.dailyIndex + 1 < DAILY_CHAIN_LENGTH) {
         this.dailyIndex += 1;
         persistProgress();
@@ -667,6 +675,7 @@ export class GameScene extends Phaser.Scene {
     }
     progress.level += 1;
     progress.attempt = 0;
+    progress.hearts = heartsForLevel(progress.level, carried);
     persistProgress();
     void this.startLevel();
   }
@@ -705,6 +714,8 @@ export class GameScene extends Phaser.Scene {
     // reseeds so a stuck player gets a fresh layout.
     if (this.dailyIndex === null) progress.attempt += 1;
     progress.scenesPlayed += 1;
+    // Hearts are a run resource (GDD v1.7 §6): the retry starts with what is left, one at the
+    // least; they come back on every 20th level or with the rewarded Continue.
     persistProgress();
     void this.startLevel();
   }
@@ -890,7 +901,22 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  /**
+   * Hearts are written on every change (GDD v1.7 §6), so Home mid-scene and a reload keep the
+   * mistakes of the scene; a loss leaves one heart for the retry.
+   */
+  private carryHearts(hearts: number): void {
+    const h = clampHearts(hearts);
+    if (this.dailyIndex === null) {
+      progress.hearts = h;
+      persistProgress();
+    } else {
+      this.dailyHearts = h;
+    }
+  }
+
   private onWrong(object: HitTarget | null, hearts: number): void {
+    this.carryHearts(hearts);
     audio.play('tap_wrong');
     haptic('wrong');
     this.time.delayedCall(HEART_LOSE_DELAY_MS, () => {
@@ -994,6 +1020,7 @@ export class GameScene extends Phaser.Scene {
     if (this.round !== r) return;
     if (earned && continueRound(r)) {
       this.continueUses += 1;
+      this.carryHearts(r.hearts);
       this.clearOverlay();
       this.hud.setHearts(r.hearts);
       this.platform.sendMessage('gameplay_started');
@@ -1168,6 +1195,8 @@ export class GameScene extends Phaser.Scene {
     const q = new URLSearchParams(window.location.search);
     const level = Number(q.get('level'));
     if (Number.isFinite(level) && level >= 1) progress.level = Math.floor(level);
+    const hearts = Number(q.get('hearts'));
+    if (Number.isFinite(hearts) && hearts >= 1) progress.hearts = clampHearts(hearts);
     const mode = q.get('mode');
     if (mode === 'find' || mode === 'odd' || mode === 'spot') this.forcedMode = mode;
     const twist = q.get('twist');

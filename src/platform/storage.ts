@@ -1,3 +1,5 @@
+import { HEARTS_MAX, clampHearts } from '../game/hearts';
+
 /**
  * Save model and storage (GDD §8, CLAUDE.md rule 7). The backend is an interface so the
  * Playgama Bridge storage API can plug in at epic 8; dev builds and failures fall back to
@@ -19,6 +21,8 @@ export interface SaveData {
   sound: boolean;
   music: boolean;
   scenesPlayed: number;
+  /** Hearts carried into the next scene of the normal chain (GDD v1.7 §6), 1..HEARTS_MAX. */
+  hearts: number;
   /** Per-player salt for non-daily scene seeds; created once, never changed. */
   seedSalt: number;
 }
@@ -81,6 +85,7 @@ export function defaultSave(seedSalt: number = newSeedSalt()): SaveData {
     sound: true,
     music: true,
     scenesPlayed: 0,
+    hearts: HEARTS_MAX,
     seedSalt,
   };
 }
@@ -121,6 +126,9 @@ export function migrate(raw: unknown): SaveData {
     sound: bool(r.sound, d.sound),
     music: bool(r.music, d.music),
     scenesPlayed: num(r.scenesPlayed, d.scenesPlayed),
+    // Saves from before v1.7 carry no hearts: full, as every scene used to start. A stored
+    // zero (a loss) reads as one, the same floor every scene start applies.
+    hearts: clampHearts(num(r.hearts, d.hearts)),
     seedSalt: salt,
   };
 }

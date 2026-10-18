@@ -3,8 +3,8 @@ import { KITCHEN } from '../src/data/themes';
 import { sceneSeed } from '../src/gen/rng';
 import { generateScene } from '../src/gen/scene-gen';
 import type { Placed } from '../src/gen/types';
+import { HEARTS_MAX } from '../src/game/hearts';
 import {
-  HEARTS_PER_SCENE,
   advanceLayout,
   applyTap,
   continueRound,
@@ -109,7 +109,7 @@ describe('round flow', () => {
     const first = applyTap(r, targets[0]!.x, targets[0]!.y, 100);
     expect(first).toMatchObject({ kind: 'correct', remaining: targets.length - 1, won: false });
     expect(applyTap(r, targets[0]!.x, targets[0]!.y, 200)).toMatchObject({ kind: 'already' });
-    expect(r.hearts).toBe(HEARTS_PER_SCENE);
+    expect(r.hearts).toBe(HEARTS_MAX);
     for (let i = 1; i < targets.length - 1; i++) applyTap(r, targets[i]!.x, targets[i]!.y, 300);
     const last = targets[targets.length - 1]!;
     const res = applyTap(r, last.x, last.y, 5000);
@@ -145,12 +145,23 @@ describe('round flow', () => {
     expect(applyTap(r, t.x, t.y, 4)).toEqual({ kind: 'ignored' });
   });
 
+  it('a round starts with the hearts the player carries, clamped to one..three', () => {
+    const r = newRound(scene(30, 4), 2);
+    startRound(r, 0);
+    const wrong = r.scene.objects.filter((o) => !o.isTarget);
+    expect(r.hearts).toBe(2);
+    applyTap(r, wrong[0]!.x, wrong[0]!.y, 1);
+    expect(applyTap(r, wrong[1]!.x, wrong[1]!.y, 2)).toMatchObject({ hearts: 0, lost: true });
+    expect(newRound(scene(1), 0).hearts).toBe(1);
+    expect(newRound(scene(1), 9).hearts).toBe(HEARTS_MAX);
+  });
+
   it('empty taps do nothing', () => {
     const r = newRound(scene(1));
     startRound(r, 0);
     // (0,0) is in the margin: no object center can be within 40 px of it.
     expect(applyTap(r, 0, 0, 1)).toEqual({ kind: 'none' });
-    expect(r.hearts).toBe(HEARTS_PER_SCENE);
+    expect(r.hearts).toBe(HEARTS_MAX);
   });
 
   it('stars follow the level thresholds on the timer', () => {
@@ -192,7 +203,7 @@ describe('rewarded helpers', () => {
     for (let i = 0; i < 3; i++) applyTap(r, wrong[i]!.x, wrong[i]!.y, i);
     expect(r.status).toBe('lost');
     expect(continueRound(r)).toBe(true);
-    expect(r.hearts).toBe(HEARTS_PER_SCENE);
+    expect(r.hearts).toBe(HEARTS_MAX);
     expect(r.status).toBe('playing');
     const t = r.scene.targets[0]!;
     expect(applyTap(r, t.x, t.y, 10).kind).toBe('correct');

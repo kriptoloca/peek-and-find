@@ -34,6 +34,7 @@ export function toSave(): SaveData {
     sound: progress.sound,
     music: progress.music,
     scenesPlayed: progress.scenesPlayed,
+    hearts: progress.hearts,
     seedSalt: progress.seedSalt,
   };
 }
