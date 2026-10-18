@@ -15,7 +15,12 @@ import {
 } from './modes/spot5';
 import { HIT_RADIUS_SPOT, SPOT_H, SPOT_W } from '../config';
 import { hitRadiusFor } from './difficulty';
-import { SHUFFLE_LAYOUTS, SHUFFLE_MIN_MOVED_SHARE, twistKindsForMode } from './twist';
+import {
+  everyTargetMoved,
+  SHUFFLE_LAYOUTS,
+  SHUFFLE_MIN_MOVED_SHARE,
+  twistKindsForMode,
+} from './twist';
 import type { Placed, Scene, Theme } from './types';
 
 const EPS = 1e-6;
@@ -95,7 +100,8 @@ export function validateScene(scene: Scene, theme: Theme): string[] {
  * Twist bookkeeping (GDD v1.5 §5a): only a kind the mode can host; shuffle layouts carry the
  * same items (id, family, frame, flip, flags) and each passes every check of the main layout
  * (with the target spread relaxed to the Poisson spacing); each layout moves at least half of
- * the items; a scene without the shuffle twist has no layouts.
+ * the items and every target (also from the last layout back to the main one); a scene without
+ * the shuffle twist has no layouts.
  */
 function validateTwist(scene: Scene, theme: Theme, errs: string[]): void {
   const kind = scene.twist?.kind;
@@ -139,6 +145,12 @@ function validateTwist(scene: Scene, theme: Theme, errs: string[]): void {
     }
     if (moved < SHUFFLE_MIN_MOVED_SHARE * layout.length) {
       errs.push(`${tag}: only ${String(moved)} of ${String(layout.length)} items moved`);
+    }
+    if (!everyTargetMoved(prev, layout, scene.spacing / 2)) {
+      errs.push(`${tag}: a target stays within spacing / 2 of its previous place`);
+    }
+    if (li === layouts.length - 1 && !everyTargetMoved(layout, scene.objects, scene.spacing / 2)) {
+      errs.push(`${tag}: a target stays within spacing / 2 of its main place (cycle)`);
     }
     const copy: Scene = {
       ...scene,

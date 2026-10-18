@@ -1,14 +1,16 @@
 import { isBigScene } from './difficulty';
+import { dist2 } from './geometry';
 import { hashSeed, Rng } from './rng';
-import type { Mode, Twist, TwistKind } from './types';
+import type { Mode, Params, Placed, Twist, TwistKind } from './types';
 
 /**
  * Late-game twists (GDD v1.5 §5a). Pure: the pick is seeded from the scene seed through its own
  * stream so that adding a twist never changes the objects of an existing seed.
  *
- * Shuffle: every object slides to a new validated place every few seconds; the first slide
- * comes after SHUFFLE_FIRST_S, a HUD pulse warns SHUFFLE_WARN_MS before each one. A fast
- * player (3 stars) sees at most one; a slow one rescans a fresh board instead of staring.
+ * Shuffle: every object slides to a new validated place on a cadence of half the level's
+ * 3-star time (shuffleCadenceMs); a HUD pulse warns SHUFFLE_WARN_MS before each one. A 3-star
+ * solve meets the first slide halfway and the second right at the 3-star boundary; a slow one
+ * rescans a fresh board every half t3 instead of staring at the same one.
  * Memory: the prompt icons show for MEMORY_SHOW_S after the pop-in, then hide behind "?";
  * a tap on the prompt, or a find, peeks for MEMORY_PEEK_MS. Never a penalty, only time.
  */
@@ -19,8 +21,9 @@ export const TWIST_FULL_LEVEL = 80;
 export const TWIST_CHANCE_START = 0.25;
 export const TWIST_CHANCE_FULL = 0.5;
 
-export const SHUFFLE_FIRST_S = 8;
-export const SHUFFLE_EVERY_S = 8;
+/** Slide cadence = t3 × this fraction, never under SHUFFLE_MIN_S (9 s at L30, 13 s at L80). */
+export const SHUFFLE_CADENCE_T3_FRACTION = 0.5;
+export const SHUFFLE_MIN_S = 8;
 export const SHUFFLE_WARN_MS = 900;
 export const SHUFFLE_MOVE_MS = 450;
 /** Alternative layouts generated per shuffle scene; the round cycles through them. */
@@ -66,4 +69,30 @@ export function pickTwist(seed: number, level: number, mode: Mode): Twist | null
 /** Seed stream of shuffle layout `i` (1-based) of a scene. */
 export function shuffleRng(seed: number, i: number): Rng {
   return new Rng(hashSeed(`shuffle:${String(seed >>> 0)}:${String(i)}`));
+}
+
+/** Milliseconds from the pop-in to the first slide, and between slides, for a level. */
+export function shuffleCadenceMs(p: Params): number {
+  return Math.max(SHUFFLE_MIN_S, Math.round(p.t3 * SHUFFLE_CADENCE_T3_FRACTION)) * 1000;
+}
+
+/**
+ * True when every target of layout `from` sits more than `minDist` away in layout `to` (same
+ * item order). The generator and the validator both require this between consecutive layouts
+ * and from the last layout back to the main one, so a slide always moves what is still to be
+ * found.
+ */
+export function everyTargetMoved(
+  from: readonly Placed[],
+  to: readonly Placed[],
+  minDist: number,
+): boolean {
+  const need2 = minDist * minDist;
+  for (let i = 0; i < from.length; i++) {
+    const a = from[i] as Placed;
+    if (!a.isTarget) continue;
+    const b = to[i] as Placed;
+    if (dist2(a.x, a.y, b.x, b.y) <= need2) return false;
+  }
+  return true;
 }

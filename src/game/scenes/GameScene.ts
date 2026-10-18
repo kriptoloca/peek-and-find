@@ -8,10 +8,9 @@ import { generateScene } from '../../gen/scene-gen';
 import {
   MEMORY_PEEK_MS,
   MEMORY_SHOW_S,
-  SHUFFLE_EVERY_S,
-  SHUFFLE_FIRST_S,
   SHUFFLE_MOVE_MS,
   SHUFFLE_WARN_MS,
+  shuffleCadenceMs,
 } from '../../gen/twist';
 import type { Mode, Placed, Scene as GenScene, Theme, TwistKind } from '../../gen/types';
 import { AdGate, MIN_INTERVAL_MS } from '../../platform/ads';
@@ -130,7 +129,10 @@ export class GameScene extends Phaser.Scene {
   private forcedTwist: TwistKind | 'none' | null = null;
   /** Round whose twist is armed; arming is idempotent because two paths start a round. */
   private twistArmedFor: Round | null = null;
+  /** Slides done in the current scene (dev state). */
   private shufflesDone = 0;
+  /** Hint rings on screen with the target they mark; a slide carries them along. */
+  private hintRings: { img: Phaser.GameObjects.Image; targetId: string }[] = [];
 
   constructor() {
     super('Game');
@@ -303,6 +305,8 @@ export class GameScene extends Phaser.Scene {
   private async startLevelInner(): Promise<void> {
     this.clearOverlay();
     this.round = null;
+    this.shufflesDone = 0;
+    this.hintRings = [];
     clearFx(this, this.fx);
     this.world.removeAll(true);
     this.worldB.removeAll(true);
@@ -521,7 +525,11 @@ export class GameScene extends Phaser.Scene {
     }
     const r = this.round;
     if (!r) return;
-    if (r.scene.twist?.kind === 'memory' && this.hud.hitsPrompt(pointer.x, pointer.y)) {
+    if (
+      r.scene.twist?.kind === 'memory' &&
+      this.hud.promptHidden() &&
+      this.hud.hitsPrompt(pointer.x, pointer.y)
+    ) {
       // Memory twist: a tap on the hidden prompt peeks at it (GDD v1.5 §5a), never a penalty.
       audio.play('button');
       this.hud.peekPrompt(MEMORY_PEEK_MS);
@@ -570,8 +578,8 @@ export class GameScene extends Phaser.Scene {
     } else {
       const img = this.sprites.get(target.id);
       if (img) {
-        popCorrect(this, img, this.fx);
         const c = this.toCanvas(img.x, img.y);
+        popCorrect(this, img, this.fx, c.x, c.y);
         sparkle(this, c.x, c.y, this.fx);
       }
     }
@@ -591,19 +599,27 @@ export class GameScene extends Phaser.Scene {
     if (this.twistArmedFor === r) return;
     this.twistArmedFor = r;
     const kind = r.scene.twist?.kind;
-    if (kind === 'shuffle') this.scheduleShuffle(r, SHUFFLE_FIRST_S * 1000);
+    if (kind === 'shuffle') this.scheduleShuffle(r, shuffleCadenceMs(r.scene.params));
     if (kind === 'memory') {
       this.time.delayedCall(MEMORY_SHOW_S * 1000, () => {
-        if (this.round === r) this.hud.setPromptHidden(true);
+        if (this.round === r && r.status === 'playing') this.hud.setPromptHidden(true);
       });
     }
   }
 
-  /** The HUD marker beats SHUFFLE_WARN_MS before the slide; the scene clock pauses with the game. */
+  /**
+   * The HUD marker beats SHUFFLE_WARN_MS before the slide; the scene clock pauses with the
+   * game. Under the fail overlay or during an ad the board waits a whole cadence, so a slide
+   * never comes without its warning.
+   */
   private scheduleShuffle(r: Round, delayMs: number): void {
     this.time.delayedCall(Math.max(0, delayMs - SHUFFLE_WARN_MS), () => {
       if (this.round !== r || r.status === 'won') return;
-      if (r.status === 'playing' && !this.adInProgress) this.hud.pulseTwist();
+      if (r.status !== 'playing' || this.adInProgress) {
+        this.scheduleShuffle(r, shuffleCadenceMs(r.scene.params));
+        return;
+      }
+      this.hud.pulseTwist();
       this.time.delayedCall(SHUFFLE_WARN_MS, () => {
         this.doShuffle(r);
       });
@@ -612,19 +628,31 @@ export class GameScene extends Phaser.Scene {
 
   /**
    * Slides every sprite to the next validated layout (rules.advanceLayout). Taps are ignored
-   * while the sprites move; found targets travel too (dimmed). Under the fail overlay or during
-   * an ad the board waits for the next tick.
+   * while the sprites move; found targets travel too (dimmed), and a hint ring follows the
+   * target it marks. The next slide comes one cadence after this one started.
    */
   private doShuffle(r: Round): void {
     if (this.round !== r || r.status === 'won') return;
     if (r.status !== 'playing' || this.adInProgress || r.moving) {
-      this.scheduleShuffle(r, SHUFFLE_EVERY_S * 1000);
+      this.scheduleShuffle(r, shuffleCadenceMs(r.scene.params));
       return;
     }
     r.moving = true;
     const layout = advanceLayout(r);
     audio.play('pop');
     this.hud.spinTwist(SHUFFLE_MOVE_MS);
+    for (const h of this.hintRings) {
+      const o = layout.find((q) => q.id === h.targetId);
+      if (!o || !h.img.active) continue;
+      const c = this.toCanvas(o.x, o.y);
+      this.tweens.add({
+        targets: h.img,
+        x: c.x,
+        y: c.y,
+        duration: SHUFFLE_MOVE_MS,
+        ease: 'Cubic.easeInOut',
+      });
+    }
     for (const o of layout) {
       const img = this.sprites.get(o.id);
       if (!img) continue;
@@ -646,7 +674,7 @@ export class GameScene extends Phaser.Scene {
       this.world.sort('depth');
       r.moving = false;
       this.shufflesDone += 1;
-      this.scheduleShuffle(r, SHUFFLE_EVERY_S * 1000);
+      this.scheduleShuffle(r, shuffleCadenceMs(r.scene.params) - SHUFFLE_MOVE_MS);
     });
   }
 
@@ -780,6 +808,8 @@ export class GameScene extends Phaser.Scene {
       const d = Math.max(t.hitRadius * 2, 120) * this.world.scaleX;
       const ring = addImage(this, c.x, c.y, UI.ring).setDisplaySize(d, d).setTint(0xffc857);
       this.fx.add(ring);
+      const entry = { img: ring, targetId: t.id };
+      this.hintRings.push(entry);
       this.tweens.add({
         targets: ring,
         scale: ring.scale * 1.25,
@@ -788,6 +818,7 @@ export class GameScene extends Phaser.Scene {
         repeat: Math.floor(HINT_GLOW_MS / 500) - 1,
         duration: 250,
         onComplete: () => {
+          this.hintRings = this.hintRings.filter((h) => h !== entry);
           ring.destroy();
         },
       });

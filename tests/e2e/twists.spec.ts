@@ -13,7 +13,7 @@ const CLOCK = `${CANVAS}&fpsmin=1`;
 const dist = (a: { x: number; y: number }, b: { x: number; y: number }): number =>
   Math.hypot(a.x - b.x, a.y - b.y);
 
-test('shuffle: the marker shows, every object moves after 8 s, the tap at the new place counts', async ({
+test('shuffle: the marker shows, the board moves at the cadence, the tap at the new place counts', async ({
   page,
 }, info) => {
   await page.goto(`${TEST}?level=40&mode=find&twist=shuffle&reset=1${SALT}${CLOCK}`, {
@@ -34,7 +34,8 @@ test('shuffle: the marker shows, every object moves after 8 s, the tap at the ne
   expect(s1.status).toBe('playing');
   const after = await page.evaluate(() => window.__peekDebug?.objects() ?? []);
   expect(after.map((o) => o.id)).toEqual(before.map((o) => o.id));
-  const moved = after.filter((o, i) => dist(o, before[i] as { x: number; y: number }) > 20);
+  // the validator guarantees > spacing / 2 (≈ 46 design px ≈ 17 CSS px here) for half the items
+  const moved = after.filter((o, i) => dist(o, before[i] as { x: number; y: number }) > 12);
   expect(moved.length).toBeGreaterThanOrEqual(Math.ceil(after.length / 2));
   await shot(page, info, 'shuffle-after');
 
@@ -47,7 +48,7 @@ test('shuffle: the marker shows, every object moves after 8 s, the tap at the ne
   await waitState(page, (s) => s.remaining === s1.remaining - 1, 'found after the shuffle');
 });
 
-test('shuffle: the countdown pauses with the game and the second slide follows 8 s later', async ({
+test('shuffle: the cadence pauses with the game and the second slide follows one cadence later', async ({
   page,
 }) => {
   await page.goto(`${TEST}?level=35&mode=odd&twist=shuffle&reset=1${SALT}${CLOCK}`, {
@@ -71,7 +72,7 @@ test('shuffle: the countdown pauses with the game and the second slide follows 8
   const oddLater = await page.evaluate(() => window.__peekDebug?.targets() ?? []);
   const o = oddLater[0];
   if (!o || !odd[0]) throw new Error('no odd item');
-  expect(dist(o, odd[0])).toBeGreaterThan(20);
+  expect(dist(o, odd[0])).toBeGreaterThan(12);
   await page.mouse.click(o.x, o.y);
   await waitState(page, (s) => s.status === 'won', 'won at the new place');
 });

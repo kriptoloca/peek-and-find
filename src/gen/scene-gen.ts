@@ -27,7 +27,13 @@ import { generateOdd, oddShuffleLayouts } from './modes/odd-one-out';
 import { generateSpot } from './modes/spot5';
 import { poissonDisc } from './poisson';
 import { Rng } from './rng';
-import { pickTwist, SHUFFLE_LAYOUTS, shuffleRng, twistKindsForMode } from './twist';
+import {
+  everyTargetMoved,
+  pickTwist,
+  SHUFFLE_LAYOUTS,
+  shuffleRng,
+  twistKindsForMode,
+} from './twist';
 import type {
   DecoyKind,
   Family,
@@ -478,6 +484,13 @@ function tryFind(
       const lay = layoutFind(alt, altPts, builds, p, playable, hitRadius, spacing);
       if (!lay) return null;
       shuffles.push(lay.objects);
+    }
+    // Every slide moves every remaining target, around the whole cycle (main → … → main).
+    const cycle = [scene.objects, ...shuffles];
+    for (let i = 0; i < cycle.length; i++) {
+      const from = cycle[i] as Placed[];
+      const to = cycle[(i + 1) % cycle.length] as Placed[];
+      if (!everyTargetMoved(from, to, spacing / 2)) return null;
     }
     scene.shuffles = shuffles;
   }

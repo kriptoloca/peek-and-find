@@ -36,22 +36,22 @@ First 5 levels are Find only. Odd One Out appears at level 6, Spot 5 at level 11
 Spot 5 is only scheduled when the current layout can show both images at ≥ 0.8 design scale (true for 9:16 and 16:9, false for 1:1). When it cannot, its 20% goes to Find (Find 80 / Odd 20). The decision is made per scene from the current layout.
 
 ## 5. Difficulty (level N → params, all in GENERATOR.md)
-- Object count: 12 → 60
-- Target count: 1 → 5 (Find), 1 (Odd), 5 (Spot)
-- Target scale: 1.0 → 0.6
-- Decoy ratio (look-alikes): 0 → 0.5
-- Occlusion: none → partial (target ≥ 60% visible)
+- Object count: 12 → 60 (level 80) → 66 (level 150)
+- Target count: 1 → 5 (Find, level 80) → 6 (level 150), 1 (Odd), 5 (Spot)
+- Target scale: 1.0 → 0.6 (the floor; never smaller)
+- Decoy ratio (look-alikes): 0 → 0.5 (level 80) → 0.6 (level 150)
+- Occlusion: none → partial (target ≥ 60% visible at level 80, ≥ 55% at level 150)
 - Theme rotates every 3 levels; the second theme unlocks at level 4 (v1.4: variety inside the first session), the others every 10 levels (20, 30, 40). The next theme's atlas is preloaded in the background 3 levels before it unlocks, so the chain never stalls.
 - Every 25th level is a "big scene": 7 targets, max density, 2× star time, bonus confetti.
 Levels are infinite. The first ramp plateaus at level 80 ("medium" on a phone, phone test 2026-10-18); a gentle second ramp runs to 150 (v1.5: 66 objects, 6 targets, 60 % look-alikes, sprites never below the 0.6 floor). Past that, the pressure comes from the twists (§5a), not from density.
 
 ## 5a. Twists (v1.5)
 Late-game modifiers that change how a scene is played without changing what counts as a find. Each scene has at most one, picked from the scene seed (same seed → same twist), shown by an icon, never by text, never by a visible timer.
-- **Shuffle** (from level 30; Find and Odd One Out): 8 s after the pop-in, and every 8 s after that, every object slides to a new place (0.45 s, found ones travel dimmed). The marker next to the prompt beats three times 0.9 s before each slide and spins during it; taps are ignored while the board moves. Every layout is generated and validated like the main one (spacing, occlusion, spread), so a target is never hidden by the move. A 3-star player sees at most one slide; a slow one rescans a fresh board instead of staring at the same one.
+- **Shuffle** (from level 30; Find and Odd One Out): on a cadence of half the level's 3-star time (9 s at level 30, 13 s at 80, 14 s at 150; never under 8 s) every object slides to a new place (0.45 s, found ones travel dimmed, a hint ring follows its target). The marker next to the prompt beats three times 0.9 s before each slide and spins during it; taps are ignored while the board moves. Every layout is generated and validated like the main one (spacing, occlusion, spread) and every remaining target moves on every slide, around the whole cycle, so the move can neither hide a target nor leave it where it was. A 3-star solve meets the first slide halfway and the second right at the 3-star boundary; a slower one rescans a fresh board every half t3 instead of staring at the same one.
 - **Memory** (from level 45; Find only): the prompt icons show for 3 s after the pop-in, then hide behind "?" (the count badges stay). A tap on a "?" peeks for 1 s; every find peeks too. Never a penalty, only time.
 - **Chance**: 25 % of eligible scenes at level 30, rising linearly to 50 % at level 80, flat after that; shuffle and memory are equally likely where both are eligible.
-- **Never**: on Spot 5 (a comparison task), on big scenes (already the event), in the daily chain (a level-5 player meets its level-30 scene), before the levels above. The shuffle waits under the fail overlay and during an ad, and its clock pauses with the platform pause.
-- Tuning knobs live in `src/gen/twist.ts`; phone feedback on level 30–60 decides whether the chance or the 8 s cadence moves.
+- **Never**: on Spot 5 (a comparison task), on big scenes (already the event), in the daily chain (a level-5 player meets its level-30 scene), before the levels above. Under the fail overlay and during an ad the shuffle waits a whole cadence (a slide never comes without its warning), and its clock pauses with the platform pause.
+- Tuning knobs live in `src/gen/twist.ts`; phone feedback on level 30–60 decides whether the chance or the cadence fraction moves.
 
 ## 6. Hearts, hints, ads
 - 3 hearts per scene, reset every scene. No global lives, no timers.

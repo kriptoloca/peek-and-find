@@ -77,8 +77,8 @@ Decoys never count as targets. Tapping a decoy = wrong tap. Targets in Find alwa
 
 ### Twists (`twist.ts`, GDD §5a)
 - `pickTwist(seed, level, mode)`: eligible kinds are shuffle (level ≥ 30; Find, Odd) and memory (level ≥ 45; Find); none on Spot or big scenes. Chance 0.25 at level 30 → 0.5 at level 80, flat after. `generateScene({ twist })` takes `"auto"` (default), `"none"` (the daily chain) or a kind (dev `?twist=`; a kind the mode cannot host is dropped).
-- Shuffle scenes carry `Scene.shuffles`: `SHUFFLE_LAYOUTS = 2` alternative layouts of the same items. Find: the same builds over a reshuffled slot list, with target spread, jitters and occlusion repair rerun (a layout that cannot be repaired regenerates the scene with seed + 1); bands and therefore sizes may change with the new place. Odd: a permutation of the grid cells (position, band, z and rotation travel with the cell). The round cycles main → 1 → 2 → main.
-- Timing in play (GameScene): first slide at 8 s after the pop-in, then every 8 s, 0.9 s warning pulse, 0.45 s slide, taps ignored during the slide; memory hides the prompt 3 s after the pop-in, peeks last 1 s.
+- Shuffle scenes carry `Scene.shuffles`: `SHUFFLE_LAYOUTS = 2` alternative layouts of the same items. Find: the same builds over a reshuffled slot list, with target spread, jitters and occlusion repair rerun (a layout that cannot be repaired, or a cycle in which a target would stay within spacing / 2 of its previous place, regenerates the scene with seed + 1); bands and therefore sizes may change with the new place. Odd: a permutation of the grid cells (position, band, z and rotation travel with the cell), reshuffled while the odd item would stay in its cell. The round cycles main → 1 → 2 → main; every target moves on every step of the cycle.
+- Timing in play (GameScene): `shuffleCadenceMs(params) = max(8 s, round(t3 / 2))` from the pop-in to the first slide and between slides (9 s at L30, 13 s at L80, 14 s at L150), 0.9 s warning pulse, 0.45 s slide, taps ignored during the slide, a hint ring follows its target; under the fail overlay or an ad the slide waits a whole cadence; memory hides the prompt 3 s after the pop-in (only while playing), peeks last 1 s.
 
 ### Odd One Out
 - Jittered grid (not Poisson): `n = clamp(8 + level, 8, 36)` instances of one frame, identical scale; cell size ≥ 2 × hitRadius + jitter, so spacing holds. Every cell also carries a seeded rotation within ±3° (`rotation`, radians), the odd one included; hit circles are unaffected.
@@ -102,7 +102,7 @@ Decoys never count as targets. Tapping a decoy = wrong tap. Targets in Find alwa
 - All objects inside the playable rect.
 - Family share ≤ 25% of objectCount (fillers), except Odd mode.
 - Determinism: `generate(seed, level, mode)` twice → deep-equal.
-- Twists: only a kind the mode hosts; shuffle layouts exist only with the shuffle twist, carry the same items (id, family, frame, flip, flags), each passes every check above (target spread relaxed to the Poisson spacing) and moves at least half of the items by more than spacing / 2.
+- Twists: only a kind the mode hosts; shuffle layouts exist only with the shuffle twist, carry the same items (id, family, frame, flip, flags), each passes every check above (target spread relaxed to the Poisson spacing), moves at least half of the items by more than spacing / 2 and moves every target by more than spacing / 2 (also from the last layout back to the main one).
 
 ## 8. Star timing
 Timer starts at scene pop-in end; stops when last target is found. `stars = t ≤ t3 ? 3 : t ≤ t2 ? 2 : 1`.

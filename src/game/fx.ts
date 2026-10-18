@@ -7,11 +7,16 @@ const SPARK_COUNT = 10;
 const CONFETTI_COUNT = 48;
 const CONFETTI_COLORS = [0xffc857, 0xe63946, 0x4cc9f0, 0x80ed99, 0xf72585, 0xffffff];
 
-/** Correct tap: quick scale pop, then the sprite settles dimmed with a ring. */
+/**
+ * Correct tap: quick scale pop, then the sprite settles dimmed with a ring. `cx`/`cy` is the
+ * sprite's center in canvas space (the fx layer is not inside the world container).
+ */
 export function popCorrect(
   scene: Phaser.Scene,
   sprite: Phaser.GameObjects.Image,
   layer: Phaser.GameObjects.Container,
+  cx: number,
+  cy: number,
 ): void {
   const sx = sprite.scaleX;
   const sy = sprite.scaleY;
@@ -26,7 +31,7 @@ export function popCorrect(
       sprite.setScale(sx, sy).setAlpha(0.45);
     },
   });
-  const ring = addImage(scene, sprite.x, sprite.y, UI.ring)
+  const ring = addImage(scene, cx, cy, UI.ring)
     .setDisplaySize(sprite.displayWidth * 0.9, sprite.displayWidth * 0.9)
     .setAlpha(0.9);
   layer.add(ring);

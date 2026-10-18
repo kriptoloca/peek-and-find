@@ -3,15 +3,19 @@ import { KITCHEN } from '../src/data/themes';
 import { dist2 } from '../src/gen/geometry';
 import { sceneSeed } from '../src/gen/rng';
 import { generateScene } from '../src/gen/scene-gen';
+import { params } from '../src/gen/difficulty';
 import {
   MEMORY_FROM_LEVEL,
   SHUFFLE_FROM_LEVEL,
   SHUFFLE_LAYOUTS,
   SHUFFLE_MIN_MOVED_SHARE,
+  SHUFFLE_MIN_S,
   TWIST_CHANCE_FULL,
   TWIST_CHANCE_START,
   TWIST_FULL_LEVEL,
+  everyTargetMoved,
   pickTwist,
+  shuffleCadenceMs,
   twistChance,
   twistKinds,
 } from '../src/gen/twist';
@@ -54,6 +58,19 @@ describe('twist picker', () => {
     expect(twistChance(TWIST_FULL_LEVEL)).toBeCloseTo(TWIST_CHANCE_FULL);
     expect(twistChance(500)).toBeCloseTo(TWIST_CHANCE_FULL);
     for (let l = 2; l < 200; l++) expect(twistChance(l)).toBeGreaterThanOrEqual(twistChance(l - 1));
+  });
+
+  it('slides on half the 3-star time, never under 8 s', () => {
+    expect(shuffleCadenceMs(params(30))).toBe(9000);
+    expect(shuffleCadenceMs(params(80))).toBe(13000);
+    expect(shuffleCadenceMs(params(151))).toBe(14000);
+    expect(shuffleCadenceMs(params(10))).toBe(SHUFFLE_MIN_S * 1000);
+    // the second slide lands at the 3-star boundary, so a 3-star solve sees one slide
+    for (const level of [30, 45, 60, 80, 151]) {
+      expect(2 * shuffleCadenceMs(params(level))).toBeGreaterThanOrEqual(
+        params(level).t3 * 1000 - 1000,
+      );
+    }
   });
 
   it('is seeded: the same seed picks the same twist, and the share matches the chance', () => {
@@ -99,9 +116,12 @@ describe('shuffle layouts (Find)', () => {
           expect(movedShare(prev, layout, s.spacing)).toBeGreaterThanOrEqual(
             SHUFFLE_MIN_MOVED_SHARE,
           );
+          // every target moves on every slide, including the slide back to the main layout
+          expect(everyTargetMoved(prev, layout, s.spacing / 2)).toBe(true);
           expect(layout.filter((o) => o.isTarget)).toHaveLength(s.params.targetCount);
           prev = layout;
         }
+        expect(everyTargetMoved(prev, s.objects, s.spacing / 2)).toBe(true);
       }
     }
   });
@@ -172,8 +192,7 @@ describe('shuffle layouts (Find)', () => {
 });
 
 describe('shuffle layouts (Odd One Out)', () => {
-  it('permutes the cells: items keep frame, size and flip; the odd one moves', () => {
-    let oddMoved = 0;
+  it('permutes the cells: items keep frame, size and flip; the odd one always moves', () => {
     const N = 40;
     for (let i = 0; i < N; i++) {
       const level = 30 + i;
@@ -195,11 +214,13 @@ describe('shuffle layouts (Odd One Out)', () => {
           ]);
         });
       }
-      const odd = s.objects.find((o) => o.isTarget) as Placed;
-      const odd1 = (s.shuffles?.[0] ?? []).find((o) => o.isTarget) as Placed;
-      if (odd.x !== odd1.x || odd.y !== odd1.y) oddMoved += 1;
+      const cycle = [s.objects, ...(s.shuffles ?? [])];
+      for (let k = 0; k < cycle.length; k++) {
+        const from = cycle[k] as Placed[];
+        const to = cycle[(k + 1) % cycle.length] as Placed[];
+        expect(everyTargetMoved(from, to, 1)).toBe(true);
+      }
     }
-    expect(oddMoved).toBeGreaterThan(N * 0.8);
   });
 });
 
@@ -212,6 +233,12 @@ describe('validator', () => {
     expect(validateScene(noTwist, KITCHEN).join()).toContain('without the shuffle twist');
     const still: Scene = { ...s, shuffles: [s.objects, s.objects] };
     expect(validateScene(still, KITCHEN).join()).toContain('items moved');
+    const t0 = s.targets[0] as Placed;
+    const targetStays = (s.shuffles?.[0] ?? []).map((o) =>
+      o.id === t0.id ? { ...o, x: t0.x, y: t0.y } : o,
+    );
+    const stay: Scene = { ...s, shuffles: [targetStays, s.shuffles?.[1] ?? []] };
+    expect(validateScene(stay, KITCHEN).join()).toContain('a target stays');
     const swapped = (s.shuffles?.[0] ?? []).map((o, i, arr) => ({
       ...o,
       id: (arr[(i + 1) % arr.length] as Placed).id,

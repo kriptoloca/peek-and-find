@@ -4,7 +4,7 @@ import { bandOf, playableRect } from '../common';
 import { FLIPPABLE_TAG, ROUNDING_CUSHION } from '../constants';
 import { hitRadiusFor, params } from '../difficulty';
 import { Rng } from '../rng';
-import { SHUFFLE_LAYOUTS, shuffleRng } from '../twist';
+import { everyTargetMoved, SHUFFLE_LAYOUTS, shuffleRng } from '../twist';
 import type { Family, OddInfo, OddKind, Placed, Scene, Theme } from '../types';
 
 /** n = clamp(8 + level, 8, 36) instances (GENERATOR.md §6). */
@@ -25,6 +25,8 @@ const JITTER_BUDGET = 0.5;
  * grid stops reading as wallpaper (docs/visual-review.md §4); rotation is never the tell.
  */
 export const ODD_ROTATION_JITTER_DEG = 3;
+/** Reshuffles of a shuffle layout whose odd item did not move (1/n chance each). */
+const ODD_SHUFFLE_TRIES = 32;
 
 export function oddCount(level: number): number {
   return Math.min(ODD_MAX, Math.max(ODD_MIN, ODD_MIN + Math.floor(level)));
@@ -150,15 +152,19 @@ export function generateOdd(seed: number, level: number, theme: Theme): Scene {
 /**
  * Shuffle twist for Odd One Out: every item takes another item's cell (position, band, draw
  * order and the rotation jitter travel with the cell; frame, size and flip stay with the item),
- * so the grid invariants hold by construction and the odd one lands somewhere new.
+ * so the grid invariants hold by construction. A permutation that leaves the odd item in its
+ * cell (or, for the last layout, back in its main cell) is reshuffled: the odd one always moves.
  */
 export function oddShuffleLayouts(objects: readonly Placed[], seed: number): Placed[][] {
   const out: Placed[][] = [];
+  let prev: readonly Placed[] = objects;
   for (let i = 1; i <= SHUFFLE_LAYOUTS; i++) {
     const rng = shuffleRng(seed, i);
-    const order = rng.shuffle(objects.map((_, k) => k));
-    out.push(
-      objects.map((o, k) => {
+    const order = objects.map((_, k) => k);
+    let layout: Placed[] = [];
+    for (let tries = 0; tries < ODD_SHUFFLE_TRIES; tries++) {
+      rng.shuffle(order);
+      layout = objects.map((o, k) => {
         const cell = objects[order[k] as number] as Placed;
         return {
           ...o,
@@ -168,8 +174,12 @@ export function oddShuffleLayouts(objects: readonly Placed[], seed: number): Pla
           band: cell.band,
           rotation: cell.rotation ?? 0,
         };
-      }),
-    );
+      });
+      const closes = i === SHUFFLE_LAYOUTS ? everyTargetMoved(layout, objects, 1) : true;
+      if (everyTargetMoved(prev, layout, 1) && closes) break;
+    }
+    out.push(layout);
+    prev = layout;
   }
   return out;
 }

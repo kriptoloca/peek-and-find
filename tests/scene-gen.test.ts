@@ -91,6 +91,22 @@ describe('generateScene (find)', () => {
     expect(regen / N).toBeLessThan(5);
   });
 
+  it('big scenes at the Poisson ceiling (level 100+, 80 objects) never fail for 200 seeds', () => {
+    let maxRegen = 0;
+    for (let i = 0; i < 200; i++) {
+      const level = 100 + 25 * (i % 4);
+      const s = generateScene({
+        seed: sceneSeed('find', level, i, 13),
+        level,
+        mode: 'find',
+        theme: KITCHEN,
+      });
+      expect(s.objects).toHaveLength(80);
+      maxRegen = Math.max(maxRegen, s.regenerations);
+    }
+    expect(maxRegen).toBeLessThan(15);
+  });
+
   it('generates level 80 in under 50 ms on average', () => {
     for (let s = 0; s < 5; s++) generateScene({ seed: s, level: 80, mode: 'find', theme: KITCHEN });
     const runs = 30;

@@ -47,7 +47,7 @@ frustrating. Decisions in docs/questions.md (same date).
 | 9g | Visual review (`docs/visual-review.md`): research + audit + screenshot tour (`npm run tour`); theme-tinted frame, palette lifted to ≥ 3:1 against the backgrounds with a pipeline gate, 1:1 HUD backing, fail buttons drawn (Canvas has no tint) | done (code) | 156 unit + 20 e2e; tour sheets reviewed in 9:16 / 16:9 / 1:1 before and after |
 | 10 | Size & performance budget | report done (code) | `docs/size-report.md`: initial load 3.12 MB OGG / 3.14 MB M4A of the 8 MB target (5 MB YouTube target), dist 4.6 MB; no update loops; **phone profile at L80 pending (Hasan)** |
 | 11 | Playgama QA tool, certification checklist | checklist done (code) | `docs/certification-checklist.md`: 12 rules with evidence; GameReady order and save persistence now asserted in e2e; **QA tool pending (needs the Playgama account)** |
-| 13 | Late-game twists (shuffle from L30, memory from L45; GDD v1.5 §5a) + second difficulty ramp to L150; `?twist=` dev param; HUD marker and "?" prompt | done (code) | 187 unit + 40 e2e; twist layouts validated like the main one; **phone pass at L30–60 pending (Hasan)** |
+| 13 | Late-game twists (shuffle from L30, memory from L45; GDD v1.5 §5a) + second difficulty ramp to L150; `?twist=` dev param; HUD marker and "?" prompt | done (code) | 189 unit + 40 e2e; twist layouts validated like the main one; adversarial audit 0/1/1/10 all closed (docs/questions.md 2026-10-18); **phone pass at L30–60 pending (Hasan)** |
 | 12 | Store assets, submission ZIP | done (code) | `npm run zip` → deterministic `release/peek-and-find-0.1.0.zip` (3.27 MB, index.html at the root, no /test/, limits checked, SHA-256 printed); `docs/store/`: listing, thumbnail brief, video script, submission notes; `tests/store.test.ts` bans young-audience wording; **uploads and the thumbnails need the Playgama account and the art pack (Hasan)** |
 
 ## Denetim özeti (2026-10-17, düşman denetçi, HEAD dcfa024 → bu commit)
@@ -82,7 +82,7 @@ See `docs/questions.md` (every deviation from the spec with its reason).
 ## Measured
 | Metric | Value |
 |---|---|
-| Tests | 187 unit + 40 e2e locally, +1 on the live site (+ `npm run tour`, 17 screenshot flows, not a gate) |
+| Tests | 189 unit + 40 e2e locally, +1 on the live site (+ `npm run tour`, 17 screenshot flows, not a gate) |
 | Bundle (dist/) | 5.33 MB shipped (61 files); initial load before GameReady 3.12 MB (OGG) / 3.14 MB (M4A): bundle 1.23 + Bridge 0.29 + kitchen and beach atlases 1.05 (beach unlocks at level 4, so it preloads at boot) + UI 0.03 + backgrounds + audio 0.16 (`docs/size-report.md`) |
 | Atlases | 2048×2048 per theme, 112 frames at 208 px; UI 1024×512 |
 | Level 80 generation | ≈ 0.4 ms; with the shuffle twist (two extra layouts) still well under 50 ms per scene |
@@ -90,7 +90,7 @@ See `docs/questions.md` (every deviation from the spec with its reason).
 | CI | 8/8 runs green on main before this epic |
 
 ## Next steps (in order)
-0. **Phone pass of the twists** (Hasan): `https://kriptoloca.github.io/peek-and-find/test/?level=40&twist=shuffle` (board slides at 8 s, marker pulses before), `https://kriptoloca.github.io/peek-and-find/test/?level=46&twist=memory` (prompt hides at 3 s, tap the "?" to peek), then a natural run from `https://kriptoloca.github.io/peek-and-find/test/?level=30` for ten scenes: pressure or help? Knobs in `src/gen/twist.ts`.
+0. **Phone pass of the twists** (Hasan): `https://kriptoloca.github.io/peek-and-find/test/?level=40&twist=shuffle` (board slides every ~10 s, marker pulses before), `https://kriptoloca.github.io/peek-and-find/test/?level=46&twist=memory` (prompt hides at 3 s, tap the "?" to peek), then a natural run from `https://kriptoloca.github.io/peek-and-find/test/?level=30` for ten scenes: pressure or help? Knobs in `src/gen/twist.ts`.
 1. **Phone pass of the whole loop** (Hasan): sound on iPhone Safari after the first tap, music toggle, interstitial flow with `?fakeads=1&adfast=1`, rotation. Report in 3 lines.
 2. **Epic 10 remainder (Hasan):** 10 scenes at level 80 on the iPhone without drops; `https://kriptoloca.github.io/peek-and-find/test/?level=80` and read `fps` in the dev state if it stutters. Haptics: does an Android phone buzz on correct/wrong?
 3. **Drop-ins when they exist:** art per `assets/README.md` (`npm run assets`), sounds per the audio section (`npm run audio`); commit `assets/` + `public/` together. No code change expected.
