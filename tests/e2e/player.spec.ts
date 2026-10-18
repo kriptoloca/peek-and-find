@@ -4,9 +4,11 @@ import {
   SALT,
   TEST,
   loseScene,
+  openMenu,
   shot,
   state,
   tapButton,
+  tapMenu,
   tapTitle,
   test,
   titleState,
@@ -81,13 +83,14 @@ test('fake ads: the interstitial blocks taps, hint and Continue are real button 
   const ad = await waitState(page, (s) => s.adInProgress, 'interstitial', 20_000);
   expect(ad.adsShown).toBe(1);
   // CLAUDE.md rule 4 / GDD: nothing reacts while an ad runs (the fake ad lets taps through to
-  // the canvas, so this is the game's own guard, not the DOM overlay): home is tapped at once
-  await tapButton(page, 'home');
+  // the canvas, so this is the game's own guard, not the DOM overlay): pause is tapped at once
+  await tapButton(page, 'pauseCenter');
   await tapButton(page, 'hintCenter');
   await page.waitForTimeout(150);
   const during = await state(page);
   expect(during?.adInProgress).toBe(true);
   expect(during?.hintUses).toBe(0);
+  expect(during?.menuOpen).toBe(false);
   expect(await page.evaluate(() => typeof window.__peekDebug)).toBe('object');
   await expect(page.locator('#fake-ad')).toBeVisible();
   await shot(page, info, 'interstitial');
@@ -270,7 +273,7 @@ test('daily from the Title: five scenes, the check mark, streak 2 the next day, 
   await playDaily('20261020', 1); // 20261019 skipped: the streak starts over
 });
 
-test('home button: back to the Title from play, PLAY returns to the same scene', async ({
+test('menu → home: back to the Title from play, PLAY returns to the same scene', async ({
   page,
 }, info) => {
   for (const view of [
@@ -281,7 +284,8 @@ test('home button: back to the Title from play, PLAY returns to the same scene',
     await page.goto(`${TEST}?level=7&mode=find&reset=1${CANVAS}`, { waitUntil: 'load' });
     const before = await waitState(page, (s) => s.status === 'playing', 'playing');
     const layout = await page.evaluate(() => window.__peekDebug?.objects() ?? []);
-    await tapButton(page, 'home');
+    await openMenu(page);
+    await tapMenu(page, 'home');
     await waitTitle(page);
     await shot(page, info, `title-after-home-${String(view.width)}`);
     await tapTitle(page, 'play');

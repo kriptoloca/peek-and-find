@@ -11,8 +11,8 @@ const BADGE_SIZE = 52;
 const HINT_SIZE = 110;
 /** Shuffle marker next to the prompt: smaller than a prompt icon so it reads as a modifier. */
 const TWIST_SIZE_MULT = 0.7;
-/** Home button (GDD v1.3): same size rule as the hint, opposite end of the secondary bar. */
-const HOME_SIZE = 96;
+/** Pause button (GDD v1.6, was the home button of v1.3): same size rule as the hint, opposite end of the secondary bar. */
+const PAUSE_SIZE = 96;
 /** 1:1 only: the HUD bars sit inside the square, over the scene; a dim strip separates them. */
 const HUD_BACKING_ALPHA = 0.45;
 const COLOR_BADGE_TEXT = '#1b1f2a';
@@ -38,8 +38,8 @@ export class Hud {
   private items: PromptItemView[] = [];
   private readonly hint: Phaser.GameObjects.Image;
   private onHintTap: (() => void) | null = null;
-  private readonly home: Phaser.GameObjects.Image;
-  private onHomeTap: (() => void) | null = null;
+  private readonly pause: Phaser.GameObjects.Image;
+  private onPauseTap: (() => void) | null = null;
   /** Shuffle twist marker (GDD v1.5 §5a): after the prompt items; pulses before each slide. */
   private readonly twist: Phaser.GameObjects.Image;
   /** Memory twist: prompt icons hide behind "?" until a peek. */
@@ -76,11 +76,11 @@ export class Hud {
       this.onHintTap?.();
     });
     this.container.add(this.hint);
-    this.home = addImage(scene, 0, 0, UI.home).setInteractive({ useHandCursor: true });
-    this.home.on(Phaser.Input.Events.POINTER_UP, () => {
-      this.onHomeTap?.();
+    this.pause = addImage(scene, 0, 0, UI.pause).setInteractive({ useHandCursor: true });
+    this.pause.on(Phaser.Input.Events.POINTER_UP, () => {
+      this.onPauseTap?.();
     });
-    this.container.add(this.home);
+    this.container.add(this.pause);
     this.twist = addImage(scene, 0, 0, UI.shuffle).setVisible(false);
     this.container.add(this.twist);
   }
@@ -169,27 +169,27 @@ export class Hud {
     this.reapply();
   }
 
-  /** Home button (GDD v1.3): back to the Title at any time; the scene decides what that means. */
-  setHome(onTap: (() => void) | null): void {
-    this.onHomeTap = onTap;
+  /** Pause button (GDD v1.6 §9): opens the in-game menu; the scene decides what that means. */
+  setPause(onTap: (() => void) | null): void {
+    this.onPauseTap = onTap;
   }
 
-  /** True when a canvas point lands on the home button (so the scene ignores it). */
-  hitsHome(x: number, y: number): boolean {
-    const r = this.home.displayWidth / 2 + 10;
-    return (x - this.home.x) ** 2 + (y - this.home.y) ** 2 <= r * r;
+  /** True when a canvas point lands on the pause button (so the scene ignores it). */
+  hitsPause(x: number, y: number): boolean {
+    const r = this.pause.displayWidth / 2 + 10;
+    return (x - this.pause.x) ** 2 + (y - this.pause.y) ** 2 <= r * r;
   }
 
-  /** Canvas (design px) center of the home button; dev hooks turn it into a screen point. */
-  homeCenter(): { x: number; y: number } {
-    return { x: this.home.x, y: this.home.y };
+  /** Canvas (design px) center of the pause button; dev hooks turn it into a screen point. */
+  pauseCenter(): { x: number; y: number } {
+    return { x: this.pause.x, y: this.pause.y };
   }
 
-  private placeHome(sec: Rect, placement: 'row' | 'column'): void {
-    const size = Math.min(HOME_SIZE, Math.max(64, (placement === 'row' ? sec.h : sec.w) - 24));
-    this.home.setDisplaySize(size, size);
-    if (placement === 'column') this.home.setPosition(sec.x + sec.w / 2, sec.y + 90);
-    else this.home.setPosition(sec.x + size / 2 + 24, sec.y + sec.h / 2);
+  private placePause(sec: Rect, placement: 'row' | 'column'): void {
+    const size = Math.min(PAUSE_SIZE, Math.max(64, (placement === 'row' ? sec.h : sec.w) - 24));
+    this.pause.setDisplaySize(size, size);
+    if (placement === 'column') this.pause.setPosition(sec.x + sec.w / 2, sec.y + 90);
+    else this.pause.setPosition(sec.x + size / 2 + 24, sec.y + sec.h / 2);
   }
 
   /** Rewarded hint button (GDD §6): shown only when the platform supports rewarded ads. */
@@ -312,7 +312,7 @@ export class Hud {
     this.layoutCache = l;
     this.spotMode = false;
     this.placeHint(l.hud.secondary, Math.min(HINT_SIZE, Math.max(72, l.hud.secondary.h - 16)));
-    this.placeHome(l.hud.secondary, l.hud.placement === 'columns' ? 'column' : 'row');
+    this.placePause(l.hud.secondary, l.hud.placement === 'columns' ? 'column' : 'row');
     const p = l.hud.primary;
     if (l.hud.placement === 'columns') this.applyColumn(p);
     else this.applyRow(p);
@@ -333,7 +333,7 @@ export class Hud {
     this.backing.clear();
     this.applyRow(l.spot.hudTop);
     this.placeHint(l.spot.hudBottom, Math.min(HINT_SIZE, Math.max(72, l.spot.hudBottom.h - 16)));
-    this.placeHome(l.spot.hudBottom, 'row');
+    this.placePause(l.spot.hudBottom, 'row');
   }
 
   private applyRow(p: Rect): void {

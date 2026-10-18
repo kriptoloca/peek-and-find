@@ -3,7 +3,7 @@ import { t } from '../../data/strings';
 import { dailyStatus, todayKey } from '../daily';
 import { computeLayout } from '../layout';
 import { getPlatform, sentPlatformMessages } from '../../platform/bridge';
-import { persistProgress, progress } from '../state';
+import { progress } from '../state';
 import { addImage, setImageFrame } from '../assets';
 import { audio } from '../audio';
 import { installTitleDebug, uninstallTitleDebug } from '../../dev/debug';
@@ -164,22 +164,8 @@ export class TitleScene extends Phaser.Scene {
     const ty = s.y + s.h * 0.86;
     this.spots.sound = { x: cx - 80, y: ty };
     this.spots.music = { x: cx + 80, y: ty };
-    this.toggle(
-      cx - 80,
-      ty,
-      () => progress.sound,
-      (v) => (progress.sound = v),
-      UI.soundOn,
-      UI.soundOff,
-    );
-    this.toggle(
-      cx + 80,
-      ty,
-      () => progress.music,
-      (v) => (progress.music = v),
-      UI.musicOn,
-      UI.musicOff,
-    );
+    this.toggle(cx - 80, ty, 'sound', UI.soundOn, UI.soundOff);
+    this.toggle(cx + 80, ty, 'music', UI.musicOn, UI.musicOff);
     if (this.paused) this.drawPauseDim();
   };
 
@@ -255,23 +241,12 @@ export class TitleScene extends Phaser.Scene {
     });
   }
 
-  private toggle(
-    x: number,
-    y: number,
-    get: () => boolean,
-    set: (v: boolean) => void,
-    on: string,
-    off: string,
-  ): void {
-    const img = addImage(this, x, y, get() ? on : off)
+  private toggle(x: number, y: number, key: 'sound' | 'music', on: string, off: string): void {
+    const img = addImage(this, x, y, progress[key] ? on : off)
       .setDisplaySize(TOGGLE, TOGGLE)
       .setInteractive({ useHandCursor: true });
     img.on(Phaser.Input.Events.POINTER_UP, () => {
-      set(!get());
-      setImageFrame(img, get() ? on : off);
-      persistProgress();
-      audio.refresh();
-      audio.play('button');
+      setImageFrame(img, audio.toggleSetting(key) ? on : off);
     });
     this.root.add(img);
   }

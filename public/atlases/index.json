@@ -70,8 +70,8 @@
   "ui": {
     "atlas": "atlases/ui.png",
     "data": "atlases/ui.json",
-    "frames": 23,
+    "frames": 24,
     "source": "placeholder",
-    "missing": 23
+    "missing": 24
   }
 }

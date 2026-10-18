@@ -30,6 +30,7 @@ Source of truth read on 2026-10-16: the SDK repository `github.com/Playgama/brid
 - `bridge.storage.get(key, tryParseJson)` and `bridge.storage.set(key, value)` [modules/storage/StorageModule.ts]. We pass `tryParseJson = false` and store the save as a JSON string under one key, which the YouTube adapter folds into `ytgame.game.saveData` / `loadData` [YoutubePlatformBridge.ts]. On the mock platform the module writes localStorage itself. Calls before `initialize()` throw `SDK_NOT_INITIALIZED`, so BootScene initialises the bridge first.
 
 ## Our wrapper (`src/platform/bridge.ts`)
+- Lifecycle around the in-game menu (GDD v1.6): `gameplay_stopped` when the pause menu opens on a playing round, `gameplay_started` on Resume; the platform pause keeps its own path (`onPause`), and a platform resume over the open menu leaves the game frozen.
 - `initPlatform()` resolves to a `Platform` object: `platformId`, `interstitialSupported`, `rewardedSupported`, `showInterstitial()`, `showRewarded(placement)`, `sendMessage(name)`, `storage` (a `StorageBackend`), `isAudioEnabled()`, `onPause(cb)`, `onAudio(cb)`. If `window.bridge` is missing or `initialize()` fails or exceeds 6 s, it resolves to a stub with the same shape (ads unsupported, localStorage) — the game is always playable.
 - Dev builds: `?fakeads=1` makes the stub simulate ads (1.5 s overlay, rewarded always earned) so the hint/continue/interstitial flows can be tested without a platform.
 

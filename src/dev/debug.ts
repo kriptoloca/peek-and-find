@@ -32,8 +32,10 @@ export interface PeekDebug {
   objects: () => DebugPoint[];
   /** The five Spot differences in both images; empty outside Spot. */
   differences: () => DebugDifference[];
-  /** Screen center of the HUD home button (back to the Title). */
-  home: () => DebugPoint;
+  /** Screen center of the HUD pause button (opens the in-game menu, GDD v1.6). */
+  pauseCenter: () => DebugPoint;
+  /** Screen centers of the in-game menu buttons, null while the menu is closed. */
+  menu: () => { resume: DebugPoint; sound: DebugPoint; music: DebugPoint; home: DebugPoint } | null;
   /** Screen center of the hint bulb, null while hidden (no rewarded ads). */
   hintCenter: () => DebugPoint | null;
   /** Screen centers of the fail overlay buttons, null unless the round is lost. */
@@ -84,6 +86,14 @@ export interface PeekDebug {
     shufflesDone: number;
     /** Memory: the prompt icons are hidden behind "?" right now. */
     promptHidden: boolean;
+    /** In-game menu open (the scene is frozen, the star timer stopped). */
+    menuOpen: boolean;
+    sound: boolean;
+    music: boolean;
+    /** Seconds on the star timer right now (frozen time left out). */
+    elapsed: number;
+    /** Bridge lifecycle messages sent so far (in order). */
+    messages: string[];
   };
   /** Screen (CSS px) rect of the scene square, or of Spot image A (scripts/thumbnails.mjs). */
   sceneRect: () => { x: number; y: number; w: number; h: number };

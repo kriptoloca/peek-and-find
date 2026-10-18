@@ -19,6 +19,10 @@ export interface Round {
   /** ms timestamp when the last target was found. */
   finishedAt: number | null;
   status: RoundStatus;
+  /** ms timestamp when the current freeze (platform pause or the in-game menu) began. */
+  pausedAt: number | null;
+  /** ms spent frozen so far; the star timer leaves it out. */
+  pausedMs: number;
   /** Shuffle twist: 0 = the scene's main layout, i = `scene.shuffles[i - 1]`. */
   layout: number;
   /** True while the sprites slide to the next layout; taps are ignored meanwhile. */
@@ -92,6 +96,8 @@ export function newRound(scene: Scene): Round {
     startedAt: null,
     finishedAt: null,
     status: 'intro',
+    pausedAt: null,
+    pausedMs: 0,
     layout: 0,
     moving: false,
   };
@@ -102,6 +108,21 @@ export function startRound(r: Round, now: number): void {
   if (r.status !== 'intro') return;
   r.status = 'playing';
   r.startedAt = now;
+  r.pausedAt = null;
+  r.pausedMs = 0;
+}
+
+/** The game froze (platform pause or the in-game menu, GDD v1.6): the star timer stops. */
+export function pauseRound(r: Round, now: number): void {
+  if (r.startedAt === null || r.finishedAt !== null || r.pausedAt !== null) return;
+  r.pausedAt = now;
+}
+
+/** The game runs again: the frozen time is left out of the star timer. */
+export function resumeRound(r: Round, now: number): void {
+  if (r.pausedAt === null) return;
+  r.pausedMs += Math.max(0, now - r.pausedAt);
+  r.pausedAt = null;
 }
 
 /**
@@ -158,11 +179,14 @@ export function applyTap(r: Round, x: number, y: number, now: number): TapResult
   return { kind: 'wrong', object: hit, hearts: r.hearts, lost };
 }
 
-/** Seconds on the star timer: from pop-in end to the last find (or to `now` while playing). */
+/**
+ * Seconds on the star timer: from pop-in end to the last find (or to `now` while playing),
+ * without the time the game was frozen.
+ */
 export function elapsedSeconds(r: Round, now: number): number {
   if (r.startedAt === null) return 0;
-  const end = r.finishedAt ?? now;
-  return Math.max(0, (end - r.startedAt) / 1000);
+  const end = r.finishedAt ?? r.pausedAt ?? now;
+  return Math.max(0, (end - r.startedAt - r.pausedMs) / 1000);
 }
 
 export function starsEarned(r: Round, now: number): 1 | 2 | 3 {

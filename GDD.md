@@ -78,7 +78,7 @@ Save after every scene. Never block gameplay on save errors. `version` enables m
 ## 9. Screens
 1. **Boot**: load atlas for current theme + UI; call GameReady only when input works.
 2. **Title**: logo, PLAY (big), DAILY (streak badge), sound/music toggles. No settings screen.
-3. **Game**: scene area + HUD (targets bar, hearts, level number, hint button, home button; v1.5: the shuffle marker after the prompt, "?" badges in a memory scene). Home (v1.3): back to the Title from anywhere in play, no confirmation and no menu; the abandoned scene keeps its seed, so PLAY returns to the same scene; a daily chain restarts from its first scene. The platform's own pause/exit control stays the primary way out on YouTube.
+3. **Game**: scene area + HUD (targets bar, hearts, level number, hint button, pause button; v1.5: the shuffle marker after the prompt, "?" badges in a memory scene). **Pause menu (v1.6)**: the pause button (bottom-left, where the v1.3 home button was) freezes the scene (tweens, the scene clock, the star timer, the shuffle cadence) under a dim and shows four icon buttons: Resume (large, play icon), Sound, Music, Home. Resume continues the very same round (finds, hearts, timer); the toggles are the Title's toggles and persist; Home abandons the scene like v1.3 (the scene keeps its seed, so PLAY returns to it; a daily chain restarts from its first scene). No text, no confirmation. Available over the fail overlay too (Home stays one tap away from a lost round), not over the win overlay (the scene advances by itself; the pause spot skips the auto-advance there like any tap), not under the platform pause or during an ad. A platform pause over the open menu dims on top and leaves the game frozen after the platform resumes. Music keeps playing in the menu so the Music toggle gives immediate feedback. The platform's own pause/exit control stays the primary way out on YouTube.
 4. **Scene Complete** overlay: stars, +score, auto-advance.
 5. **Fail** overlay: Continue (rewarded) / Retry.
 6. **Daily Complete** overlay: badge, streak, back to title.
@@ -136,3 +136,7 @@ No accounts, no leaderboards, no multiplayer, no IAP, no level editor, no locali
 - Difficulty table: fifth column at level 150 (second ramp); plateau moves from 80 to 150.
 - Twists (§5a): shuffle from level 30, memory from level 45, seeded per scene, never on Spot, big scenes or the daily chain.
 - Hasan's brief: level 80 felt medium; the game should hook from level 1 to the end, neither frustrating nor trivial, with creative late-game variety ("objects change places after a while").
+
+## 18. Changes in v1.6 (2026-10-18, pause menu)
+- The in-game home button becomes a pause button that opens a frozen-scene menu with Resume, Sound, Music and Home (§9). Hasan's brief: changing the sound mid-scene went through the Title and restarted the scene.
+- The star timer leaves frozen time out (platform pause and the menu alike); before, a platform pause of 30 s cost the stars of that scene.

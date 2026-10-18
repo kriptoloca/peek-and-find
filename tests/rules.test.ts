@@ -13,9 +13,11 @@ import {
   hitTargets,
   layoutCount,
   newRound,
+  pauseRound,
   promptCounts,
   remainingTargets,
   resolveTap,
+  resumeRound,
   roundObjects,
   startRound,
   starsEarned,
@@ -260,5 +262,45 @@ describe('shuffle twist in the round (GDD v1.5 §5a)', () => {
     expect(layoutCount(scene)).toBe(1);
     expect(advanceLayout(r)).toBe(scene.objects);
     expect(r.layout).toBe(0);
+  });
+});
+
+describe('frozen time (platform pause, in-game menu; GDD v1.6)', () => {
+  it('leaves the frozen time out of the star timer, also across two freezes and the finish', () => {
+    const seed = sceneSeed('find', 20, 0, 7);
+    const scene = generateScene({ seed, level: 20, mode: 'find', theme: KITCHEN, twist: 'none' });
+    const r = newRound(scene);
+    startRound(r, 1000);
+    expect(elapsedSeconds(r, 3000)).toBe(2);
+    pauseRound(r, 3000);
+    expect(elapsedSeconds(r, 9000)).toBe(2); // frozen: still 2 s
+    pauseRound(r, 5000); // a second pause call while paused changes nothing
+    resumeRound(r, 9000);
+    expect(elapsedSeconds(r, 10_000)).toBe(3);
+    pauseRound(r, 10_000);
+    resumeRound(r, 12_000);
+    resumeRound(r, 13_000); // a resume without a pause changes nothing
+    expect(elapsedSeconds(r, 13_000)).toBe(4);
+    for (const target of scene.targets) applyTap(r, target.x, target.y, 14_000);
+    expect(r.status).toBe('won');
+    expect(elapsedSeconds(r, 99_000)).toBe(5);
+    // a freeze after the finish changes nothing (the overlay can sit under a platform pause)
+    pauseRound(r, 20_000);
+    expect(r.pausedAt).toBeNull();
+    resumeRound(r, 50_000);
+    expect(elapsedSeconds(r, 99_000)).toBe(5);
+    expect(starsEarned(r, 99_000)).toBe(starsEarned(r, 14_000));
+  });
+
+  it('a freeze before the pop-in ends is ignored and the round start clears the counters', () => {
+    const seed = sceneSeed('find', 20, 1, 7);
+    const scene = generateScene({ seed, level: 20, mode: 'find', theme: KITCHEN, twist: 'none' });
+    const r = newRound(scene);
+    pauseRound(r, 500);
+    expect(r.pausedAt).toBeNull();
+    resumeRound(r, 900);
+    startRound(r, 1000);
+    expect(r.pausedMs).toBe(0);
+    expect(elapsedSeconds(r, 2000)).toBe(1);
   });
 });

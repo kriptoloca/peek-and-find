@@ -23,6 +23,7 @@
     "home",
     "hint",
     "shuffle",
-    "memory"
+    "memory",
+    "pause"
   ]
 }

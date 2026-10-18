@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import type { Platform } from '../platform/bridge';
 import { runLoader } from './assets';
 import { MUSIC_KEY, type SfxName } from './audio-keys';
-import { progress } from './state';
+import { persistProgress, progress } from './state';
 
 /**
  * Audio (GDD §12, CLAUDE.md rule 4). Files come from `public/audio/index.json` (written by
@@ -165,6 +165,19 @@ class AudioManager {
   setPaused(paused: boolean): void {
     this.paused = paused;
     this.refresh();
+  }
+
+  /**
+   * Flips a player toggle (Title and the in-game menu share this): the flag persists, the
+   * manager re-reads it, and the button click plays if sound is (still) on. Returns the new
+   * value so the caller can swap its icon.
+   */
+  toggleSetting(key: 'sound' | 'music'): boolean {
+    progress[key] = !progress[key];
+    persistProgress();
+    this.refresh();
+    this.play('button');
+    return progress[key];
   }
 
   /** Re-evaluates platform state, pause and the player's toggles; the platform always wins. */

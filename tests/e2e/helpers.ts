@@ -129,11 +129,27 @@ export async function tapTitle(page: Page, spot: TitleSpot): Promise<void> {
 /** Taps a HUD/overlay button at the screen position the dev hook reports (a real tap). */
 export async function tapButton(
   page: Page,
-  which: 'home' | 'hintCenter' | 'retryCenter' | 'continueCenter',
+  which: 'pauseCenter' | 'hintCenter' | 'retryCenter' | 'continueCenter',
 ): Promise<void> {
   const p = await page.evaluate((w) => window.__peekDebug?.[w](), which);
   if (!p) throw new Error(`${which}: no button on screen`);
   await page.mouse.click(p.x, p.y);
+}
+
+/** Taps a button of the in-game menu (GDD v1.6); the menu must be open. */
+export async function tapMenu(
+  page: Page,
+  which: 'resume' | 'sound' | 'music' | 'home',
+): Promise<void> {
+  const m = await page.evaluate(() => window.__peekDebug?.menu() ?? null);
+  if (!m) throw new Error(`${which}: the menu is not open`);
+  await page.mouse.click(m[which].x, m[which].y);
+}
+
+/** Opens the in-game menu with the HUD pause button and waits for it. */
+export async function openMenu(page: Page): Promise<GameState> {
+  await tapButton(page, 'pauseCenter');
+  return waitState(page, (s) => s.menuOpen, 'menu open', 10_000);
 }
 
 /** Taps the remaining targets of the current scene until it is won. */

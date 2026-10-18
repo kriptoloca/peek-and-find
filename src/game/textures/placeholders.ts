@@ -482,6 +482,12 @@ export function ensureUiTextures(scene: Phaser.Scene): void {
       );
     }
   });
+  mk(UI.pause, (g) => {
+    // two bars, white like the home icon it replaces in the HUD
+    g.fillStyle(0xffffff, 1);
+    g.fillRoundedRect(s * 0.23, s * 0.19, s * 0.19, s * 0.62, 8);
+    g.fillRoundedRect(s * 0.58, s * 0.19, s * 0.19, s * 0.62, 8);
+  });
   mk(UI.memory, (g) => {
     // question mark as strokes on a dark badge (memory twist hides the prompt behind it)
     g.fillStyle(0x2e3650, 1);

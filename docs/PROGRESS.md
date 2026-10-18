@@ -3,7 +3,7 @@
 Single source of truth for "where did we leave off". Update at the end of every epic and whenever a decision changes the plan. Read this first at the start of every session.
 
 ## Status
-Epic: 13 (late-game twists + second ramp, GDD v1.5) done in code; 9 done with placeholder art and sound; 10 and 11 done except the device/QA-tool items; 12 done except the uploads · Next: Hasan's phone pass of the twists, the real art/sound drop-in, then the uploads (Playgama console, QA tool) · Last update: 2026-10-18 · Branch: main
+Epic: 14 (pause menu, GDD v1.6) and 13 (late-game twists + second ramp, GDD v1.5) done in code; 9 done with placeholder art and sound; 10 and 11 done except the device/QA-tool items; 12 done except the uploads · Next: Hasan's phone pass of the twists, the real art/sound drop-in, then the uploads (Playgama console, QA tool) · Last update: 2026-10-18 · Branch: main
 Repo: https://github.com/kriptoloca/peek-and-find
 
 ## Session plan (2026-10-18, Epic 13: late-game twists + second ramp)
@@ -46,9 +46,10 @@ frustrating. Decisions in docs/questions.md (same date).
 | 9e | Phone test 2 fixes: visible color variants (grey tint, pixel-measured in the pipeline), tap circle = whole sprite, taps during the pop-in count, rules e2e (Spot pixel diff, rim tap, early tap) | done (code) | 20 e2e + 145 unit tests |
 | 9f | Haptics (Android; iOS has no API), audio self-review (`docs/audio-review.md`) | done (code) | 4 haptics tests; 149 unit |
 | 9g | Visual review (`docs/visual-review.md`): research + audit + screenshot tour (`npm run tour`); theme-tinted frame, palette lifted to ≥ 3:1 against the backgrounds with a pipeline gate, 1:1 HUD backing, fail buttons drawn (Canvas has no tint) | done (code) | 156 unit + 20 e2e; tour sheets reviewed in 9:16 / 16:9 / 1:1 before and after |
-| 10 | Size & performance budget | report done (code) | `docs/size-report.md`: initial load 3.12 MB OGG / 3.14 MB M4A of the 8 MB target (5 MB YouTube target), dist 4.6 MB; no update loops; **phone profile at L80 pending (Hasan)** |
+| 10 | Size & performance budget | report done (code) | `docs/size-report.md`: initial load 3.13 MB OGG / 3.15 MB M4A of the 8 MB target (5 MB YouTube target), dist 4.6 MB; no update loops; **phone profile at L80 pending (Hasan)** |
 | 11 | Playgama QA tool, certification checklist | checklist done (code) | `docs/certification-checklist.md`: 12 rules with evidence; GameReady order and save persistence now asserted in e2e; **QA tool pending (needs the Playgama account)** |
 | 13 | Late-game twists (shuffle from L30, memory from L45; GDD v1.5 §5a) + second difficulty ramp to L150; `?twist=` dev param; HUD marker and "?" prompt | done (code) | 189 unit + 40 e2e; twist layouts validated like the main one; adversarial audit 0/1/1/10 all closed (docs/questions.md 2026-10-18); **phone pass at L30–60 pending (Hasan)** |
+| 14 | In-game pause menu (GDD v1.6 §9): pause button freezes the scene, Resume / Sound / Music / Home; star timer leaves frozen time out (also fixes the platform-pause star loss) | done (code) | 191 unit + 49 e2e (`menu.spec`); **phone check pending (Hasan)** |
 | 12 | Store assets, submission ZIP | done (code) | `npm run zip` → deterministic `release/peek-and-find-0.1.0.zip` (3.27 MB, index.html at the root, no /test/, limits checked, SHA-256 printed); `docs/store/`: listing, thumbnail brief, video script, submission notes; `tests/store.test.ts` bans young-audience wording; **uploads and the thumbnails need the Playgama account and the art pack (Hasan)** |
 
 ## Denetim özeti (2026-10-17, düşman denetçi, HEAD dcfa024 → bu commit)
@@ -83,14 +84,15 @@ See `docs/questions.md` (every deviation from the spec with its reason).
 ## Measured
 | Metric | Value |
 |---|---|
-| Tests | 189 unit + 40 e2e locally, +1 on the live site (+ `npm run tour`, 17 screenshot flows, not a gate) |
-| Bundle (dist/) | 5.33 MB shipped (61 files); initial load before GameReady 3.12 MB (OGG) / 3.14 MB (M4A): bundle 1.23 + Bridge 0.29 + kitchen and beach atlases 1.05 (beach unlocks at level 4, so it preloads at boot) + UI 0.03 + backgrounds + audio 0.16 (`docs/size-report.md`) |
+| Tests | 191 unit + 49 e2e locally, +1 on the live site (+ `npm run tour`, 17 screenshot flows, not a gate) |
+| Bundle (dist/) | 5.33 MB shipped (61 files); initial load before GameReady 3.13 MB (OGG) / 3.15 MB (M4A): bundle 1.23 + Bridge 0.29 + kitchen and beach atlases 1.05 (beach unlocks at level 4, so it preloads at boot) + UI 0.03 + backgrounds + audio 0.16 (`docs/size-report.md`) |
 | Atlases | 2048×2048 per theme, 112 frames at 208 px; UI 1024×512 |
 | Level 80 generation | ≈ 0.4 ms; with the shuffle twist (two extra layouts) still well under 50 ms per scene |
 | Asset build | atlases ≈ 7 s, reproducible (CI diff check); sprite/background contrast gate: least contrasting sprite per theme has 39–50 % of its area at ≥ 3:1; audio ≈ 3 s with ffmpeg (presence checked, not bytes) |
 | CI | 8/8 runs green on main before this epic |
 
 ## Next steps (in order)
+0. **Phone check of the pause menu** (Hasan): any scene, tap the bottom-left pause button → Sound/Music toggles, Resume continues the same scene, Home exits: `https://kriptoloca.github.io/peek-and-find/test/?level=12`.
 0. **Phone pass of the twists** (Hasan): `https://kriptoloca.github.io/peek-and-find/test/?level=40&twist=shuffle` (board slides every ~10 s, marker pulses before), `https://kriptoloca.github.io/peek-and-find/test/?level=46&twist=memory` (prompt hides at 3 s, tap the "?" to peek), then a natural run from `https://kriptoloca.github.io/peek-and-find/test/?level=30` for ten scenes: pressure or help? Knobs in `src/gen/twist.ts`.
 1. **Phone pass of the whole loop** (Hasan): sound on iPhone Safari after the first tap, music toggle, interstitial flow with `?fakeads=1&adfast=1`, rotation. Report in 3 lines.
 2. **Epic 10 remainder (Hasan):** 10 scenes at level 80 on the iPhone without drops; `https://kriptoloca.github.io/peek-and-find/test/?level=80` and read `fps` in the dev state if it stutters. Haptics: does an Android phone buzz on correct/wrong?

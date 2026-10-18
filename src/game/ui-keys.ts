@@ -28,4 +28,6 @@ export const UI = {
   /** Twists (GDD v1.5): HUD marker of a shuffle scene; "?" that hides the prompt in memory. */
   shuffle: 'ui_shuffle',
   memory: 'ui_memory',
+  /** In-game pause menu button (GDD v1.6 §9). */
+  pause: 'ui_pause',
 } as const;

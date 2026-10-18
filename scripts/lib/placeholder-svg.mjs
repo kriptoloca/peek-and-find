@@ -343,6 +343,12 @@ export function placeholderUi(name) {
           `<polyline points="24,86 50,86 78,42 100,42" fill="none" stroke="${WHITE}" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>` +
           `<polygon points="96,28 116,42 96,56" fill="${WHITE}"/><polygon points="96,72 116,86 96,100" fill="${WHITE}"/>`,
       );
+    case 'pause':
+      return svgDoc(
+        128,
+        128,
+        `<rect x="30" y="24" width="24" height="80" rx="8" fill="${WHITE}"/><rect x="74" y="24" width="24" height="80" rx="8" fill="${WHITE}"/>`,
+      );
     case 'memory':
       // a question mark drawn as paths (no text), replaces a hidden prompt icon
       return svgDoc(

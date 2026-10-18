@@ -14,7 +14,7 @@ import {
 } from '../../gen/twist';
 import type { Mode, Placed, Scene as GenScene, Theme, TwistKind } from '../../gen/types';
 import { AdGate, MIN_INTERVAL_MS } from '../../platform/ads';
-import { getPlatform, type Platform } from '../../platform/bridge';
+import { getPlatform, sentPlatformMessages, type Platform } from '../../platform/bridge';
 import { audio } from '../audio';
 import { haptic, setHapticsEnabled } from '../../platform/haptics';
 import { correctSfx, starSfx } from '../audio-keys';
@@ -28,11 +28,14 @@ import {
   advanceLayout,
   applyTap,
   continueRound,
+  elapsedSeconds,
   hintTarget,
   hitTargets,
   newRound,
+  pauseRound,
   promptCounts,
   remainingTargets,
+  resumeRound,
   roundObjects,
   startRound,
   starsEarned,
@@ -41,8 +44,15 @@ import {
 } from '../rules';
 import { persistProgress, progress, resetProgress } from '../state';
 import { UI } from '../textures/placeholders';
-import { addImage, ensureThemes, fitImage, loadedAtlases, releaseThemes } from '../assets';
-import { SCENE_SIZE, SPOT_H, SPOT_W } from '../../config';
+import {
+  addImage,
+  ensureThemes,
+  fitImage,
+  loadedAtlases,
+  releaseThemes,
+  setImageFrame,
+} from '../assets';
+import { DESIGN_LONG_MAX, SCENE_SIZE, SPOT_H, SPOT_W } from '../../config';
 
 const COLOR_SCENE = 0x2e3650;
 const COLOR_SPOT_RING = 0x80ed99;
@@ -56,6 +66,18 @@ const AUTO_ADVANCE_MS = 1200;
 const DEPTH_WORLD = 10;
 const DEPTH_FX = 15;
 const DEPTH_OVERLAY = 30;
+/** In-game menu (GDD v1.6 §9): above the win/fail overlays, below the platform pause dim. */
+const DEPTH_MENU = 35;
+const MENU_DIM_ALPHA = 0.6;
+const COLOR_MENU_BUTTON = 0x3a4160;
+/** Menu buttons in overlay coordinates: Resume on top, Sound / Music / Home in a row. */
+const MENU_BUTTONS = {
+  resume: { x: 0, y: -70, r: 100, icon: 110 },
+  sound: { x: -200, y: 150, r: 72, icon: 78 },
+  music: { x: 0, y: 150, r: 72, icon: 78 },
+  home: { x: 200, y: 150, r: 72, icon: 78 },
+} as const;
+type MenuButton = keyof typeof MENU_BUTTONS;
 /** Prompt icon breathes at round start on these first levels (GDD §2 teaching). */
 const TEACH_PULSE_UNTIL_LEVEL = 3;
 /** Retry button: circle radius and vertical offset from the overlay center. */
@@ -97,6 +119,15 @@ export class GameScene extends Phaser.Scene {
   private worldB!: Phaser.GameObjects.Container;
   private fx!: Phaser.GameObjects.Container;
   private overlay: Phaser.GameObjects.Container | null = null;
+  /** In-game menu (GDD v1.6): Resume, Sound, Music, Home; the scene is frozen while it is open. */
+  private menu: Phaser.GameObjects.Container | null = null;
+  private menuOpen = false;
+  private menuSound: Phaser.GameObjects.Image | null = null;
+  private menuMusic: Phaser.GameObjects.Image | null = null;
+  /** Menu button under the finger at pointer-down; it acts on pointer-up over the same one. */
+  private menuDownOn: MenuButton | null = null;
+  /** A pause-spot tap that the win overlay took (skip): its pointer-up must not open the menu. */
+  private pauseTapConsumed = false;
   private sprites: SpriteMap = new Map();
   private spritesB: SpriteMap = new Map();
   private round: Round | null = null;
@@ -150,6 +181,12 @@ export class GameScene extends Phaser.Scene {
     this.forcedTwist = null;
     this.twistArmedFor = null;
     this.shufflesDone = 0;
+    this.menuOpen = false;
+    this.menu = null;
+    this.menuSound = null;
+    this.menuMusic = null;
+    this.menuDownOn = null;
+    this.pauseTapConsumed = false;
   }
 
   create(): void {
@@ -159,9 +196,22 @@ export class GameScene extends Phaser.Scene {
     this.fx = this.add.container(0, 0).setDepth(DEPTH_FX);
     this.hud = new Hud(this);
     this.input.on(Phaser.Input.Events.POINTER_DOWN, this.onPointer);
+    this.input.on(Phaser.Input.Events.POINTER_UP, this.onPointerUp);
     this.scale.on(Phaser.Scale.Events.RESIZE, this.relayout);
+    // Without the SDK (stub platform) nobody reports a hidden page; Phaser's own visibility
+    // events freeze the scene the same way, and a visible page re-reads the platform's pause.
+    const onHidden = (): void => {
+      this.setPaused(true);
+    };
+    const onVisible = (): void => {
+      this.setPaused(this.platform.isPaused());
+    };
+    this.game.events.on(Phaser.Core.Events.HIDDEN, onHidden);
+    this.game.events.on(Phaser.Core.Events.VISIBLE, onVisible);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.scale.off(Phaser.Scale.Events.RESIZE, this.relayout);
+      this.game.events.off(Phaser.Core.Events.HIDDEN, onHidden);
+      this.game.events.off(Phaser.Core.Events.VISIBLE, onVisible);
     });
     this.platform = getPlatform();
     this.unsubscribePause = this.platform.onPause((p) => {
@@ -179,8 +229,8 @@ export class GameScene extends Phaser.Scene {
     this.hud.setHint(this.platform.rewardedSupported, () => {
       void this.onHint();
     });
-    this.hud.setHome(() => {
-      this.goHome();
+    this.hud.setPause(() => {
+      this.openMenu();
     });
     this.relayout();
     if (import.meta.env.DEV) this.applyDevParams();
@@ -195,18 +245,133 @@ export class GameScene extends Phaser.Scene {
     this.paused = paused;
     audio.setPaused(paused);
     setHapticsEnabled(!paused);
+    this.applyFreeze();
     if (paused) {
-      this.tweens.pauseAll();
-      this.time.paused = true;
-      const { width, height } = this.scale.gameSize;
-      const dim = this.add.graphics();
-      dim.fillStyle(0x000000, 0.55).fillRect(0, 0, width, height);
-      this.pauseOverlay = this.add.container(0, 0, [dim]).setDepth(DEPTH_PAUSE);
+      this.pauseOverlay = this.dimContainer(0.55, DEPTH_PAUSE);
     } else {
       this.pauseOverlay?.destroy(true);
       this.pauseOverlay = null;
+    }
+  }
+
+  /**
+   * Tweens and the scene clock (shuffle cadence, memory timers, auto-advance) stop while the
+   * platform pause or the in-game menu holds; the round's star timer leaves the frozen time
+   * out. A platform resume while the menu is open keeps the game frozen.
+   */
+  private applyFreeze(): void {
+    const frozen = this.paused || this.menuOpen;
+    if (frozen) {
+      this.tweens.pauseAll();
+      this.time.paused = true;
+    } else {
       this.time.paused = false;
       this.tweens.resumeAll();
+    }
+    // The freeze stamps use the wall clock: a hidden page gets no frames, so the scene clock
+    // would read the same value at pause and at resume and the whole pause would leak into the
+    // star timer. RAF timestamps and performance.now() share one timeline.
+    const r = this.round;
+    if (!r) return;
+    if (frozen) pauseRound(r, performance.now());
+    else resumeRound(r, performance.now());
+  }
+
+  // ---- in-game menu (GDD v1.6 §9) -----------------------------------------------------------
+
+  /**
+   * Pause button: freezes the scene and shows Resume, Sound, Music and Home. Works over the
+   * fail overlay too (Home stays reachable from a lost round, as in v1.3); not over the win
+   * overlay (the scene advances in 1.6 s and Home there would replay a banked win), not under
+   * the platform pause, during an ad or in the dev menu.
+   */
+  private openMenu(): void {
+    if (this.pauseTapConsumed) {
+      this.pauseTapConsumed = false;
+      return;
+    }
+    if (this.menuOpen || this.paused || this.adInProgress || this.devMenuOpen) return;
+    const r = this.round;
+    if (!r || r.status === 'won') return;
+    audio.play('button');
+    this.menuOpen = true;
+    if (r.status === 'playing') this.platform.sendMessage('gameplay_stopped');
+    this.applyFreeze();
+    const menu = this.dimContainer(MENU_DIM_ALPHA, DEPTH_MENU);
+    const b = MENU_BUTTONS;
+    menu.add([
+      this.disc(b.resume.x, b.resume.y, COLOR_CONTINUE, b.resume.r),
+      addImage(this, b.resume.x, b.resume.y, UI.play).setDisplaySize(b.resume.icon, b.resume.icon),
+      this.disc(b.sound.x, b.sound.y, COLOR_MENU_BUTTON, b.sound.r),
+      this.disc(b.music.x, b.music.y, COLOR_MENU_BUTTON, b.music.r),
+      this.disc(b.home.x, b.home.y, COLOR_MENU_BUTTON, b.home.r),
+      addImage(this, b.home.x, b.home.y, UI.home).setDisplaySize(b.home.icon, b.home.icon),
+    ]);
+    this.menuSound = addImage(
+      this,
+      b.sound.x,
+      b.sound.y,
+      progress.sound ? UI.soundOn : UI.soundOff,
+    ).setDisplaySize(b.sound.icon, b.sound.icon);
+    this.menuMusic = addImage(
+      this,
+      b.music.x,
+      b.music.y,
+      progress.music ? UI.musicOn : UI.musicOff,
+    ).setDisplaySize(b.music.icon, b.music.icon);
+    menu.add([this.menuSound, this.menuMusic]);
+    this.menu = menu;
+  }
+
+  /** Closes the menu; `resume` continues the same round (hearts, finds and the timer kept). */
+  private closeMenu(resume: boolean): void {
+    if (!this.menuOpen) return;
+    this.menuOpen = false;
+    this.menu?.destroy(true);
+    this.menu = null;
+    this.menuSound = null;
+    this.menuMusic = null;
+    this.applyFreeze();
+    const r = this.round;
+    if (resume && r && r.status === 'playing') this.platform.sendMessage('gameplay_started');
+  }
+
+  private menuButtonAt(pointer: Phaser.Input.Pointer): MenuButton | null {
+    if (!this.menu) return null;
+    for (const key of Object.keys(MENU_BUTTONS) as MenuButton[]) {
+      const b = MENU_BUTTONS[key];
+      const dx = pointer.x - (this.menu.x + b.x);
+      const dy = pointer.y - (this.menu.y + b.y);
+      if (dx * dx + dy * dy <= b.r * b.r) return key;
+    }
+    return null;
+  }
+
+  /**
+   * Menu buttons act on pointer-up over the button that took the pointer-down: Home changes
+   * the scene, and a pointer-up arriving after `scene.start` would land on the Title's DAILY
+   * button (its rect overlaps the Home spot in every aspect).
+   */
+  private onMenuTap(hit: MenuButton): void {
+    switch (hit) {
+      case 'resume':
+        audio.play('button');
+        this.closeMenu(true);
+        break;
+      case 'sound': {
+        // The Title's toggle: the flag persists, the audio manager re-reads it.
+        const on = audio.toggleSetting('sound');
+        if (this.menuSound) setImageFrame(this.menuSound, on ? UI.soundOn : UI.soundOff);
+        break;
+      }
+      case 'music': {
+        const on = audio.toggleSetting('music');
+        if (this.menuMusic) setImageFrame(this.menuMusic, on ? UI.musicOn : UI.musicOff);
+        break;
+      }
+      case 'home':
+        this.goHome();
+        break;
     }
   }
 
@@ -233,9 +398,11 @@ export class GameScene extends Phaser.Scene {
       this.worldB.setVisible(false);
       this.hud.apply(l);
     }
-    if (this.overlay) {
+    if (this.overlay || this.menu || this.pauseOverlay) {
       const c = this.overlayCenter();
-      this.overlay.setPosition(c.x, c.y);
+      this.overlay?.setPosition(c.x, c.y);
+      this.menu?.setPosition(c.x, c.y);
+      this.pauseOverlay?.setPosition(c.x, c.y);
     }
   };
 
@@ -303,6 +470,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private async startLevelInner(): Promise<void> {
+    this.closeMenu(false);
     this.clearOverlay();
     this.round = null;
     this.shufflesDone = 0;
@@ -518,7 +686,17 @@ export class GameScene extends Phaser.Scene {
 
   private readonly onPointer = (pointer: Phaser.Input.Pointer): void => {
     if (this.devMenuOpen || this.paused || this.adInProgress) return;
-    if (this.hud.hitsHint(pointer.x, pointer.y) || this.hud.hitsHome(pointer.x, pointer.y)) return;
+    if (this.menuOpen) {
+      this.menuDownOn = this.menuButtonAt(pointer);
+      return;
+    }
+    // The HUD buttons act on their own pointer-up; over the win overlay the pause spot is
+    // just part of the overlay (tap to skip the auto-advance).
+    const onHudButton =
+      this.hud.hitsHint(pointer.x, pointer.y) || this.hud.hitsPause(pointer.x, pointer.y);
+    if (onHudButton && this.round?.status !== 'won') return;
+    // The skip may start the next scene before this tap's pointer-up reaches the HUD button.
+    if (onHudButton) this.pauseTapConsumed = true;
     if (this.overlay) {
       this.onOverlayTap(pointer);
       return;
@@ -557,6 +735,13 @@ export class GameScene extends Phaser.Scene {
       default:
         break;
     }
+  };
+
+  private readonly onPointerUp = (pointer: Phaser.Input.Pointer): void => {
+    const down = this.menuDownOn;
+    this.menuDownOn = null;
+    if (!this.menuOpen || down === null || this.paused || this.adInProgress) return;
+    if (this.menuButtonAt(pointer) === down) this.onMenuTap(down);
   };
 
   private onCorrect(target: HitTarget): void {
@@ -791,7 +976,7 @@ export class GameScene extends Phaser.Scene {
   /** Rewarded Hint: one remaining target glows for two seconds (GDD §6). */
   private async onHint(): Promise<void> {
     const r = this.round;
-    if (!r || r.status !== 'playing' || this.adInProgress || this.paused) return;
+    if (!r || r.status !== 'playing' || this.adInProgress || this.paused || this.menuOpen) return;
     this.adInProgress = true;
     this.platform.sendMessage('gameplay_stopped');
     const earned = await this.platform.showRewarded('hint');
@@ -826,19 +1011,33 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** Filled circle centered on (x, y) of the overlay; scales around its center like an image. */
-  private disc(x: number, y: number, color: number): Phaser.GameObjects.Graphics {
-    return this.add.graphics({ x, y }).fillStyle(color, 1).fillCircle(0, 0, RETRY_RADIUS);
+  private disc(
+    x: number,
+    y: number,
+    color: number,
+    radius = RETRY_RADIUS,
+  ): Phaser.GameObjects.Graphics {
+    return this.add.graphics({ x, y }).fillStyle(color, 1).fillCircle(0, 0, radius);
   }
 
   private makeOverlay(dimAlpha: number): Phaser.GameObjects.Container {
     this.clearOverlay();
-    const { width, height } = this.scale.gameSize;
-    const dim = this.add.graphics();
-    dim.fillStyle(0x000000, dimAlpha).fillRect(-width, -height, width * 2, height * 2);
-    const c = this.overlayCenter();
-    const ov = this.add.container(c.x, c.y, [dim]).setDepth(DEPTH_OVERLAY);
+    const ov = this.dimContainer(dimAlpha, DEPTH_OVERLAY);
     this.overlay = ov;
     return ov;
+  }
+
+  /**
+   * A container at the overlay center with a dim that covers the canvas in every aspect the
+   * layout can take (the long side is clamped to DESIGN_LONG_MAX), so a rotation while it is
+   * open never leaves an undimmed strip.
+   */
+  private dimContainer(alpha: number, depth: number): Phaser.GameObjects.Container {
+    const dim = this.add.graphics();
+    const reach = DESIGN_LONG_MAX;
+    dim.fillStyle(0x000000, alpha).fillRect(-reach, -reach, reach * 2, reach * 2);
+    const c = this.overlayCenter();
+    return this.add.container(c.x, c.y, [dim]).setDepth(depth);
   }
 
   private clearOverlay(): void {
@@ -861,11 +1060,8 @@ export class GameScene extends Phaser.Scene {
    */
   private goHome(): void {
     if (this.paused || this.adInProgress || this.devMenuOpen) return;
+    // Reached from the menu only: `gameplay_stopped` already went out when it opened.
     audio.play('button');
-    const r = this.round;
-    if (r && (r.status === 'playing' || r.status === 'intro')) {
-      this.platform.sendMessage('gameplay_stopped');
-    }
     this.scene.start('Title');
   }
 
@@ -1053,11 +1249,23 @@ export class GameScene extends Phaser.Scene {
               r: d.hitRadius * this.world.scaleX * screenScale(),
             }))
           : [],
-      home: () => {
+      pauseCenter: () => {
         const rect = this.game.canvas.getBoundingClientRect();
         const k = screenScale();
-        const c = this.hud.homeCenter();
-        return { id: 'home', x: rect.left + c.x * k, y: rect.top + c.y * k };
+        const c = this.hud.pauseCenter();
+        return { id: 'pause', x: rect.left + c.x * k, y: rect.top + c.y * k };
+      },
+      menu: () => {
+        const m = this.menu;
+        if (!m) return null;
+        const rect = this.game.canvas.getBoundingClientRect();
+        const k = screenScale();
+        const pt = (id: MenuButton): DebugPoint => ({
+          id,
+          x: rect.left + (m.x + MENU_BUTTONS[id].x) * k,
+          y: rect.top + (m.y + MENU_BUTTONS[id].y) * k,
+        });
+        return { resume: pt('resume'), sound: pt('sound'), music: pt('music'), home: pt('home') };
       },
       hintCenter: () => {
         const c = this.hud.hintCenter();
@@ -1124,6 +1332,11 @@ export class GameScene extends Phaser.Scene {
         moving: this.round?.moving ?? false,
         shufflesDone: this.shufflesDone,
         promptHidden: this.hud.promptHidden(),
+        menuOpen: this.menuOpen,
+        sound: progress.sound,
+        music: progress.music,
+        elapsed: this.round ? elapsedSeconds(this.round, this.time.now) : 0,
+        messages: [...sentPlatformMessages()],
         frameColor: hexOf(this.frameColor),
       }),
     });
