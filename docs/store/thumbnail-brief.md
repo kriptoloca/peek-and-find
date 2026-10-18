@@ -32,6 +32,10 @@ such scene with **one obvious target circled**, nothing else to explain.
 
 ## Icon 512×512
 
+The brand icon (`npm run brand` → `docs/store/brand/peek-and-find-icon-512.png`: a field of
+muted forms and one circled signal, docs/store/brand/philosophy.md) is the default. The
+scene-based icon below stays as the alternative to test against it.
+
 The circled target alone on the theme background (the mug with the yellow ring), no text,
 no gradient borders, 48 px inner margin.
 

@@ -33,3 +33,10 @@ are the ones enforced here.
 
 What is not in the ZIP: `docs/`, `tests/`, sources, the `/test/` build, `.map` files (none are
 emitted).
+
+## Brand files (2026-10-18)
+
+Icon 512 / 1024 and the wordmark: `docs/store/brand/` (`npm run brand` regenerates them).
+Studio profile photo: `docs/store/brand/pebblit-profile-1024.png` (square; the platform crops
+the circle) or `pebblit-profile-circle-1024.png`. Thumbnails: `docs/store/thumbnails/`
+(`npm run thumbnails`, after the real art pack).
