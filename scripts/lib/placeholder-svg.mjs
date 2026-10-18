@@ -333,6 +333,25 @@ export function placeholderUi(name) {
           `<rect x="50" y="82" width="28" height="14" rx="3" fill="${WHITE}"/>` +
           `<rect x="54" y="100" width="20" height="8" rx="3" fill="${DARK}"/>`,
       );
+    case 'shuffle':
+      // two crossing arrows on the dark badge: "the scene will move"
+      return svgDoc(
+        128,
+        128,
+        `<circle cx="64" cy="64" r="64" fill="${DARK}"/>` +
+          `<polyline points="24,42 50,42 78,86 100,86" fill="none" stroke="${WHITE}" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>` +
+          `<polyline points="24,86 50,86 78,42 100,42" fill="none" stroke="${WHITE}" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>` +
+          `<polygon points="96,28 116,42 96,56" fill="${WHITE}"/><polygon points="96,72 116,86 96,100" fill="${WHITE}"/>`,
+      );
+    case 'memory':
+      // a question mark drawn as paths (no text), replaces a hidden prompt icon
+      return svgDoc(
+        128,
+        128,
+        `<circle cx="64" cy="64" r="64" fill="${DARK}"/>` +
+          `<path d="M42 50 A22 22 0 1 1 72 70 Q64 76 64 88" fill="none" stroke="${WHITE}" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>` +
+          `<circle cx="64" cy="106" r="8" fill="${WHITE}"/>`,
+      );
     default:
       throw new Error(`no placeholder for UI frame ${name}`);
   }

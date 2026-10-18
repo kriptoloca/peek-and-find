@@ -1,6 +1,6 @@
 import { starsFor } from '../gen/difficulty';
 import { dist2 } from '../gen/geometry';
-import type { Scene } from '../gen/types';
+import type { Placed, Scene } from '../gen/types';
 import { UI } from './ui-keys';
 
 /** Hearts per scene (GDD §6). Reset every scene, no global lives. */
@@ -19,6 +19,10 @@ export interface Round {
   /** ms timestamp when the last target was found. */
   finishedAt: number | null;
   status: RoundStatus;
+  /** Shuffle twist: 0 = the scene's main layout, i = `scene.shuffles[i - 1]`. */
+  layout: number;
+  /** True while the sprites slide to the next layout; taps are ignored meanwhile. */
+  moving: boolean;
 }
 
 /** Something a tap can land on: an object (Find, Odd) or a difference circle (Spot). */
@@ -38,7 +42,17 @@ export type TapResult =
   /** `object` is null when a Spot tap missed every difference (still costs a heart). */
   | { kind: 'wrong'; object: HitTarget | null; hearts: number; lost: boolean };
 
-export function hitTargets(scene: Scene): readonly HitTarget[] {
+/** Objects of layout `layout` (0 = main; a missing shuffle layout falls back to the main one). */
+export function layoutObjects(scene: Scene, layout: number): readonly Placed[] {
+  if (layout <= 0) return scene.objects;
+  return scene.shuffles?.[layout - 1] ?? scene.objects;
+}
+
+export function layoutCount(scene: Scene): number {
+  return 1 + (scene.shuffles?.length ?? 0);
+}
+
+export function hitTargets(scene: Scene, layout = 0): readonly HitTarget[] {
   if (scene.spot) {
     return scene.spot.differences.map((d) => ({
       id: d.id,
@@ -48,7 +62,21 @@ export function hitTargets(scene: Scene): readonly HitTarget[] {
       isTarget: true,
     }));
   }
-  return scene.objects;
+  return layoutObjects(scene, layout);
+}
+
+/** Objects as currently laid out in the round. */
+export function roundObjects(r: Round): readonly Placed[] {
+  return layoutObjects(r.scene, r.layout);
+}
+
+/**
+ * Shuffle twist: steps to the next layout and returns it. The caller animates the sprites and
+ * sets `moving` around the slide; the tap resolution reads the new layout from then on.
+ */
+export function advanceLayout(r: Round): readonly Placed[] {
+  r.layout = (r.layout + 1) % layoutCount(r.scene);
+  return roundObjects(r);
 }
 
 export function totalTargets(scene: Scene): number {
@@ -64,6 +92,8 @@ export function newRound(scene: Scene): Round {
     startedAt: null,
     finishedAt: null,
     status: 'intro',
+    layout: 0,
+    moving: false,
   };
 }
 
@@ -99,8 +129,8 @@ export function remainingTargets(r: Round): number {
 export function applyTap(r: Round, x: number, y: number, now: number): TapResult {
   // Fast players tap while sprites are still popping in: that tap starts the round and counts.
   if (r.status === 'intro') startRound(r, now);
-  if (r.status !== 'playing') return { kind: 'ignored' };
-  const hit = resolveTap(hitTargets(r.scene), x, y);
+  if (r.status !== 'playing' || r.moving) return { kind: 'ignored' };
+  const hit = resolveTap(hitTargets(r.scene, r.layout), x, y);
   if (!hit) {
     // Spot 5: a tap inside an image that hits no difference is a wrong guess (GDD §3 hearts).
     if (r.scene.mode !== 'spot') return { kind: 'none' };
@@ -174,5 +204,5 @@ export function continueRound(r: Round): boolean {
 
 /** Rewarded Hint (GDD §6): the next target still to be found, or null. */
 export function hintTarget(r: Round): HitTarget | null {
-  return hitTargets(r.scene).find((h) => h.isTarget && !r.found.has(h.id)) ?? null;
+  return hitTargets(r.scene, r.layout).find((h) => h.isTarget && !r.found.has(h.id)) ?? null;
 }

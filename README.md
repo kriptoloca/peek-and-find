@@ -34,6 +34,7 @@ Both run on the Bridge "mock" platform (the host is not YouTube): no real ads, s
 | Fresh start, level 1 | `https://kriptoloca.github.io/peek-and-find/test/?reset=1` |
 | Jump to a level | `https://kriptoloca.github.io/peek-and-find/test/?level=30` |
 | Force a mode | `…/test/?level=12&mode=spot` (`find`, `odd`, `spot`) |
+| Force a twist (GDD §5a) | `…/test/?level=40&twist=shuffle` (`shuffle`, `memory`, `none`) |
 | Ad flows (fake ads, first interstitial after 3 scenes) | `https://kriptoloca.github.io/peek-and-find/test/?fakeads=1&adfast=1` |
 | Daily chain | `https://kriptoloca.github.io/peek-and-find/test/?daily=1` |
 | Daily on another date (streaks) | `…/test/?daily=1&today=20261017` |

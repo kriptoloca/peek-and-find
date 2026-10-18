@@ -9,6 +9,8 @@ const HEART_MAX = 72;
 const ITEM_GAP = 24;
 const BADGE_SIZE = 52;
 const HINT_SIZE = 110;
+/** Shuffle marker next to the prompt: smaller than a prompt icon so it reads as a modifier. */
+const TWIST_SIZE_MULT = 0.7;
 /** Home button (GDD v1.3): same size rule as the hint, opposite end of the secondary bar. */
 const HOME_SIZE = 96;
 /** 1:1 only: the HUD bars sit inside the square, over the scene; a dim strip separates them. */
@@ -38,6 +40,12 @@ export class Hud {
   private onHintTap: (() => void) | null = null;
   private readonly home: Phaser.GameObjects.Image;
   private onHomeTap: (() => void) | null = null;
+  /** Shuffle twist marker (GDD v1.5 §5a): after the prompt items; pulses before each slide. */
+  private readonly twist: Phaser.GameObjects.Image;
+  /** Memory twist: prompt icons hide behind "?" until a peek. */
+  private promptHiddenFlag = false;
+  private peeking = false;
+  private peekTimer: Phaser.Time.TimerEvent | null = null;
   private layoutCache: Layout | null = null;
   /** True while the Spot 5 bands are in use; re-applies must keep using them. */
   private spotMode = false;
@@ -73,6 +81,92 @@ export class Hud {
       this.onHomeTap?.();
     });
     this.container.add(this.home);
+    this.twist = addImage(scene, 0, 0, UI.shuffle).setVisible(false);
+    this.container.add(this.twist);
+  }
+
+  // ---- twists (GDD v1.5 §5a) ---------------------------------------------------------------
+
+  /** Shows the shuffle marker next to the prompt; null hides it. */
+  setTwist(kind: 'shuffle' | null): void {
+    this.twist.setVisible(kind === 'shuffle').setAngle(0);
+    this.reapply();
+  }
+
+  /** Canvas center of the shuffle marker, null while hidden (dev hooks). */
+  twistCenter(): { x: number; y: number } | null {
+    return this.twist.visible ? { x: this.twist.x, y: this.twist.y } : null;
+  }
+
+  /** Warning before a slide: the marker beats three times. */
+  pulseTwist(): void {
+    if (!this.twist.visible) return;
+    this.scene.tweens.add({
+      targets: this.twist,
+      scale: this.twist.scale * 1.35,
+      yoyo: true,
+      repeat: 2,
+      duration: 140,
+      ease: 'Sine.easeInOut',
+    });
+  }
+
+  /** The slide itself: one full turn of the marker. */
+  spinTwist(ms: number): void {
+    if (!this.twist.visible) return;
+    this.scene.tweens.add({
+      targets: this.twist,
+      angle: '+=360',
+      duration: ms,
+      ease: 'Cubic.easeInOut',
+    });
+  }
+
+  /** Memory twist: hides (or shows) the prompt icons behind "?"; cancels a running peek. */
+  setPromptHidden(hidden: boolean): void {
+    this.promptHiddenFlag = hidden;
+    this.peeking = false;
+    this.peekTimer?.remove();
+    this.peekTimer = null;
+    this.applyPromptFrames();
+  }
+
+  /** True while the prompt icons are hidden and no peek is showing them. */
+  promptHidden(): boolean {
+    return this.promptHiddenFlag && !this.peeking;
+  }
+
+  /** Shows the hidden icons for `ms`, then hides them again. No-op when they are not hidden. */
+  peekPrompt(ms: number): void {
+    if (!this.promptHiddenFlag) return;
+    this.peeking = true;
+    this.applyPromptFrames();
+    this.peekTimer?.remove();
+    this.peekTimer = this.scene.time.delayedCall(ms, () => {
+      this.peekTimer = null;
+      this.peeking = false;
+      this.applyPromptFrames();
+    });
+  }
+
+  /** Canvas centers of the prompt icons (dev hooks). */
+  promptCenters(): { x: number; y: number }[] {
+    return this.items.map((it) => ({ x: it.icon.x, y: it.icon.y }));
+  }
+
+  /** True when a canvas point lands on one of the prompt icons (a peek tap in memory scenes). */
+  hitsPrompt(x: number, y: number): boolean {
+    for (const it of this.items) {
+      const r = it.icon.displayWidth / 2 + 12;
+      if ((x - it.icon.x) ** 2 + (y - it.icon.y) ** 2 <= r * r) return true;
+    }
+    return false;
+  }
+
+  private applyPromptFrames(): void {
+    const show = !this.promptHiddenFlag || this.peeking;
+    for (const it of this.items) setImageFrame(it.icon, show ? it.key : UI.memory);
+    this.reapply();
   }
 
   /** Home button (GDD v1.3): back to the Title at any time; the scene decides what that means. */
@@ -160,7 +254,8 @@ export class Hud {
         this.container.add([icon, badge, count]);
         return { icon, badge, count, key: c.icon };
       });
-      this.reapply();
+      if (this.promptHiddenFlag) this.applyPromptFrames();
+      else this.reapply();
     }
     counts.forEach((c, i) => {
       const it = this.items[i];
@@ -250,12 +345,14 @@ export class Hud {
       h.setDisplaySize(heart, heart).setPosition(p.x + p.w - 48 - i * (heart + 8), cy);
     });
     const n = this.items.length;
-    const total = n * icon + (n - 1) * ITEM_GAP;
+    const tw = this.twist.visible ? Math.round(icon * TWIST_SIZE_MULT) : 0;
+    const total = n * icon + (n - 1) * ITEM_GAP + (tw > 0 ? ITEM_GAP + tw : 0);
     let x = p.x + p.w / 2 - total / 2 + icon / 2;
     for (const it of this.items) {
       this.placeItem(it, x, cy, icon);
       x += icon + ITEM_GAP;
     }
+    if (tw > 0) this.twist.setDisplaySize(tw, tw).setPosition(x - icon / 2 + tw / 2, cy);
   }
 
   private applyColumn(p: Rect): void {
@@ -271,6 +368,10 @@ export class Hud {
     for (const it of this.items) {
       this.placeItem(it, cx, y, icon);
       y += icon + ITEM_GAP + 20;
+    }
+    if (this.twist.visible) {
+      const tw = Math.round(icon * TWIST_SIZE_MULT);
+      this.twist.setDisplaySize(tw, tw).setPosition(cx, y - (icon - tw) / 2);
     }
   }
 

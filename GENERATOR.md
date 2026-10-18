@@ -7,19 +7,20 @@ All code in `src/gen/` is pure TypeScript, deterministic, Phaser-free.
 - `Rng` = mulberry32. Methods: `next()`, `int(a,b)` (inclusive), `pick(arr)`, `shuffle(arr)` (in place, Fisher–Yates), `chance(p)`, `gauss(mean, sd)`.
 - Scene seed: `hashSeed(\`${mode}:${level}:${attempt}:${seedSalt}\`)` where `seedSalt` comes from the save model.
 - Daily seed: `hashSeed(\`daily:${YYYYMMDD}:${i}\`)` for i in 0..4 (no salt). Daily chain levels are fixed: `[10, 20, 30, 40, 50][i]`.
+- Twist streams (v1.5): the twist pick uses `hashSeed(\`twist:${seed}\`)` and shuffle layout i uses `hashSeed(\`shuffle:${seed}:${i}\`)`, both separate from the scene stream, so a twist never changes the main layout of an existing seed.
 
 ## 2. Difficulty: `params(level: number): Params`
-Piecewise-linear curves between the columns, plateau at level 80. All values are design-space (1080×1080 scene square for Find/Odd).
+Piecewise-linear curves between the columns, plateau at level 150 (GDD v1.5; the first ramp ends at 80, the last column is a gentle second ramp). All values are design-space (1080×1080 scene square for Find/Odd).
 
-| Param | L1 | L10 | L30 | L80+ |
-|---|---|---|---|---|
-| objectCount | 12 | 24 | 42 | 60 |
-| targetCount (Find) | 1 | 2 | 3 | 5 |
-| targetScale | 1.0 | 0.9 | 0.75 | 0.6 |
-| decoyRatio | 0 | 0.15 | 0.3 | 0.5 |
-| maxOcclusion (fraction of target hidden) | 0 | 0.1 | 0.3 | 0.4 |
-| minSpacing (px between centers) | 150 | 120 | 95 | 80 |
-| t3 / t2 star thresholds (s) | 8/15 | 12/22 | 18/32 | 25/45 |
+| Param | L1 | L10 | L30 | L80 | L150+ |
+|---|---|---|---|---|---|
+| objectCount | 12 | 24 | 42 | 60 | 66 |
+| targetCount (Find) | 1 | 2 | 3 | 5 | 6 |
+| targetScale | 1.0 | 0.9 | 0.75 | 0.6 | 0.6 |
+| decoyRatio | 0 | 0.15 | 0.3 | 0.5 | 0.6 |
+| maxOcclusion (fraction of target hidden) | 0 | 0.1 | 0.3 | 0.4 | 0.45 |
+| minSpacing (px between centers) | 150 | 120 | 95 | 80 | 80 |
+| t3 / t2 star thresholds (s) | 8/15 | 12/22 | 18/32 | 25/45 | 28/50 |
 
 Invariant: object centers are ≥ `2 × 40 + 2` px apart in every mode, so object hit circles (Find, Odd) never overlap. In Spot 5 only the five difference circles are tappable; they may overlap and a tap resolves to the nearest center.
 
@@ -74,6 +75,11 @@ Decoys never count as targets. Tapping a decoy = wrong tap. Targets in Find alwa
 - Targets never flip and always use the base color frame; the prompt shows the exact target frame (`icon` = frame), so a separate `_icon` asset is optional. Singleton families (no color variants) are never targets.
 - Prompt: `{ kind: "find", items: [{ family, icon: targetFrame, count }] }`.
 
+### Twists (`twist.ts`, GDD §5a)
+- `pickTwist(seed, level, mode)`: eligible kinds are shuffle (level ≥ 30; Find, Odd) and memory (level ≥ 45; Find); none on Spot or big scenes. Chance 0.25 at level 30 → 0.5 at level 80, flat after. `generateScene({ twist })` takes `"auto"` (default), `"none"` (the daily chain) or a kind (dev `?twist=`; a kind the mode cannot host is dropped).
+- Shuffle scenes carry `Scene.shuffles`: `SHUFFLE_LAYOUTS = 2` alternative layouts of the same items. Find: the same builds over a reshuffled slot list, with target spread, jitters and occlusion repair rerun (a layout that cannot be repaired regenerates the scene with seed + 1); bands and therefore sizes may change with the new place. Odd: a permutation of the grid cells (position, band, z and rotation travel with the cell). The round cycles main → 1 → 2 → main.
+- Timing in play (GameScene): first slide at 8 s after the pop-in, then every 8 s, 0.9 s warning pulse, 0.45 s slide, taps ignored during the slide; memory hides the prompt 3 s after the pop-in, peeks last 1 s.
+
 ### Odd One Out
 - Jittered grid (not Poisson): `n = clamp(8 + level, 8, 36)` instances of one frame, identical scale; cell size ≥ 2 × hitRadius + jitter, so spacing holds. Every cell also carries a seeded rotation within ±3° (`rotation`, radians), the odd one included; hit circles are unaffected.
 - Exactly one "odd" instance differs by one attribute chosen from: baked color variant (`_c1`/`_c2`), flipX (only for `flippable` families), scale ×0.8, missing-part variant (family `odd` frame, if present).
@@ -96,6 +102,7 @@ Decoys never count as targets. Tapping a decoy = wrong tap. Targets in Find alwa
 - All objects inside the playable rect.
 - Family share ≤ 25% of objectCount (fillers), except Odd mode.
 - Determinism: `generate(seed, level, mode)` twice → deep-equal.
+- Twists: only a kind the mode hosts; shuffle layouts exist only with the shuffle twist, carry the same items (id, family, frame, flip, flags), each passes every check above (target spread relaxed to the Poisson spacing) and moves at least half of the items by more than spacing / 2.
 
 ## 8. Star timing
 Timer starts at scene pop-in end; stops when last target is found. `stars = t ≤ t3 ? 3 : t ≤ t2 ? 2 : 1`.

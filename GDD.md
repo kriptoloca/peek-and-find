@@ -43,7 +43,15 @@ Spot 5 is only scheduled when the current layout can show both images at ≥ 0.8
 - Occlusion: none → partial (target ≥ 60% visible)
 - Theme rotates every 3 levels; the second theme unlocks at level 4 (v1.4: variety inside the first session), the others every 10 levels (20, 30, 40). The next theme's atlas is preloaded in the background 3 levels before it unlocks, so the chain never stalls.
 - Every 25th level is a "big scene": 7 targets, max density, 2× star time, bonus confetti.
-Levels are infinite; curves plateau at level 80.
+Levels are infinite. The first ramp plateaus at level 80 ("medium" on a phone, phone test 2026-10-18); a gentle second ramp runs to 150 (v1.5: 66 objects, 6 targets, 60 % look-alikes, sprites never below the 0.6 floor). Past that, the pressure comes from the twists (§5a), not from density.
+
+## 5a. Twists (v1.5)
+Late-game modifiers that change how a scene is played without changing what counts as a find. Each scene has at most one, picked from the scene seed (same seed → same twist), shown by an icon, never by text, never by a visible timer.
+- **Shuffle** (from level 30; Find and Odd One Out): 8 s after the pop-in, and every 8 s after that, every object slides to a new place (0.45 s, found ones travel dimmed). The marker next to the prompt beats three times 0.9 s before each slide and spins during it; taps are ignored while the board moves. Every layout is generated and validated like the main one (spacing, occlusion, spread), so a target is never hidden by the move. A 3-star player sees at most one slide; a slow one rescans a fresh board instead of staring at the same one.
+- **Memory** (from level 45; Find only): the prompt icons show for 3 s after the pop-in, then hide behind "?" (the count badges stay). A tap on a "?" peeks for 1 s; every find peeks too. Never a penalty, only time.
+- **Chance**: 25 % of eligible scenes at level 30, rising linearly to 50 % at level 80, flat after that; shuffle and memory are equally likely where both are eligible.
+- **Never**: on Spot 5 (a comparison task), on big scenes (already the event), in the daily chain (a level-5 player meets its level-30 scene), before the levels above. The shuffle waits under the fail overlay and during an ad, and its clock pauses with the platform pause.
+- Tuning knobs live in `src/gen/twist.ts`; phone feedback on level 30–60 decides whether the chance or the 8 s cadence moves.
 
 ## 6. Hearts, hints, ads
 - 3 hearts per scene, reset every scene. No global lives, no timers.
@@ -70,7 +78,7 @@ Save after every scene. Never block gameplay on save errors. `version` enables m
 ## 9. Screens
 1. **Boot**: load atlas for current theme + UI; call GameReady only when input works.
 2. **Title**: logo, PLAY (big), DAILY (streak badge), sound/music toggles. No settings screen.
-3. **Game**: scene area + HUD (targets bar, hearts, level number, hint button, home button). Home (v1.3): back to the Title from anywhere in play, no confirmation and no menu; the abandoned scene keeps its seed, so PLAY returns to the same scene; a daily chain restarts from its first scene. The platform's own pause/exit control stays the primary way out on YouTube.
+3. **Game**: scene area + HUD (targets bar, hearts, level number, hint button, home button; v1.5: the shuffle marker after the prompt, "?" badges in a memory scene). Home (v1.3): back to the Title from anywhere in play, no confirmation and no menu; the abandoned scene keeps its seed, so PLAY returns to the same scene; a daily chain restarts from its first scene. The platform's own pause/exit control stays the primary way out on YouTube.
 4. **Scene Complete** overlay: stars, +score, auto-advance.
 5. **Fail** overlay: Continue (rewarded) / Retry.
 6. **Daily Complete** overlay: badge, streak, back to title.
@@ -123,3 +131,8 @@ No accounts, no leaderboards, no multiplayer, no IAP, no level editor, no locali
 - Spot 5 visibility threshold corrected to 1600 px² (40×40) or a 40 px shift.
 - Next theme preloads 3 levels before unlock (the second theme therefore loads at boot for a new player).
 - Code budget stated honestly at 1.5 MB.
+
+## 17. Changes in v1.5 (2026-10-18, after phone test 4)
+- Difficulty table: fifth column at level 150 (second ramp); plateau moves from 80 to 150.
+- Twists (§5a): shuffle from level 30, memory from level 45, seeded per scene, never on Spot, big scenes or the daily chain.
+- Hasan's brief: level 80 felt medium; the game should hook from level 1 to the end, neither frustrating nor trivial, with creative late-game variety ("objects change places after a while").

@@ -76,7 +76,19 @@ export interface PeekDebug {
     renderer: 'webgl' | 'canvas';
     /** Frame (canvas outside the scene) as #rrggbb; follows the theme. */
     frameColor: string;
+    /** Twist of the scene (GDD v1.5): "shuffle", "memory" or null. */
+    twist: string | null;
+    /** Shuffle: index of the layout in play (0 = main) and slides done in this scene. */
+    layout: number;
+    moving: boolean;
+    shufflesDone: number;
+    /** Memory: the prompt icons are hidden behind "?" right now. */
+    promptHidden: boolean;
   };
+  /** Screen center of the shuffle marker, null when the scene has no shuffle twist. */
+  twistCenter: () => DebugPoint | null;
+  /** Screen centers of the prompt icons (a tap peeks in memory scenes). */
+  promptCenters: () => DebugPoint[];
 }
 
 /** Title screen hooks (dev builds): tap targets in screen px, toggle state, audio state. */

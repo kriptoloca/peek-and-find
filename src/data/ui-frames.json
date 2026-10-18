@@ -21,6 +21,8 @@
     "music_on",
     "music_off",
     "home",
-    "hint"
+    "hint",
+    "shuffle",
+    "memory"
   ]
 }

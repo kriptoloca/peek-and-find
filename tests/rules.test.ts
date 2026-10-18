@@ -5,14 +5,18 @@ import { generateScene } from '../src/gen/scene-gen';
 import type { Placed } from '../src/gen/types';
 import {
   HEARTS_PER_SCENE,
+  advanceLayout,
   applyTap,
   continueRound,
   elapsedSeconds,
   hintTarget,
+  hitTargets,
+  layoutCount,
   newRound,
   promptCounts,
   remainingTargets,
   resolveTap,
+  roundObjects,
   startRound,
   starsEarned,
 } from '../src/game/rules';
@@ -199,5 +203,62 @@ describe('rewarded helpers', () => {
     expect(h.isTarget).toBe(true);
     applyTap(r, h.x, h.y, 1);
     expect(hintTarget(r)).toBeNull();
+  });
+});
+
+describe('shuffle twist in the round (GDD v1.5 §5a)', () => {
+  const shuffleScene = () => {
+    const seed = sceneSeed('find', 40, 0, 7);
+    return generateScene({ seed, level: 40, mode: 'find', theme: KITCHEN, twist: 'shuffle' });
+  };
+
+  it('cycles main → layout 1 → layout 2 → main and resolves taps against the current one', () => {
+    const scene = shuffleScene();
+    const r = newRound(scene);
+    startRound(r, 0);
+    expect(layoutCount(scene)).toBe(3);
+    expect(r.layout).toBe(0);
+    expect(roundObjects(r)).toBe(scene.objects);
+    const t0 = scene.targets[0] as Placed;
+    const next = advanceLayout(r);
+    expect(r.layout).toBe(1);
+    expect(next).toBe(scene.shuffles?.[0]);
+    const t1 = next.find((o) => o.id === t0.id) as Placed;
+    expect(t1.x !== t0.x || t1.y !== t0.y).toBe(true);
+    // the old place of the target is now whatever sits there in the new layout
+    const atOld = resolveTap(hitTargets(scene, r.layout), t0.x, t0.y);
+    expect(atOld?.id === t0.id).toBe(false);
+    // the new place counts
+    const res = applyTap(r, t1.x, t1.y, 100);
+    expect(res.kind).toBe('correct');
+    expect(hintTarget(r)?.id).not.toBe(t0.id);
+    advanceLayout(r);
+    expect(r.layout).toBe(2);
+    advanceLayout(r);
+    expect(r.layout).toBe(0);
+    expect(roundObjects(r)).toBe(scene.objects);
+    // a found target stays found across layouts
+    expect(applyTap(r, t0.x, t0.y, 200).kind).toBe('already');
+  });
+
+  it('ignores taps while the sprites move', () => {
+    const scene = shuffleScene();
+    const r = newRound(scene);
+    startRound(r, 0);
+    r.moving = true;
+    const t = scene.targets[0] as Placed;
+    expect(applyTap(r, t.x, t.y, 50)).toEqual({ kind: 'ignored' });
+    expect(r.found.size).toBe(0);
+    r.moving = false;
+    expect(applyTap(r, t.x, t.y, 60).kind).toBe('correct');
+  });
+
+  it('a plain scene has one layout and advancing stays on it', () => {
+    const seed = sceneSeed('find', 40, 0, 7);
+    const scene = generateScene({ seed, level: 40, mode: 'find', theme: KITCHEN, twist: 'none' });
+    const r = newRound(scene);
+    expect(layoutCount(scene)).toBe(1);
+    expect(advanceLayout(r)).toBe(scene.objects);
+    expect(r.layout).toBe(0);
   });
 });

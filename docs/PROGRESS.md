@@ -3,27 +3,27 @@
 Single source of truth for "where did we leave off". Update at the end of every epic and whenever a decision changes the plan. Read this first at the start of every session.
 
 ## Status
-Epic: 9 done with placeholder art and sound (9g visual review applied); 10 and 11 done except the device/QA-tool items; 12 done except the uploads · Next: the real art/sound drop-in, then the uploads (Playgama console, QA tool) · Last update: 2026-10-17 · Branch: main
+Epic: 13 (late-game twists + second ramp, GDD v1.5) done in code; 9 done with placeholder art and sound; 10 and 11 done except the device/QA-tool items; 12 done except the uploads · Next: Hasan's phone pass of the twists, the real art/sound drop-in, then the uploads (Playgama console, QA tool) · Last update: 2026-10-18 · Branch: main
 Repo: https://github.com/kriptoloca/peek-and-find
 
 ## Session plan (2026-10-18, Epic 13: late-game twists + second ramp)
 Hasan's phone pass: level 80 feels "medium"; asked for creative late-game pressure (objects
 changing places after a while) and a curve that hooks from level 1 to the end without
 frustrating. Decisions in docs/questions.md (same date).
-- [ ] Difficulty table: fifth column at L150 (gentle second ramp), plateau 80 → 150.
-- [ ] `src/gen/twist.ts` (pure): shuffle from L30 (Find, Odd), memory from L45 (Find); never on
+- [x] Difficulty table: fifth column at L150 (gentle second ramp), plateau 80 → 150.
+- [x] `src/gen/twist.ts` (pure): shuffle from L30 (Find, Odd), memory from L45 (Find); never on
       Spot, big scenes or the daily chain; chance 25 % → 50 % by L80; seeded per scene.
-- [ ] Generator: shuffle scenes carry two extra validated layouts (`Scene.shuffles`); Odd
+- [x] Generator: shuffle scenes carry two extra validated layouts (`Scene.shuffles`); Odd
       layouts permute the grid cells; validator checks every layout.
-- [ ] Rules: the round tracks the current layout; taps resolve against it; taps ignored while
+- [x] Rules: the round tracks the current layout; taps resolve against it; taps ignored while
       sprites slide.
-- [ ] GameScene/HUD: warning pulse 0.9 s before each shuffle (first at 8 s, then every 8 s),
+- [x] GameScene/HUD: warning pulse 0.9 s before each shuffle (first at 8 s, then every 8 s),
       450 ms slide; memory hides the prompt icons after 3 s, a tap on the prompt (or a find)
       peeks for 1 s; shuffle icon in the HUD; `?twist=` dev param; dev hooks.
-- [ ] UI frames `shuffle`, `memory` (pipeline SVG + runtime placeholder).
-- [ ] Tests: unit (table, picker, layouts, validator, rules) + e2e (shuffle moves a target and
+- [x] UI frames `shuffle`, `memory` (pipeline SVG + runtime placeholder).
+- [x] Tests: unit (table, picker, layouts, validator, rules) + e2e (shuffle moves a target and
       the tap counts at the new place; memory hides and peeks; daily has no twist).
-- [ ] Docs: GDD v1.5, GENERATOR.md, questions.md, PROGRESS.md.
+- [x] Docs: GDD v1.5, GENERATOR.md, questions.md, PROGRESS.md.
 
 ## Epic board
 | # | Epic | State | Gate |
@@ -45,8 +45,9 @@ frustrating. Decisions in docs/questions.md (same date).
 | 9e | Phone test 2 fixes: visible color variants (grey tint, pixel-measured in the pipeline), tap circle = whole sprite, taps during the pop-in count, rules e2e (Spot pixel diff, rim tap, early tap) | done (code) | 20 e2e + 145 unit tests |
 | 9f | Haptics (Android; iOS has no API), audio self-review (`docs/audio-review.md`) | done (code) | 4 haptics tests; 149 unit |
 | 9g | Visual review (`docs/visual-review.md`): research + audit + screenshot tour (`npm run tour`); theme-tinted frame, palette lifted to ≥ 3:1 against the backgrounds with a pipeline gate, 1:1 HUD backing, fail buttons drawn (Canvas has no tint) | done (code) | 156 unit + 20 e2e; tour sheets reviewed in 9:16 / 16:9 / 1:1 before and after |
-| 10 | Size & performance budget | report done (code) | `docs/size-report.md`: initial load 3.10 MB OGG / 3.12 MB M4A of the 8 MB target (5 MB YouTube target), dist 4.6 MB; no update loops; **phone profile at L80 pending (Hasan)** |
+| 10 | Size & performance budget | report done (code) | `docs/size-report.md`: initial load 3.12 MB OGG / 3.14 MB M4A of the 8 MB target (5 MB YouTube target), dist 4.6 MB; no update loops; **phone profile at L80 pending (Hasan)** |
 | 11 | Playgama QA tool, certification checklist | checklist done (code) | `docs/certification-checklist.md`: 12 rules with evidence; GameReady order and save persistence now asserted in e2e; **QA tool pending (needs the Playgama account)** |
+| 13 | Late-game twists (shuffle from L30, memory from L45; GDD v1.5 §5a) + second difficulty ramp to L150; `?twist=` dev param; HUD marker and "?" prompt | done (code) | 187 unit + 40 e2e; twist layouts validated like the main one; **phone pass at L30–60 pending (Hasan)** |
 | 12 | Store assets, submission ZIP | done (code) | `npm run zip` → deterministic `release/peek-and-find-0.1.0.zip` (3.27 MB, index.html at the root, no /test/, limits checked, SHA-256 printed); `docs/store/`: listing, thumbnail brief, video script, submission notes; `tests/store.test.ts` bans young-audience wording; **uploads and the thumbnails need the Playgama account and the art pack (Hasan)** |
 
 ## Denetim özeti (2026-10-17, düşman denetçi, HEAD dcfa024 → bu commit)
@@ -81,14 +82,15 @@ See `docs/questions.md` (every deviation from the spec with its reason).
 ## Measured
 | Metric | Value |
 |---|---|
-| Tests | 174 unit + 36 e2e locally, +1 on the live site (+ `npm run tour`, 17 screenshot flows, not a gate) |
-| Bundle (dist/) | 4.6 MB shipped; initial load before GameReady 3.10 MB (OGG) / 3.12 MB (M4A): bundle 1.23 + Bridge 0.29 + kitchen and beach atlases 1.05 (beach unlocks at level 4, so it preloads at boot) + UI 0.03 + backgrounds + audio 0.16 (`docs/size-report.md`) |
+| Tests | 187 unit + 40 e2e locally, +1 on the live site (+ `npm run tour`, 17 screenshot flows, not a gate) |
+| Bundle (dist/) | 5.33 MB shipped (61 files); initial load before GameReady 3.12 MB (OGG) / 3.14 MB (M4A): bundle 1.23 + Bridge 0.29 + kitchen and beach atlases 1.05 (beach unlocks at level 4, so it preloads at boot) + UI 0.03 + backgrounds + audio 0.16 (`docs/size-report.md`) |
 | Atlases | 2048×2048 per theme, 112 frames at 208 px; UI 1024×512 |
-| Level 80 generation | ≈ 0.4 ms |
+| Level 80 generation | ≈ 0.4 ms; with the shuffle twist (two extra layouts) still well under 50 ms per scene |
 | Asset build | atlases ≈ 7 s, reproducible (CI diff check); sprite/background contrast gate: least contrasting sprite per theme has 39–50 % of its area at ≥ 3:1; audio ≈ 3 s with ffmpeg (presence checked, not bytes) |
 | CI | 8/8 runs green on main before this epic |
 
 ## Next steps (in order)
+0. **Phone pass of the twists** (Hasan): `https://kriptoloca.github.io/peek-and-find/test/?level=40&twist=shuffle` (board slides at 8 s, marker pulses before), `https://kriptoloca.github.io/peek-and-find/test/?level=46&twist=memory` (prompt hides at 3 s, tap the "?" to peek), then a natural run from `https://kriptoloca.github.io/peek-and-find/test/?level=30` for ten scenes: pressure or help? Knobs in `src/gen/twist.ts`.
 1. **Phone pass of the whole loop** (Hasan): sound on iPhone Safari after the first tap, music toggle, interstitial flow with `?fakeads=1&adfast=1`, rotation. Report in 3 lines.
 2. **Epic 10 remainder (Hasan):** 10 scenes at level 80 on the iPhone without drops; `https://kriptoloca.github.io/peek-and-find/test/?level=80` and read `fps` in the dev state if it stutters. Haptics: does an Android phone buzz on correct/wrong?
 3. **Drop-ins when they exist:** art per `assets/README.md` (`npm run assets`), sounds per the audio section (`npm run audio`); commit `assets/` + `public/` together. No code change expected.
@@ -96,4 +98,4 @@ See `docs/questions.md` (every deviation from the spec with its reason).
 5. Open tuning items (density/overlap, mirror decoys, empty taps, frame size) stay here until Hasan's feedback on L30/L60. Decided 2026-10-17: second theme at level 4, Odd cells at ±3°.
 6. Visual: when the real pack lands, re-run `npm run tour` and re-check the contrast gate output; recommendations for the pack are in docs/visual-review.md §4.
 
-Dev shortcuts: `?level=N`, `?mode=find|odd|spot`, `?daily=1`, `?today=YYYYMMDD`, `?reset=1`, `?fakeads=1`, `?adfast=1`, `?debug=true` (SDK logs), `?renderer=canvas` (Canvas renderer, e2e on GPU-less machines), `?audiodebug=1` (audio state drawn on screen for phone tests), triple-tap top-left for the dev menu, `/#gen` (M cycles modes). `__peekDebug.state().atlasKeys` lists the loaded atlases, `.audio` the sound state (locked, music, last SFX).
+Dev shortcuts: `?level=N`, `?mode=find|odd|spot`, `?twist=shuffle|memory|none`, `?daily=1`, `?today=YYYYMMDD`, `?reset=1`, `?fakeads=1`, `?adfast=1`, `?debug=true` (SDK logs), `?renderer=canvas` (Canvas renderer, e2e on GPU-less machines), `?audiodebug=1` (audio state drawn on screen for phone tests), triple-tap top-left for the dev menu, `/#gen` (M cycles modes). `__peekDebug.state().atlasKeys` lists the loaded atlases, `.audio` the sound state (locked, music, last SFX).

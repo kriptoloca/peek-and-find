@@ -456,6 +456,44 @@ export function ensureUiTextures(scene: Phaser.Scene): void {
     g.fillStyle(0x2e3650, 1);
     g.fillRect(s * 0.42, s * 0.7, s * 0.16, s * 0.05);
   });
+  mk(UI.shuffle, (g) => {
+    // two crossing arrows on a dark badge (shuffle twist, GDD v1.5)
+    g.fillStyle(0x2e3650, 1);
+    g.fillCircle(s / 2, s / 2, s / 2);
+    g.lineStyle(s * 0.085, 0xffffff, 1);
+    for (const [y0, y1] of [
+      [0.33, 0.67],
+      [0.67, 0.33],
+    ] as const) {
+      g.beginPath();
+      g.moveTo(s * 0.19, s * y0);
+      g.lineTo(s * 0.39, s * y0);
+      g.lineTo(s * 0.61, s * y1);
+      g.lineTo(s * 0.78, s * y1);
+      g.strokePath();
+      g.fillStyle(0xffffff, 1);
+      g.fillPoints(
+        [
+          new Phaser.Math.Vector2(s * 0.75, s * (y1 - 0.11)),
+          new Phaser.Math.Vector2(s * 0.91, s * y1),
+          new Phaser.Math.Vector2(s * 0.75, s * (y1 + 0.11)),
+        ],
+        true,
+      );
+    }
+  });
+  mk(UI.memory, (g) => {
+    // question mark as strokes on a dark badge (memory twist hides the prompt behind it)
+    g.fillStyle(0x2e3650, 1);
+    g.fillCircle(s / 2, s / 2, s / 2);
+    g.lineStyle(s * 0.1, 0xffffff, 1);
+    g.beginPath();
+    g.arc(s * 0.5, s * 0.42, s * 0.17, Math.PI * 1.05, Math.PI * 0.35, false);
+    g.strokePath();
+    g.lineBetween(s * 0.5, s * 0.59, s * 0.5, s * 0.69);
+    g.fillStyle(0xffffff, 1);
+    g.fillCircle(s * 0.5, s * 0.83, s * 0.065);
+  });
   mk(UI.spot, (g) => {
     // "⟷" on a dark rounded square (Spot 5 arrives in epic 5)
     g.fillStyle(0x2e3650, 1);

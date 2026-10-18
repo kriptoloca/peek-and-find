@@ -25,4 +25,7 @@ export const UI = {
   home: 'ui_home',
   /** Rewarded hint button (Epic 8). */
   hint: 'ui_hint',
+  /** Twists (GDD v1.5): HUD marker of a shuffle scene; "?" that hides the prompt in memory. */
+  shuffle: 'ui_shuffle',
+  memory: 'ui_memory',
 } as const;

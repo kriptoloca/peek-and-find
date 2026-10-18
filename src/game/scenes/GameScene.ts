@@ -5,7 +5,15 @@ import { installDebug, uninstallDebug, type DebugPoint } from '../../dev/debug';
 import { Rng, hashSeed, sceneSeed } from '../../gen/rng';
 import { pickMode } from '../../gen/difficulty';
 import { generateScene } from '../../gen/scene-gen';
-import type { Mode, Placed, Scene as GenScene, Theme } from '../../gen/types';
+import {
+  MEMORY_PEEK_MS,
+  MEMORY_SHOW_S,
+  SHUFFLE_EVERY_S,
+  SHUFFLE_FIRST_S,
+  SHUFFLE_MOVE_MS,
+  SHUFFLE_WARN_MS,
+} from '../../gen/twist';
+import type { Mode, Placed, Scene as GenScene, Theme, TwistKind } from '../../gen/types';
 import { AdGate, MIN_INTERVAL_MS } from '../../platform/ads';
 import { getPlatform, type Platform } from '../../platform/bridge';
 import { audio } from '../audio';
@@ -18,6 +26,7 @@ import { computeLayout, type Layout, type Rect } from '../layout';
 import { DAILY_CHAIN_LENGTH, completeDaily, dailyScene, todayKey } from '../daily';
 import { modeForLevel } from '../progression';
 import {
+  advanceLayout,
   applyTap,
   continueRound,
   hintTarget,
@@ -25,6 +34,7 @@ import {
   newRound,
   promptCounts,
   remainingTargets,
+  roundObjects,
   startRound,
   starsEarned,
   type HitTarget,
@@ -116,6 +126,11 @@ export class GameScene extends Phaser.Scene {
   private continueUses = 0;
   private devTaps: number[] = [];
   private devMenuOpen = false;
+  /** Dev builds only: ?twist=shuffle|memory|none forces or removes the twist (GDD v1.5). */
+  private forcedTwist: TwistKind | 'none' | null = null;
+  /** Round whose twist is armed; arming is idempotent because two paths start a round. */
+  private twistArmedFor: Round | null = null;
+  private shufflesDone = 0;
 
   constructor() {
     super('Game');
@@ -130,6 +145,9 @@ export class GameScene extends Phaser.Scene {
     this.adInProgress = false;
     this.levelFailedOnce = false;
     this.loadingOpen = false;
+    this.forcedTwist = null;
+    this.twistArmedFor = null;
+    this.shufflesDone = 0;
   }
 
   create(): void {
@@ -342,6 +360,8 @@ export class GameScene extends Phaser.Scene {
       mode,
       theme: this.theme,
       validate: import.meta.env.DEV,
+      // GDD v1.5 §5a: the daily chain stays plain (a level-5 player meets its level-30 scene).
+      twist: this.dailyIndex !== null ? 'none' : (this.forcedTwist ?? 'auto'),
     });
     this.sendLoading(false);
     this.round = newRound(gen);
@@ -350,6 +370,8 @@ export class GameScene extends Phaser.Scene {
     this.hud.setLevel(this.dailyIndex === null ? level : this.dailyIndex + 1);
     this.hud.setHearts(this.round.hearts);
     this.hud.setPrompt(promptCounts(this.round));
+    this.hud.setPromptHidden(false);
+    this.hud.setTwist(gen.twist?.kind === 'shuffle' ? 'shuffle' : null);
     // The next themes load in the background while this scene is played (GDD §5: no stall);
     // once they are in, everything outside `needed` is released (GPU memory).
     void ensureThemes(this, needed).then(() => {
@@ -395,6 +417,7 @@ export class GameScene extends Phaser.Scene {
     this.time.delayedCall(total, () => {
       if (this.round?.scene !== gen) return;
       startRound(this.round, this.time.now);
+      this.armTwist(this.round);
       this.platform.sendMessage('level_started');
       this.platform.sendMessage('gameplay_started');
       if (level <= TEACH_PULSE_UNTIL_LEVEL) this.hud.teachPulse();
@@ -498,9 +521,17 @@ export class GameScene extends Phaser.Scene {
     }
     const r = this.round;
     if (!r) return;
+    if (r.scene.twist?.kind === 'memory' && this.hud.hitsPrompt(pointer.x, pointer.y)) {
+      // Memory twist: a tap on the hidden prompt peeks at it (GDD v1.5 §5a), never a penalty.
+      audio.play('button');
+      this.hud.peekPrompt(MEMORY_PEEK_MS);
+      return;
+    }
     const local = this.toScene(pointer.x, pointer.y);
     if (!local) return;
+    const wasIntro = r.status === 'intro';
     const res = applyTap(r, local.x, local.y, this.time.now);
+    if (wasIntro && r.status !== 'intro') this.armTwist(r);
     switch (res.kind) {
       case 'correct':
         this.onCorrect(res.target);
@@ -550,6 +581,73 @@ export class GameScene extends Phaser.Scene {
     const placed = r.scene.objects.find((o) => o.id === target.id);
     const icon = modeItem ? modeItem.icon : (placed?.frame ?? '');
     this.hud.pulsePrompt(icon);
+    if (r.scene.twist?.kind === 'memory') this.hud.peekPrompt(MEMORY_PEEK_MS);
+  }
+
+  // ---- twists (GDD v1.5 §5a) ---------------------------------------------------------------
+
+  /** Round start: arms the scene's twist once; both round-start paths call this. */
+  private armTwist(r: Round): void {
+    if (this.twistArmedFor === r) return;
+    this.twistArmedFor = r;
+    const kind = r.scene.twist?.kind;
+    if (kind === 'shuffle') this.scheduleShuffle(r, SHUFFLE_FIRST_S * 1000);
+    if (kind === 'memory') {
+      this.time.delayedCall(MEMORY_SHOW_S * 1000, () => {
+        if (this.round === r) this.hud.setPromptHidden(true);
+      });
+    }
+  }
+
+  /** The HUD marker beats SHUFFLE_WARN_MS before the slide; the scene clock pauses with the game. */
+  private scheduleShuffle(r: Round, delayMs: number): void {
+    this.time.delayedCall(Math.max(0, delayMs - SHUFFLE_WARN_MS), () => {
+      if (this.round !== r || r.status === 'won') return;
+      if (r.status === 'playing' && !this.adInProgress) this.hud.pulseTwist();
+      this.time.delayedCall(SHUFFLE_WARN_MS, () => {
+        this.doShuffle(r);
+      });
+    });
+  }
+
+  /**
+   * Slides every sprite to the next validated layout (rules.advanceLayout). Taps are ignored
+   * while the sprites move; found targets travel too (dimmed). Under the fail overlay or during
+   * an ad the board waits for the next tick.
+   */
+  private doShuffle(r: Round): void {
+    if (this.round !== r || r.status === 'won') return;
+    if (r.status !== 'playing' || this.adInProgress || r.moving) {
+      this.scheduleShuffle(r, SHUFFLE_EVERY_S * 1000);
+      return;
+    }
+    r.moving = true;
+    const layout = advanceLayout(r);
+    audio.play('pop');
+    this.hud.spinTwist(SHUFFLE_MOVE_MS);
+    for (const o of layout) {
+      const img = this.sprites.get(o.id);
+      if (!img) continue;
+      img.setDepth(o.z);
+      const k = o.size / Math.max(img.width, img.height);
+      this.tweens.add({
+        targets: img,
+        x: o.x,
+        y: o.y,
+        scaleX: k,
+        scaleY: k,
+        rotation: o.rotation ?? 0,
+        duration: SHUFFLE_MOVE_MS,
+        ease: 'Cubic.easeInOut',
+      });
+    }
+    this.time.delayedCall(SHUFFLE_MOVE_MS, () => {
+      if (this.round !== r) return;
+      this.world.sort('depth');
+      r.moving = false;
+      this.shufflesDone += 1;
+      this.scheduleShuffle(r, SHUFFLE_EVERY_S * 1000);
+    });
   }
 
   private onWrong(object: HitTarget | null, hearts: number): void {
@@ -818,6 +916,8 @@ export class GameScene extends Phaser.Scene {
     if (Number.isFinite(level) && level >= 1) progress.level = Math.floor(level);
     const mode = q.get('mode');
     if (mode === 'find' || mode === 'odd' || mode === 'spot') this.forcedMode = mode;
+    const twist = q.get('twist');
+    if (twist === 'shuffle' || twist === 'memory' || twist === 'none') this.forcedTwist = twist;
     const today = q.get('today');
     if (today && /^\d{8}$/.test(today)) this.dailyKey = today;
     if (q.get('daily') === '1') this.dailyIndex = 0;
@@ -887,9 +987,12 @@ export class GameScene extends Phaser.Scene {
     const wrongPoints = (): { id: string; x: number; y: number }[] => {
       const r = this.round;
       if (!r) return [];
-      if (r.scene.mode !== 'spot') return r.scene.objects.filter((o) => !o.isTarget).slice(0, 5);
+      if (r.scene.mode !== 'spot')
+        return roundObjects(r)
+          .filter((o) => !o.isTarget)
+          .slice(0, 5);
       // Spot: grid points inside image A that are clear of every difference circle.
-      const hits = hitTargets(r.scene);
+      const hits = hitTargets(r.scene, r.layout);
       const out: { id: string; x: number; y: number }[] = [];
       for (let y = 140; y < r.scene.height - 100 && out.length < 5; y += 90) {
         for (let x = 140; x < r.scene.width - 100 && out.length < 5; x += 90) {
@@ -903,12 +1006,12 @@ export class GameScene extends Phaser.Scene {
     installDebug({
       targets: () =>
         this.round
-          ? hitTargets(this.round.scene)
+          ? hitTargets(this.round.scene, this.round.layout)
               .filter((t) => t.isTarget && !this.round?.found.has(t.id))
               .map(toScreen)
           : [],
       wrong: () => wrongPoints().map(toScreen),
-      objects: () => (this.round ? this.round.scene.objects.map(toScreen) : []),
+      objects: () => (this.round ? roundObjects(this.round).map(toScreen) : []),
       differences: () =>
         this.round?.scene.spot
           ? this.round.scene.spot.differences.map((d) => ({
@@ -934,6 +1037,22 @@ export class GameScene extends Phaser.Scene {
       },
       retryCenter: () => this.overlayButton('retry'),
       continueCenter: () => this.overlayButton('continue'),
+      twistCenter: () => {
+        const c = this.hud.twistCenter();
+        if (!c) return null;
+        const rect = this.game.canvas.getBoundingClientRect();
+        const k = screenScale();
+        return { id: 'twist', x: rect.left + c.x * k, y: rect.top + c.y * k };
+      },
+      promptCenters: () => {
+        const rect = this.game.canvas.getBoundingClientRect();
+        const k = screenScale();
+        return this.hud.promptCenters().map((c, i) => ({
+          id: `prompt${String(i)}`,
+          x: rect.left + c.x * k,
+          y: rect.top + c.y * k,
+        }));
+      },
       state: () => ({
         level: progress.level,
         sceneLevel: this.round?.scene.level ?? 0,
@@ -963,6 +1082,11 @@ export class GameScene extends Phaser.Scene {
         fps: Math.round(this.game.loop.actualFps),
         renderer: this.game.renderer.type === Phaser.CANVAS ? 'canvas' : 'webgl',
         hudInBand: this.hudInBand(),
+        twist: this.round?.scene.twist?.kind ?? null,
+        layout: this.round?.layout ?? 0,
+        moving: this.round?.moving ?? false,
+        shufflesDone: this.shufflesDone,
+        promptHidden: this.hud.promptHidden(),
         frameColor: hexOf(this.frameColor),
       }),
     });
