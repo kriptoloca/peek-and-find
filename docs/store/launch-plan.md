@@ -14,9 +14,35 @@ code-complete with placeholder art and sound; the real art pack and CC0 sounds a
 Lock-in check: Playgama's pages say non-exclusive; keep it so (choose the non-exclusive
 distribution option, read the agreement text before accepting).
 
+## Playgama Sandbox (live 2026-10-18)
+
+The form was filled on 2026-10-18 and the game went live in the Playgama Sandbox: a public
+link anyone can open, no moderation yet. The dashboard shows two targets before evaluation:
+**100 plays** and **5:00 average play time**. What the sources add (Playgama's MCP README,
+github.com/Playgama/developer-cabinet-mcp, read 2026-10-18; a developer's itch.io devlog for the
+play rule):
+
+- A play counts when the session loads and lasts over 30 s (the devlog, third-party; not on a
+  Playgama page we could open). The same devlog saw about 9 sessions in 10 end before that.
+- "Get More Players" starts a Playgama DSP campaign built from the three covers (beta). The
+  **share bonus** makes one run free: publish a post about the game on any platform, paste its
+  link (1–3 links); once per game, up to three games per organization. A run cannot be cancelled
+  once started; a failed run returns the bonus. Paid traffic is also offered: not bought (spend
+  rules below).
+- The referral bonus ($3 of traffic) needed an invitation accepted before the first sandbox
+  publication; that window has passed for this game. Hasan's own invitation link can still earn
+  $3 when another studio publishes.
+- Submitting to moderation stays a human action in the console.
+- Sandbox republishing: up to 15 publications per rolling hour per game.
+
+Order: test the sandbox link on a phone and a desktop (load, sound, pause menu, a reload keeps
+the level), run the console's QA tool, then the share post and the free run, then friends and
+the channel. A 5-minute average needs about 20 scenes per player; the first scenes are the
+lever if the average stalls (decide from the dashboard, not before).
+
 ## Sequence
 
-1. **Now (Hasan, 30 min):** Add Game on developer.playgama.com with the fields in
+1. **Done 2026-10-18 (sandbox live):** Add Game on developer.playgama.com with the fields in
    `docs/store/listing.md` ("Facts for the console"), the ZIP from `npm run zip`, the icon and
    banner from `docs/store/brand/`, the screenshots from `npm run screenshots`. Distribution:
    all platforms, non-exclusive. Orientation: both.
