@@ -37,6 +37,10 @@ play rule):
 
 QA tool (console menu "QA tool", 2026-10-18): it asks for a game URL; give it the production GitHub Pages build `https://kriptoloca.github.io/peek-and-find/` (same game code as the uploaded ZIP; not `/test/`, which carries the dev hooks). In the tool: Play, a hint (rewarded), three wrong taps then Continue (rewarded), three scenes past 120 s (interstitial), a tab switch (pause).
 
+Update Game (2026-10-18): a new ZIP goes through the game's "Update Game" button; the game keeps its
+id, dashboard numbers, likes and sandbox targets, and the save key and version are unchanged, so
+players keep their level. First update: 0.1.1 (host focus fix, docs/questions.md).
+
 Order: test the sandbox link on a phone and a desktop (load, sound, pause menu, a reload keeps
 the level), run the console's QA tool, then the share post and the free run, then friends and
 the channel. A 5-minute average needs about 20 scenes per player; the first scenes are the

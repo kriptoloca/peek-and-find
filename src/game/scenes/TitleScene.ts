@@ -3,6 +3,7 @@ import { t } from '../../data/strings';
 import { dailyStatus, todayKey } from '../daily';
 import { computeLayout } from '../layout';
 import { getPlatform, sentPlatformMessages } from '../../platform/bridge';
+import { ResumeGrace } from '../resume-grace';
 import { progress } from '../state';
 import { addImage, setImageFrame } from '../assets';
 import { BRAND_STUDIO_KEY, BRAND_WORDMARK_KEY } from '../brand';
@@ -33,6 +34,8 @@ let readySent = false;
 export class TitleScene extends Phaser.Scene {
   private root!: Phaser.GameObjects.Container;
   private paused = false;
+  /** Input gate: off under the platform pause and for the grace after it (resume-grace.ts). */
+  private readonly grace = new ResumeGrace(this);
   private dailyDone = false;
   private pauseDim: Phaser.GameObjects.Graphics | null = null;
   private unsubscribePause: (() => void) | null = null;
@@ -58,12 +61,14 @@ export class TitleScene extends Phaser.Scene {
     });
     this.build();
     if (import.meta.env.DEV) this.installDebugHooks();
+    this.grace.reset();
     const platform = getPlatform();
     // CLAUDE.md rule 4: platform pause freezes the Title too (tweens, input, a dim overlay).
     this.unsubscribePause = platform.onPause((p) => {
       this.setPaused(p);
     });
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.grace.dispose();
       this.unsubscribePause?.();
       this.unsubscribePause = null;
       if (import.meta.env.DEV) uninstallTitleDebug();
@@ -80,14 +85,15 @@ export class TitleScene extends Phaser.Scene {
   private setPaused(paused: boolean): void {
     if (this.paused === paused) return;
     this.paused = paused;
-    this.input.enabled = !paused;
     if (paused) {
+      this.grace.pause();
       this.tweens.pauseAll();
       this.drawPauseDim();
     } else {
       this.tweens.resumeAll();
       this.pauseDim?.destroy();
       this.pauseDim = null;
+      this.grace.resume();
     }
   }
 
@@ -211,6 +217,7 @@ export class TitleScene extends Phaser.Scene {
         music: progress.music,
         brand: this.brandShown,
         dailyDone: this.dailyDone,
+        inputEnabled: this.input.enabled,
         streak: progress.streak,
       }),
       audio: () => audio.debug(),

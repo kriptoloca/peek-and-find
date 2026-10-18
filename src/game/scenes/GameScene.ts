@@ -14,7 +14,13 @@ import {
 } from '../../gen/twist';
 import type { Mode, Placed, Scene as GenScene, Theme, TwistKind } from '../../gen/types';
 import { AdGate, MIN_INTERVAL_MS } from '../../platform/ads';
-import { getPlatform, sentPlatformMessages, type Platform } from '../../platform/bridge';
+import {
+  getPlatform,
+  regainFocus,
+  sentPlatformMessages,
+  type Platform,
+} from '../../platform/bridge';
+import { ResumeGrace } from '../resume-grace';
 import { audio } from '../audio';
 import { haptic, setHapticsEnabled } from '../../platform/haptics';
 import { correctSfx, starSfx } from '../audio-keys';
@@ -146,6 +152,8 @@ export class GameScene extends Phaser.Scene {
   private pauseOverlay: Phaser.GameObjects.Container | null = null;
   private paused = false;
   private adInProgress = false;
+  /** Input gate: off under the platform pause and for the grace after it (resume-grace.ts). */
+  private readonly grace = new ResumeGrace(this);
   /** Incremented by every startLevel(); an awaited load belongs to the latest one only. */
   private levelGen = 0;
   private levelFailedOnce = false;
@@ -213,15 +221,16 @@ export class GameScene extends Phaser.Scene {
       this.game.events.off(Phaser.Core.Events.HIDDEN, onHidden);
       this.game.events.off(Phaser.Core.Events.VISIBLE, onVisible);
     });
+    this.grace.reset();
     this.platform = getPlatform();
     this.unsubscribePause = this.platform.onPause((p) => {
       this.setPaused(p);
     });
-    // A restarted scene keeps its tween/clock managers: make sure they run, then sync pause.
+    // A restarted scene keeps its tween/clock managers: make sure they run.
     this.tweens.resumeAll();
     this.time.paused = false;
-    if (this.platform.isPaused()) this.setPaused(true);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.grace.dispose();
       this.unsubscribePause?.();
       this.unsubscribePause = null;
       if (import.meta.env.DEV) uninstallDebug();
@@ -233,6 +242,9 @@ export class GameScene extends Phaser.Scene {
       this.openMenu();
     });
     this.relayout();
+    // Only after the first layout: the pause dim is placed from it (a host that holds its pause
+    // while the scene starts, e.g. an ad in the parent page, used to crash create() here).
+    if (this.platform.isPaused()) this.setPaused(true);
     if (import.meta.env.DEV) this.applyDevParams();
     void this.startLevel();
     if (import.meta.env.DEV) this.installDebugHooks();
@@ -247,10 +259,25 @@ export class GameScene extends Phaser.Scene {
     setHapticsEnabled(!paused);
     this.applyFreeze();
     if (paused) {
+      this.grace.pause();
       this.pauseOverlay = this.dimContainer(0.55, DEPTH_PAUSE);
     } else {
       this.pauseOverlay?.destroy(true);
       this.pauseOverlay = null;
+      this.grace.resume();
+    }
+  }
+
+  /**
+   * Every ad flow ends here. The host may hold its pause until the game's window has focus
+   * again (bridge.ts), so the game asks for it back; and a platform that no longer reports
+   * paused must not leave the scene frozen behind a lost resume event.
+   */
+  private afterAd(): void {
+    this.adInProgress = false;
+    regainFocus();
+    if (this.paused && !this.platform.isPaused() && document.visibilityState !== 'hidden') {
+      this.setPaused(false);
     }
   }
 
@@ -616,7 +643,7 @@ export class GameScene extends Phaser.Scene {
       this.adInProgress = true;
       this.adsShown += 1;
       void this.platform.showInterstitial().then(() => {
-        this.adInProgress = false;
+        this.afterAd();
         this.nextLevel();
       });
       return;
@@ -963,7 +990,7 @@ export class GameScene extends Phaser.Scene {
     audio.play('button');
     this.adInProgress = true;
     const earned = await this.platform.showRewarded('continue');
-    this.adInProgress = false;
+    this.afterAd();
     if (this.round !== r) return;
     if (earned && continueRound(r)) {
       this.continueUses += 1;
@@ -980,7 +1007,7 @@ export class GameScene extends Phaser.Scene {
     this.adInProgress = true;
     this.platform.sendMessage('gameplay_stopped');
     const earned = await this.platform.showRewarded('hint');
-    this.adInProgress = false;
+    this.afterAd();
     if (this.round === r && r.status === 'playing') this.platform.sendMessage('gameplay_started');
     if (!earned || this.round !== r || r.status !== 'playing') return;
     const t = hintTarget(r);
@@ -1314,6 +1341,7 @@ export class GameScene extends Phaser.Scene {
         hintUses: this.hintUses,
         continueUses: this.continueUses,
         paused: this.paused,
+        inputEnabled: this.input.enabled,
         adInProgress: this.adInProgress,
         streak: progress.streak,
         lastDailyDate: progress.lastDailyDate,

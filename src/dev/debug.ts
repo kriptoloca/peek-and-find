@@ -58,6 +58,8 @@ export interface PeekDebug {
     hintUses: number;
     continueUses: number;
     paused: boolean;
+    /** Scene input on (off under the platform pause and for the grace after it). */
+    inputEnabled: boolean;
     adInProgress: boolean;
     streak: number;
     lastDailyDate: string | null;
@@ -113,6 +115,8 @@ export interface PeekTitleDebug {
     streak: number;
     /** The wordmark texture is on screen (false: the text fallback). */
     brand: boolean;
+    /** Title input on (off under the platform pause and for the grace after it). */
+    inputEnabled: boolean;
   };
   audio: () => AudioDebug;
   /** Lifecycle messages sent to the platform so far, in order. */

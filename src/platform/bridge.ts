@@ -56,6 +56,27 @@ const AD_SILENT_TIMEOUT_MS = 4000;
 /** Upper bound for an open ad; real ads end long before. */
 const AD_MAX_MS = 120_000;
 const FAKE_AD_MS = 1500;
+/**
+ * Bridge 2.3.1 pauses the game on window `blur` and resumes it on `focus`: PlatformBridgeBase
+ * feeds the "visibility" input of its pause aggregator from visibilitychange, blur and focus
+ * (the YouTube bridge opts out, `isPlatformPageVisibilityApiAllowed` false). In the Playgama
+ * host an ad in the parent page blurs the game's window, and focus only returns with the next
+ * tap inside the game: that tap resumes the game and, on iOS Safari, reaches Phaser after the
+ * resume, so it counted as a game tap and cost a heart (sandbox report 2026-10-18). Two
+ * measures: the game asks for focus back when an ad ends (`regainFocus`, below), and the scene
+ * input stays off for a grace after every resume (src/game/resume-grace.ts). A cross-origin
+ * host may refuse the focus request; then the dim stays until the first tap, which is free.
+ */
+
+/** Asks the host for focus back; a no-op where the window already has it. Never throws. */
+export function regainFocus(): void {
+  try {
+    if (document.hasFocus()) return;
+    window.focus();
+  } catch {
+    // not fatal: the next tap brings focus back, and the grace keeps it from counting
+  }
+}
 
 const MESSAGE: Record<PlatformMessageName, string> = {
   game_ready: PLATFORM_MESSAGE.GAME_READY,

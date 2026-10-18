@@ -171,8 +171,15 @@ test('platform pause on the Title: PLAY does nothing until the host resumes', as
   await page.waitForTimeout(800);
   expect(await page.evaluate(() => typeof window.__peekDebug)).toBe('undefined');
   await setHidden(page, false);
-  await page.waitForTimeout(300);
+  await page.waitForTimeout(100);
   expect((await titleAudio(page)).paused).toBe(false);
+  // The tap that brings the focus back to the game is never a game tap (resume-grace.ts): the
+  // Title's input stays off for the grace, so PLAY still does nothing right after the resume.
+  expect((await titleState(page)).inputEnabled).toBe(false);
+  await tapTitle(page, 'play');
+  await page.waitForTimeout(400);
+  expect(await page.evaluate(() => typeof window.__peekDebug)).toBe('undefined');
+  await expect.poll(async () => (await titleState(page)).inputEnabled).toBe(true);
   await tapTitle(page, 'play');
   await waitState(page, (x) => x.status === 'playing', 'playing after resume');
 });

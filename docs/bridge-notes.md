@@ -14,6 +14,7 @@ Source of truth read on 2026-10-16: the SDK repository `github.com/Playgama/brid
 - `EVENT_NAME.PAUSE_STATE_CHANGED` → `(isPaused: boolean)`; `EVENT_NAME.AUDIO_STATE_CHANGED` → `(isEnabled: boolean)`; `EVENT_NAME.VISIBILITY_STATE_CHANGED` → `'visible' | 'hidden'`; `EVENT_NAME.INTERSTITIAL_STATE_CHANGED` → `'loading' | 'opened' | 'closed' | 'failed'`; `EVENT_NAME.REWARDED_STATE_CHANGED` → `'loading' | 'opened' | 'rewarded' | 'closed' | 'failed'` [constants/eventName.ts, modules/advertisement/constants.ts].
 - Subscription: `bridge.on(eventName, cb)` / `bridge.off(eventName, cb)` (the root is an EventEmitter; module events are forwarded to the global bus) [PlaygamaBridge.ts, modules/ModuleBase.ts].
 - The pause state aggregates platform pause, hidden visibility and open ads: while an interstitial or rewarded ad is open the SDK reports paused [platform-bridges/PlatformBridgeBase.ts `_pauseStateAggregator`].
+- The same base feeds the aggregator's "visibility" input from window `blur` (→ hidden) and `focus` (→ visible) wherever `isPlatformPageVisibilityApiAllowed` is true (the base default; the YouTube bridge returns false). In an iframe host an ad in the parent page blurs the game and focus only returns with the next tap inside it: `src/platform/bridge.ts` `regainFocus()` and `RESUME_TAP_GRACE_MS`, docs/questions.md 2026-10-18 (host focus) [dist/playgama-bridge.js 2.3.1, `_setVisibilityState`].
 
 ## Platform module
 - `bridge.platform.id`, `.language`, `.isAudioEnabled`, `.isPaused` [modules/platform/PlatformModule.ts].

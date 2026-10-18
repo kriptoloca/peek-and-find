@@ -82,7 +82,7 @@ Save after every scene. Never block gameplay on save errors. `version` enables m
 4. **Scene Complete** overlay: stars, +score, auto-advance.
 5. **Fail** overlay: Continue (rewarded) / Retry.
 6. **Daily Complete** overlay: badge, streak, back to title.
-Pause: platform pause → freeze tweens/physics/audio, dim overlay; resume on platform resume. Platform mute overrides in-game sound settings.
+Pause: platform pause → freeze tweens/physics/audio, dim overlay; resume on platform resume. Platform mute overrides in-game sound settings. The host may hold its pause until the game's window has focus again (Bridge pauses on blur): after an ad the game asks for focus back, and the tap that brings focus back is never a game tap (350 ms grace after every resume, Title included).
 Haptics (v1.2): short vibration on correct (12 ms), wrong (40-50-40), scene won, scene lost, through the Vibration API where it exists (Android); silent no-op on iOS and desktop, off while paused. No toggle, no feature depends on it.
 
 ## 10. Layout & aspect ratios
@@ -140,4 +140,7 @@ No accounts, no leaderboards, no multiplayer, no IAP, no level editor, no locali
 ## 18. Changes in v1.6 (2026-10-18, pause menu)
 - The in-game home button becomes a pause button that opens a frozen-scene menu with Resume, Sound, Music and Home (§9). Hasan's brief: changing the sound mid-scene went through the Title and restarted the scene.
 - The star timer leaves frozen time out (platform pause and the menu alike); before, a platform pause of 30 s cost the stars of that scene.
+
+## 19. Changes in v1.6.1 (2026-10-18, host focus)
+- After an ad the game asks the host for focus back, and the first 350 ms after any resume take no taps (§9 Pause). Sandbox report: the board stayed dim after an ad until a tap, and that tap cost a heart; cause and decision in docs/questions.md (host focus).
 - Brand in the game: the Title and the boot screen show the wordmark texture, the Title carries the studio mark (docs/store/brand).
