@@ -24,6 +24,7 @@ frustrating. Decisions in docs/questions.md (same date).
 - [x] Tests: unit (table, picker, layouts, validator, rules) + e2e (shuffle moves a target and
       the tap counts at the new place; memory hides and peeks; daily has no twist).
 - [x] Docs: GDD v1.5, GENERATOR.md, questions.md, PROGRESS.md.
+- [x] Skills: `docs/skills.md` (which enabled skill at which step), CLAUDE.md "Skills"; `design:ux-copy` applied to the store listing; `npm run thumbnails` produces the thumbnail/icon drafts from a real scene (layout check with placeholder art).
 
 ## Epic board
 | # | Epic | State | Gate |
@@ -94,7 +95,7 @@ See `docs/questions.md` (every deviation from the spec with its reason).
 1. **Phone pass of the whole loop** (Hasan): sound on iPhone Safari after the first tap, music toggle, interstitial flow with `?fakeads=1&adfast=1`, rotation. Report in 3 lines.
 2. **Epic 10 remainder (Hasan):** 10 scenes at level 80 on the iPhone without drops; `https://kriptoloca.github.io/peek-and-find/test/?level=80` and read `fps` in the dev state if it stutters. Haptics: does an Android phone buzz on correct/wrong?
 3. **Drop-ins when they exist:** art per `assets/README.md` (`npm run assets`), sounds per the audio section (`npm run audio`); commit `assets/` + `public/` together. No code change expected.
-4. Uploads (Hasan): Playgama account → `npm run zip` → QA tool → listing + thumbnails (`docs/store/`). Code side of Epics 11 and 12 is done.
+4. Uploads (Hasan): Playgama account → `npm run zip` → QA tool → listing + thumbnails (`docs/store/`; `npm run thumbnails` regenerates them from the real art). Code side of Epics 11 and 12 is done. With Hasan's computer linked, the upload and the QA tool can run through the browser skills (docs/skills.md).
 5. Open tuning items (density/overlap, mirror decoys, empty taps, frame size) stay here until Hasan's feedback on L30/L60. Decided 2026-10-17: second theme at level 4, Odd cells at ±3°.
 6. Visual: when the real pack lands, re-run `npm run tour` and re-check the contrast gate output; recommendations for the pack are in docs/visual-review.md §4.
 

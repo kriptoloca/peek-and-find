@@ -3,6 +3,12 @@
 Two deliverables: **1280×720** (16:9) and **1080×1080** (1:1). Plus the **512×512 icon** (ASSETS.md).
 Produce them from the real art pack; the placeholder shapes are only for layout checks.
 
+**How:** `npm run build:test`, serve `dist/` (`npx vite preview --port 4173`), then
+`npm run thumbnails` (`-- --level 3 --salt 7` to pick another scene). The script screenshots a
+real generated kitchen scene, circles the target nearest the right third and writes variants A
+(ring) and B (magnifier) for both sizes plus the icon to `docs/store/thumbnails/` (git-ignored).
+Hand-check against the rules below before uploading; the optional word "FIND?" is not drawn.
+
 ## The one idea
 
 Every scene of the game already is a "can you find it?" picture (GDD §2). The thumbnail is one

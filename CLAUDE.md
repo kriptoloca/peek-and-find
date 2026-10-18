@@ -70,6 +70,9 @@ Keep generator and modes **pure** (no Phaser imports) so they are unit-testable 
 - Do not add features not in GDD.md. If something is ambiguous, write the question in `docs/questions.md` and choose the simplest reading.
 - Performance: object pooling for sprites, one atlas per theme, no per-frame allocations in update loops.
 
+## Skills
+`docs/skills.md` maps the enabled Claude skills to project steps. Mandatory touchpoints: every epic ends with `code-review` and the adversarial audit (independent subagent, KRİTİK/YÜKSEK closed before the push); store text goes through `design:ux-copy`; thumbnails come from `npm run thumbnails`; the Playgama upload and QA tool run through the browser skills when Hasan's computer is linked. Analytics skills are never used (platform rule 1).
+
 ## Definition of done (whole project)
 - Playgama QA tool: all checks pass.
 - All three aspect ratios screenshot-verified.

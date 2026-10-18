@@ -1068,6 +1068,12 @@ export class GameScene extends Phaser.Scene {
       },
       retryCenter: () => this.overlayButton('retry'),
       continueCenter: () => this.overlayButton('continue'),
+      sceneRect: () => {
+        const rect = this.game.canvas.getBoundingClientRect();
+        const k = screenScale();
+        const m = this.mainRect();
+        return { x: rect.left + m.x * k, y: rect.top + m.y * k, w: m.w * k, h: m.h * k };
+      },
       twistCenter: () => {
         const c = this.hud.twistCenter();
         if (!c) return null;

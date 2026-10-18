@@ -11,17 +11,25 @@ Peek & Find
 
 ## One-line pitch
 
-Spot it, tap it, next scene: endless find-the-object puzzles for one finger.
+Find the icon in the picture, tap it, next scene. No reading, no timer, one finger.
 
 ## Description
 
-A crowded, colorful scene and one icon at the top: find what it shows and tap it.
-Three ways to play (find the targets, pick the odd one out, spot five differences) across kitchens, beaches, city streets, forests and space, with every scene freshly generated.
-Play for a minute or an hour, and come back for the five-scene daily challenge and your streak.
+One icon at the top, one busy picture below: find what the icon shows and tap it.
+Three ways to play (find the targets, pick the odd one out, spot five differences) across kitchens, beaches, city streets, forests and space. Every scene is freshly generated, and from level 30 the board starts moving.
+A scene takes seconds, so play for a minute or an hour, then come back for the five-scene daily chain and keep your streak alive.
 
 ## Tags
 
 hidden object, spot the difference, puzzle, casual, relaxing
+
+## Copy review (2026-10-18, `/ux-copy`)
+
+- The pitch leads with the action the player repeats and names the three facts a browsing player checks (no reading, no timer, one finger); "endless" moved to the description because "endless" next to "puzzles" read as grind.
+- The description keeps the three-line shape the test enforces: line 1 = how to play, line 2 = variety (modes, themes, the moving board from level 30, GDD v1.5), line 3 = session length and the daily hook. "Keep your streak alive" states the return reason as an action.
+- Alternatives kept for the console if a field is shorter: pitch B (≤ 60) "Spot the icon, tap it, next scene. One finger, no reading." pitch C (≤ 40) "Find it, tap it, next scene."
+- Tone: plain and friendly, no exclamation marks, no superlatives, no age cues (CLAUDE.md rule 8); the words "kitchen, beach, city, forest, space" carry the theme list without brand or character names.
+- Localisation: the game is text-free; only the store text needs translating. "Odd one out" and "spot the difference" are genre names, translate to the local genre term rather than literally.
 
 ## Facts for the console
 

@@ -85,6 +85,8 @@ export interface PeekDebug {
     /** Memory: the prompt icons are hidden behind "?" right now. */
     promptHidden: boolean;
   };
+  /** Screen (CSS px) rect of the scene square, or of Spot image A (scripts/thumbnails.mjs). */
+  sceneRect: () => { x: number; y: number; w: number; h: number };
   /** Screen center of the shuffle marker, null when the scene has no shuffle twist. */
   twistCenter: () => DebugPoint | null;
   /** Screen centers of the prompt icons (a tap peeks in memory scenes). */
