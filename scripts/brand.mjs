@@ -240,13 +240,23 @@ async function peekWordmark(dark, W = 1600, H = 480) {
     .toBuffer();
 }
 
-async function pebblitWordmark(dark) {
-  const W = 1600;
-  const H = 480;
-  const k = 300 / 1024; // the mark at 300 px beside the word
+/**
+ * The Pebblit lockup (mark + word). The base layout is 1600×480; `fit` scales the lockup to
+ * that share of the canvas width and centres it, so a 16:9 banner keeps the lockup inside the
+ * central safe area (YouTube: 1235×338 of 2048×1152).
+ */
+async function pebblitWordmark(dark, W = 1600, H = 480, fit = null) {
+  const k = 300 / 1024; // the mark at 300 px beside the word (base units)
   const mark = pebblitMarkBody(k, 230, 250);
-  const text = `<text x="430" y="${H / 2 + 70}" font-family="Bricolage Grotesque" font-weight="700" font-size="212" letter-spacing="-3" fill="${SAND}">Pebblit</text>`;
-  return sharp(svgDoc(W, H, mark + text, dark ? NIGHT : null))
+  const text = `<text x="430" y="310" font-family="Bricolage Grotesque" font-weight="700" font-size="212" letter-spacing="-3" fill="${SAND}">Pebblit</text>`;
+  // the lockup spans x 80..1340 of the base canvas (mark 80..380, word 430..1340)
+  const LOCKUP_W = 1260;
+  const LOCKUP_CX = 710;
+  const f = fit === null ? W / 1600 : (W * fit) / LOCKUP_W;
+  const tx = W / 2 - LOCKUP_CX * f;
+  const ty = H / 2 - 240 * f;
+  const body = `<g transform="translate(${tx.toFixed(2)} ${ty.toFixed(2)}) scale(${f.toFixed(4)})">${mark}${text}</g>`;
+  return sharp(svgDoc(W, H, body, dark ? NIGHT : null))
     .png()
     .toBuffer();
 }
@@ -279,6 +289,13 @@ await out('pebblit-profile-circle-1024.png', await png(pebblitSvg(1024, true)));
 await out('pebblit-mark.svg', pebblitSvg(1024, false));
 await out('pebblit-wordmark-dark.png', await pebblitWordmark(true));
 await out('pebblit-wordmark-transparent.png', await pebblitWordmark(false));
+
+// Pebblit banners (16:9, lockup inside the central safe area) and a 4× wordmark for print/crisp use
+await out('pebblit-banner-2048x1152.png', await pebblitWordmark(true, 2048, 1152, 0.6));
+await out('pebblit-banner-2560x1440.png', await pebblitWordmark(true, 2560, 1440, 0.6));
+await out('pebblit-banner-4096x2304.png', await pebblitWordmark(true, 4096, 2304, 0.6));
+await out('pebblit-wordmark-dark-4x.png', await pebblitWordmark(true, 6400, 1920));
+await out('pebblit-wordmark-transparent-4x.png', await pebblitWordmark(false, 6400, 1920));
 
 // in-game textures (public/brand, loaded by Boot before the first screen; counted as initial load)
 const PUB = resolve(ROOT, 'public/brand');

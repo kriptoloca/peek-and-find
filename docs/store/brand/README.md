@@ -15,6 +15,8 @@ SVG and rendered with sharp, so a change to a colour or a form is one edit and o
 | `pebblit-profile-circle-1024.png` | the same, already cropped to a circle (transparent outside) |
 | `pebblit-mark.svg` | vector source of the studio mark |
 | `pebblit-wordmark-dark.png` / `-transparent.png` | studio logo with the mark, 1600×480 |
+| `pebblit-wordmark-dark-4x.png` / `-transparent-4x.png` | the same at 6400×1920 (print, crisp downscales) |
+| `pebblit-banner-2048x1152.png`, `-2560x1440.png`, `-4096x2304.png` | 16:9 banners (YouTube channel art and similar): the lockup sits inside the central safe area |
 | `brand-sheet.png` | preview at 256 / 128 / 64 px |
 | `critique.md` | the `/design-critique` pass that fixed the ground and the signal colour |
 | `../../../public/brand/wordmark.png`, `pebblit.png` | in-game textures (boot screen, Title), written by the same run |
