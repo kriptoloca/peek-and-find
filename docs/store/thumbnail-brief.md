@@ -9,6 +9,16 @@ real generated kitchen scene, circles the target nearest the right third and wri
 (ring) and B (magnifier) for both sizes plus the icon to `docs/store/thumbnails/` (git-ignored).
 Hand-check against the rules below before uploading; the optional word "FIND?" is not drawn.
 
+## Playgama cover images
+
+The Playgama console asks for three covers at exact sizes: **800×800**, **1080×1920** and
+**1920×1080** (PNG or JPEG). `npm run thumbnails` writes them next to the thumbnails from the same
+scene: the scene on the theme's frame color with its edges faded into it, the game wordmark in
+its own band (top on the square and the portrait, left on the landscape), one target ringed in
+the accent yellow, the Pebblit mark small under the scene (portrait) or under the wordmark
+(landscape). The ringed target stays inside a central region of the scene so the ring never
+meets the wordmark, the fade or the cover edges; `--try 12` picks a salt that has one there.
+
 ## The one idea
 
 Every scene of the game already is a "can you find it?" picture (GDD §2). The thumbnail is one

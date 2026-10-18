@@ -1,6 +1,8 @@
 // Store thumbnails from the brief (docs/store/thumbnail-brief.md): screenshots a real generated
 // scene in the development build, circles one target and writes the 16:9, 1:1 and 512² icon
-// drafts (variants A: plain ring, B: magnifier) to docs/store/thumbnails/ (git-ignored output).
+// drafts (variants A: plain ring, B: magnifier) plus the three Playgama cover images
+// (cover-800x800, cover-1080x1920, cover-1920x1080: scene, wordmark, ring) to
+// docs/store/thumbnails/ (git-ignored output).
 // With placeholder art the result is a layout check; with the real pack it is the deliverable.
 //
 //   npm run build:test && npx vite preview --port 4173     (or any server of dist/)
@@ -34,6 +36,25 @@ const STROKE = 12;
 const RING_MULT = 0.62;
 const RING_MIN = 96;
 const ICON_MARGIN = 48;
+/** Playgama "Cover Images": exact sizes the console asks for (seen 2026-10-18). */
+const COVER_SQUARE = 800;
+const COVER_PORTRAIT = { w: 1080, h: 1920 };
+const COVER_LANDSCAPE = { w: 1920, h: 1080 };
+/**
+ * Where the circled target may sit on the 1080 scene so the ring stays clear of the wordmark
+ * band (square cover), the fade into the frame (landscape cover) and the central 80 % safe area
+ * of every cover. Salts whose targets all miss it score worse (`--try N`).
+ */
+const COVER_REGION = { x0: 300, x1: 860, y0: 450, y1: 900 };
+const WORDMARK = resolve('docs/store/brand/peek-and-find-wordmark-transparent.png');
+const STUDIO_MARK = resolve('public/brand/pebblit.png');
+const inCoverRegion = (t, rect) => {
+  const x = t.x - rect.x;
+  const y = t.y - rect.y;
+  return (
+    x >= COVER_REGION.x0 && x <= COVER_REGION.x1 && y >= COVER_REGION.y0 && y <= COVER_REGION.y1
+  );
+};
 
 const browser = await chromium.launch({
   args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'],
@@ -76,7 +97,13 @@ try {
         return Math.hypot(t.x - aimAt.x, t.y - aimAt.y) + crowd * 400;
       }),
     );
-    return { ...info, salt, score, shot: await page.screenshot({ type: 'png' }) };
+    const coverPenalty = info.targets.some((t) => inCoverRegion(t, info.rect)) ? 0 : 2000;
+    return {
+      ...info,
+      salt,
+      score: score + coverPenalty,
+      shot: await page.screenshot({ type: 'png' }),
+    };
   };
   let best = null;
   for (const salt of SALTS) {
@@ -201,6 +228,100 @@ try {
       .removeAlpha()
       .png(),
   );
+
+  // Playgama covers: the same scene on the theme's frame color, the scene edges faded into it,
+  // the wordmark in its own band, one target ringed (the brand's "one circled signal").
+  const inRegion = targets.filter((t) => inCoverRegion(t, rect));
+  const coverTarget = (inRegion.length > 0 ? inRegion : [target]).reduce((a, b) =>
+    Math.abs(a.x - rect.x - 580) + Math.abs(a.y - rect.y - 675) <=
+    Math.abs(b.x - rect.x - 580) + Math.abs(b.y - rect.y - 675)
+      ? a
+      : b,
+  );
+  if (inRegion.length === 0) {
+    console.warn('covers: no target inside the cover region, rerun with --try 12');
+  }
+  const cx = coverTarget.x - rect.x;
+  const cy = coverTarget.y - rect.y;
+  const coverRing = Math.max(RING_MIN, (coverTarget.size ?? RING_MIN) * RING_MULT);
+  const frame = String(info.state.frameColor ?? '#1b1f2a');
+  const wordmark = await sharp(WORDMARK).trim().png().toBuffer();
+  const sized = async (file, width) => sharp(file).resize({ width }).png().toBuffer();
+  const meta = async (buf) => {
+    const m = await sharp(buf).metadata();
+    return { w: m.width ?? 0, h: m.height ?? 0 };
+  };
+  /** Opaque frame color at `from`, transparent at `to`, along one axis (SVG gradient). */
+  const fade = (w, h, x1, y1, x2, y2) =>
+    overlay(
+      w,
+      h,
+      `<defs><linearGradient id="f" gradientUnits="userSpaceOnUse" x1="${String(x1)}" y1="${String(y1)}" x2="${String(x2)}" y2="${String(y2)}">` +
+        `<stop offset="0" stop-color="${frame}" stop-opacity="1"/><stop offset="1" stop-color="${frame}" stop-opacity="0"/></linearGradient></defs>` +
+        `<rect width="${String(w)}" height="${String(h)}" fill="url(#f)"/>`,
+    );
+  const cover = async (name, w, h, layers) => {
+    await write(
+      name,
+      sharp({ create: { width: w, height: h, channels: 4, background: frame } })
+        .composite(layers)
+        .removeAlpha()
+        .png(),
+    );
+  };
+  const place = async (buf, centerX, centerY) => {
+    const m = await meta(buf);
+    return {
+      input: buf,
+      left: Math.round(centerX - m.w / 2),
+      top: Math.round(centerY - m.h / 2),
+    };
+  };
+
+  {
+    // Square 800: the whole scene, the top band faded for the wordmark.
+    const k = COVER_SQUARE / W;
+    const S = COVER_SQUARE;
+    await cover(`cover-${String(S)}x${String(S)}.png`, S, S, [
+      { input: await sharp(square).resize(S, S).png().toBuffer(), left: 0, top: 0 },
+      { input: fade(S, S, 0, 150, 0, 360) },
+      { input: overlay(S, S, ringSvg(cx * k, cy * k, coverRing * k, STROKE * 0.8, false)) },
+      await place(await sized(wordmark, 600), S / 2, 118),
+    ]);
+  }
+  {
+    // Portrait 1080 × 1920: wordmark band on top, the scene below it, the studio mark under.
+    const { w: PW, h: PH } = COVER_PORTRAIT;
+    const k = PW / W;
+    const top = 580;
+    const sh = Math.round(H * k);
+    await cover(`cover-${String(PW)}x${String(PH)}.png`, PW, PH, [
+      { input: await sharp(square).resize(PW, sh).png().toBuffer(), left: 0, top },
+      { input: fade(PW, PH, 0, top, 0, top + 200) },
+      { input: fade(PW, PH, 0, top + sh, 0, top + sh - 200) },
+      {
+        input: overlay(PW, PH, ringSvg(cx * k, top + cy * k, coverRing * k, STROKE, false)),
+      },
+      await place(await sized(wordmark, 820), PW / 2, 330),
+      await place(await sized(STUDIO_MARK, 120), PW / 2, top + sh + 110),
+    ]);
+  }
+  {
+    // Landscape 1920 × 1080: the scene on the right, faded into the frame; wordmark on the left.
+    const { w: LW, h: LH } = COVER_LANDSCAPE;
+    const k = LH / H;
+    const sw = Math.round(W * k);
+    const left = LW - sw;
+    await cover(`cover-${String(LW)}x${String(LH)}.png`, LW, LH, [
+      { input: await sharp(square).resize(sw, LH).png().toBuffer(), left, top: 0 },
+      { input: fade(LW, LH, left, 0, left + 260, 0) },
+      {
+        input: overlay(LW, LH, ringSvg(left + cx * k, cy * k, coverRing * k, STROKE, false)),
+      },
+      await place(await sized(wordmark, 640), left / 2 + 30, LH / 2 - 40),
+      await place(await sized(STUDIO_MARK, 110), left / 2 + 30, LH / 2 + 170),
+    ]);
+  }
 
   writeFileSync(
     resolve(OUT, 'README.md'),
