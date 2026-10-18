@@ -23,6 +23,12 @@ A scene takes seconds, so play for a minute or an hour, then come back for the f
 
 hidden object, spot the difference, puzzle, casual, relaxing
 
+## How to play (required field of the Playgama form)
+
+The icon at the top shows what to find: tap it in the picture. A wrong tap costs a heart; you have three per scene.
+Odd One Out: tap the one item that differs from the rest. Spot 5: tap the five differences between the two images, on either one.
+Pause with the button at the bottom left (sound, music, home). Lost all hearts? Watch a short ad to continue, or retry with a fresh scene.
+
 ## Copy review (2026-10-18, `/ux-copy`)
 
 - The pitch leads with the action the player repeats and names the three facts a browsing player checks (no reading, no timer, one finger); "endless" moved to the description because "endless" next to "puzzles" read as grind.
@@ -39,3 +45,4 @@ hidden object, spot the difference, puzzle, casual, relaxing
 - Monetisation: interstitial after at least 3 scenes and 120 s, rewarded ads only for Hint and Continue; no purchases.
 - Offline: yes, no network calls; saves through the platform.
 - Languages: none needed in play (text-free); the Title shows PLAY and DAILY in English.
+- Playgama form (wiki "Submitting a game", read 2026-10-18 through search summaries): Title (2–4 words) → "Peek & Find"; Game Engine → Phaser (or HTML5 / Other if Phaser is not listed); Archive → `release/peek-and-find-<version>.zip` (index.html at the root; ≤ 300 MB, ≤ 500 files; ours 61 files, 3.99 MB); Description → the three lines above; How to play → the section above; Supported Devices → mobile and desktop; Game Languages → English; Distribution → all partner platforms including YouTube Playables (non-exclusive); Screen Orientation → portrait and landscape both supported (do not restrict); Media → icon `docs/store/brand/peek-and-find-icon-1024.png` (512 also there), cover `docs/store/brand/pebblit-banner-2048x1152.png` or a 16:9 thumbnail from `docs/store/thumbnails/`, screenshots from `npm run screenshots` (five portrait 1080×1920, five landscape 1920×1080).

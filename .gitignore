@@ -9,3 +9,5 @@ playwright-report/
 release/
 # generated store thumbnails (scripts/thumbnails.mjs)
 docs/store/thumbnails/
+# generated store screenshots (scripts/screenshots.mjs)
+docs/store/screenshots/

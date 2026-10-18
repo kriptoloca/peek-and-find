@@ -21,18 +21,37 @@ The YouTube figures come from the certification requirements page as found on 20
 uploading. Playgama's own blog quotes 30 MB initial / 200 MB total; the stricter YouTube numbers
 are the ones enforced here.
 
-## Upload steps (Hasan)
+## Upload steps (Hasan; developer account opened 2026-10-18)
 
-1. `npm run zip` on a clean checkout of `main`; keep the printed SHA-256.
-2. developer.playgama.com → the game → Builds → upload `release/peek-and-find-<version>.zip`.
-3. Run the Playgama QA tool against the uploaded build (`docs/certification-checklist.md`
-   rows 10 and 11 stay open until then).
-4. Fill the listing from `docs/store/listing.md`; upload the icon, the two thumbnails and the
-   screenshots (3 per aspect, 9:16 and 16:9, taken from the production link after the art pack).
-5. Target platform YouTube Playables; wait for the test feedback (the blog promises 24 h).
+1. `npm run zip` on a clean checkout of `main`; keep the printed SHA-256 (2026-10-18:
+   `peek-and-find-0.1.0.zip`, 3.99 MB, `cadf90ac…2bb5`, built from 09d7b41).
+2. developer.playgama.com → **Add Game** → fill the required fields from the "Facts for the
+   console" list in `docs/store/listing.md` (title, engine, archive, description, how to play,
+   devices, languages, distribution); orientation both; media from `docs/store/brand/` and
+   `npm run screenshots`.
+3. Playgama tests the build and sends recommendations (their pages say within 24 hours);
+   forward the feedback here, fixes come as a new `npm run zip`. `docs/certification-checklist.md`
+   rows 10 and 11 stay open until the QA feedback and the phone profile are in.
+4. Distribution: all partner platforms, non-exclusive; Playgama forwards the game to YouTube
+   Playables through its own partner account (their pages: most titles live in 2–4 weeks).
+5. In parallel, YouTube's own route: the Playables interest form (linked from Google's
+   Playables support/contact page) with the Pebblit channel; the Developer Portal itself is
+   invitation-only, so this is a second door, not the plan.
+
+Sources read 2026-10-18 (through search summaries; the pages do not open from the build
+machine): wiki.playgama.com "Quick start", "Submitting a game", "Technical Requirements";
+playgama.com "Publish your game on YouTube Playables" and the business FAQs;
+developers.google.com Playables developer portal and support pages. Revenue share and timing
+figures on those pages are Playgama's own claims.
 
 What is not in the ZIP: `docs/`, `tests/`, sources, the `/test/` build, `.map` files (none are
 emitted).
+
+## Screenshots
+
+`npm run screenshots` (test build served on 4173): five portrait 1080×1920 and five landscape
+1920×1080 PNGs in `docs/store/screenshots/` (git-ignored): Title, Find level 9, Odd One Out
+level 12, Spot 5 level 15, Find level 40 with the shuffle marker. Rerun after the real art pack.
 
 ## Brand files (2026-10-18)
 

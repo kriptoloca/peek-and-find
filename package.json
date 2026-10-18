@@ -27,6 +27,7 @@
     "tour": "npm run build:test && playwright test --config tests/tour/playwright.config.ts && node scripts/tour-sheet.mjs",
     "thumbnails": "node scripts/thumbnails.mjs",
     "brand": "node scripts/brand.mjs",
+    "screenshots": "node scripts/screenshots.mjs",
     "zip": "npm run build && node scripts/zip.mjs",
     "zip:only": "node scripts/zip.mjs"
   },
