@@ -106,7 +106,14 @@ export interface PeekDebug {
 /** Title screen hooks (dev builds): tap targets in screen px, toggle state, audio state. */
 export interface PeekTitleDebug {
   positions: () => Record<'play' | 'daily' | 'sound' | 'music', DebugPoint>;
-  state: () => { sound: boolean; music: boolean; dailyDone: boolean; streak: number };
+  state: () => {
+    sound: boolean;
+    music: boolean;
+    dailyDone: boolean;
+    streak: number;
+    /** The wordmark texture is on screen (false: the text fallback). */
+    brand: boolean;
+  };
   audio: () => AudioDebug;
   /** Lifecycle messages sent to the platform so far, in order. */
   messages: () => string[];

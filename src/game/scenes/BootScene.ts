@@ -16,6 +16,12 @@ import { AUDIO_INDEX_KEY, AUDIO_INDEX_URL, audio, loadAudio } from '../audio';
 import { computeLayout } from '../layout';
 import { ensureUiTextures } from '../textures/placeholders';
 import {
+  BRAND_STUDIO_KEY,
+  BRAND_STUDIO_URL,
+  BRAND_WORDMARK_KEY,
+  BRAND_WORDMARK_URL,
+} from '../brand';
+import {
   attachSaveStore,
   hydrateProgress,
   progress,
@@ -24,6 +30,8 @@ import {
 } from '../state';
 
 const BOOT_BAR_W = 360;
+/** Wordmark width on the boot screen (design px); the texture is 1200×360. */
+const BOOT_WORDMARK_W = 560;
 const BOOT_BAR_H = 10;
 const COLOR_BAR_TRACK = 0x2e3650;
 const COLOR_BAR_FILL = 0x3b7dd8;
@@ -43,6 +51,10 @@ export class BootScene extends Phaser.Scene {
     // Written by scripts/assets.mjs; when absent the game runs on runtime placeholders.
     this.load.json(ATLAS_INDEX_KEY, ATLAS_INDEX_URL);
     this.load.json(AUDIO_INDEX_KEY, AUDIO_INDEX_URL);
+    // Brand textures (scripts/brand.mjs → public/brand): the wordmark of the boot screen and
+    // the Title, the studio mark of the Title. A failed load falls back to plain text.
+    this.load.image(BRAND_WORDMARK_KEY, BRAND_WORDMARK_URL);
+    this.load.image(BRAND_STUDIO_KEY, BRAND_STUDIO_URL);
   }
 
   create(): void {
@@ -62,14 +74,20 @@ export class BootScene extends Phaser.Scene {
     const s = computeLayout(width, height).scene;
     const cx = s.x + s.w / 2;
     const cy = s.y + s.h / 2;
-    this.add
-      .text(cx, cy - 40, t().title, {
-        fontFamily: 'Arial, Helvetica, sans-serif',
-        fontSize: '72px',
-        fontStyle: 'bold',
-        color: '#ffffff',
-      })
-      .setOrigin(0.5);
+    if (this.textures.exists(BRAND_WORDMARK_KEY)) {
+      this.add
+        .image(cx, cy - 50, BRAND_WORDMARK_KEY)
+        .setDisplaySize(BOOT_WORDMARK_W, BOOT_WORDMARK_W * 0.3);
+    } else {
+      this.add
+        .text(cx, cy - 40, t().title, {
+          fontFamily: 'Arial, Helvetica, sans-serif',
+          fontSize: '72px',
+          fontStyle: 'bold',
+          color: '#ffffff',
+        })
+        .setOrigin(0.5);
+    }
     this.add.rectangle(cx, cy + 50, BOOT_BAR_W, BOOT_BAR_H, COLOR_BAR_TRACK);
     const fill = this.add
       .rectangle(cx - BOOT_BAR_W / 2, cy + 50, 1, BOOT_BAR_H, COLOR_BAR_FILL)

@@ -16,6 +16,9 @@ SVG and rendered with sharp, so a change to a colour or a form is one edit and o
 | `pebblit-mark.svg` | vector source of the studio mark |
 | `pebblit-wordmark-dark.png` / `-transparent.png` | studio logo with the mark, 1600×480 |
 | `brand-sheet.png` | preview at 256 / 128 / 64 px |
+| `critique.md` | the `/design-critique` pass that fixed the ground and the signal colour |
+| `../../../public/brand/wordmark.png`, `pebblit.png` | in-game textures (boot screen, Title), written by the same run |
 
-Palette: night `#1b1f2a`, sand `#f4f1de`, accent `#ffc857` (the hint ring of the game), signal
-teal `#2ba193`, slate `#566590`, eight muted field tones. The accent is used once per mark.
+Palette: ground scene blue `#2e3650` (icon, profile), night `#1b1f2a` (wordmark backgrounds), sand
+`#f4f1de`, accent `#ffc857` (the hint ring of the game), signal teal `#30b5a4`, stone grey `#7d88a8`,
+eight muted field tones. The accent is used once per mark.

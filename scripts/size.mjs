@@ -40,6 +40,7 @@ const INITIAL = [
   new RegExp(`^atlases/${SECOND_THEME}\\.(png|json)$`),
   new RegExp(`^backgrounds/${SECOND_THEME}(_spot)?\\.png$`),
   /^audio\/index\.json$/,
+  /^brand\/.+\.png$/,
 ];
 const AUDIO_OGG = /^audio\/.+\.ogg$/;
 const AUDIO_M4A = /^audio\/.+\.m4a$/;

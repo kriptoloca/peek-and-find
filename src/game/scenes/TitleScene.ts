@@ -5,11 +5,16 @@ import { computeLayout } from '../layout';
 import { getPlatform, sentPlatformMessages } from '../../platform/bridge';
 import { progress } from '../state';
 import { addImage, setImageFrame } from '../assets';
+import { BRAND_STUDIO_KEY, BRAND_WORDMARK_KEY } from '../brand';
 import { audio } from '../audio';
 import { installTitleDebug, uninstallTitleDebug } from '../../dev/debug';
 import { UI } from '../textures/placeholders';
 
 const COLOR_BG = 0x1b1f2a;
+/** Wordmark width on the Title (design px); the texture is 1200×360. */
+const TITLE_WORDMARK_W = 760;
+/** The studio mark at the foot of the square, below the toggles. */
+const STUDIO_MARK_SIZE = 72;
 const COLOR_PLAY = 0x3b7dd8;
 const COLOR_DAILY = 0x2a9d8f;
 const COLOR_DAILY_DONE = 0x4a4f63;
@@ -32,6 +37,8 @@ export class TitleScene extends Phaser.Scene {
   private pauseDim: Phaser.GameObjects.Graphics | null = null;
   private unsubscribePause: (() => void) | null = null;
   /** Design-px centers of the tap targets (dev hooks expose them in screen px). */
+  /** True when the Title shows the wordmark texture (dev hooks; false = text fallback). */
+  private brandShown = false;
   private readonly spots = {
     play: { x: 0, y: 0 },
     daily: { x: 0, y: 0 },
@@ -103,15 +110,32 @@ export class TitleScene extends Phaser.Scene {
     this.root.add(bg);
 
     const strings = t();
-    const logo = this.add
-      .text(cx, s.y + s.h * 0.2, strings.title, {
-        fontFamily: 'Arial, Helvetica, sans-serif',
-        fontSize: '104px',
-        fontStyle: 'bold',
-        color: '#ffffff',
-      })
-      .setOrigin(0.5);
-    this.root.add(logo);
+    // The wordmark texture (brand, GDD v1.6 §9); plain text only when the texture failed.
+    this.brandShown = this.textures.exists(BRAND_WORDMARK_KEY);
+    if (this.brandShown) {
+      const logo = this.add
+        .image(cx, s.y + s.h * 0.2, BRAND_WORDMARK_KEY)
+        .setDisplaySize(TITLE_WORDMARK_W, TITLE_WORDMARK_W * 0.3);
+      this.root.add(logo);
+    } else {
+      const logo = this.add
+        .text(cx, s.y + s.h * 0.2, strings.title, {
+          fontFamily: 'Arial, Helvetica, sans-serif',
+          fontSize: '104px',
+          fontStyle: 'bold',
+          color: '#ffffff',
+        })
+        .setOrigin(0.5);
+      this.root.add(logo);
+    }
+    // Studio signature at the foot of the square: the cairn alone, small and quiet.
+    if (this.textures.exists(BRAND_STUDIO_KEY)) {
+      const mark = this.add
+        .image(cx, s.y + s.h - STUDIO_MARK_SIZE * 0.78, BRAND_STUDIO_KEY)
+        .setDisplaySize(STUDIO_MARK_SIZE, STUDIO_MARK_SIZE)
+        .setAlpha(0.8);
+      this.root.add(mark);
+    }
 
     // PLAY
     const playY = s.y + s.h * 0.48;
@@ -185,6 +209,7 @@ export class TitleScene extends Phaser.Scene {
       state: () => ({
         sound: progress.sound,
         music: progress.music,
+        brand: this.brandShown,
         dailyDone: this.dailyDone,
         streak: progress.streak,
       }),

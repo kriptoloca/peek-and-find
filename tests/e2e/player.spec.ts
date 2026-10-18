@@ -297,3 +297,20 @@ test('menu → home: back to the Title from play, PLAY returns to the same scene
     expect(await page.evaluate(() => window.__peekDebug?.objects() ?? [])).toEqual(layout);
   }
 });
+
+test('the Title shows the brand wordmark texture (text only as a fallback)', async ({
+  page,
+}, info) => {
+  for (const view of [
+    { width: 390, height: 844 },
+    { width: 844, height: 390 },
+    { width: 700, height: 700 },
+  ]) {
+    await page.setViewportSize(view);
+    await page.goto(`${TEST}?reset=1${CANVAS}`, { waitUntil: 'load' });
+    await waitTitle(page);
+    expect((await titleState(page)).brand).toBe(true);
+    await page.waitForTimeout(300);
+    await shot(page, info, `title-brand-${String(view.width)}x${String(view.height)}`);
+  }
+});

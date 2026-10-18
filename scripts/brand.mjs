@@ -27,20 +27,22 @@ const sharp = (await import('sharp')).default;
 
 // ---- palette (Field & Signal) ---------------------------------------------------------------
 const NIGHT = '#1b1f2a';
+/** Ground of the icon and the profile: the game's scene blue, which keeps an edge on a black page. */
+const GROUND = '#2e3650';
 const SAND = '#f4f1de';
 const ACCENT = '#ffc857';
-const SIGNAL = '#2ba193';
-const SLATE = '#566590';
+const SIGNAL = '#30b5a4';
+const SLATE = '#7d88a8';
 /** Muted, equal-luminance field tones: stones in one stream bed, light enough to hold at 64 px. */
 const FIELD = [
-  '#5b6a95',
-  '#6b7fa0',
-  '#7077ad',
-  '#5e8395',
-  '#7b73a3',
-  '#6b889b',
-  '#5d728c',
-  '#76859a',
+  '#6d7cab',
+  '#7c91b3',
+  '#8188c0',
+  '#6f96a8',
+  '#8d85b7',
+  '#7d9aae',
+  '#6f849f',
+  '#8898ad',
 ];
 
 const svgDoc = (w, h, body, bg = null) =>
@@ -96,17 +98,17 @@ function iconSvg(size, rounded) {
   const k = size / 1024;
   const body =
     ICON_FIELD.map(([kind, x, y, s, c]) => forms[kind](x * k, y * k, s * k, FIELD[c])).join('') +
-    ring(SIGNAL_AT.x * k, SIGNAL_AT.y * k, 170 * k, 30 * k, NIGHT) +
+    ring(SIGNAL_AT.x * k, SIGNAL_AT.y * k, 170 * k, 30 * k, GROUND) +
     forms.diamond(SIGNAL_AT.x * k, SIGNAL_AT.y * k, SIGNAL_AT.s * k, SIGNAL);
   if (rounded) {
     const r = 180 * k;
     return svgDoc(
       size,
       size,
-      `<defs><clipPath id="c"><rect width="${size}" height="${size}" rx="${r}"/></clipPath></defs><g clip-path="url(#c)"><rect width="${size}" height="${size}" fill="${NIGHT}"/>${body}</g>`,
+      `<defs><clipPath id="c"><rect width="${size}" height="${size}" rx="${r}"/></clipPath></defs><g clip-path="url(#c)"><rect width="${size}" height="${size}" fill="${GROUND}"/>${body}</g>`,
     );
   }
-  return svgDoc(size, size, body, NIGHT);
+  return svgDoc(size, size, body, GROUND);
 }
 
 // ---- Pebblit mark: a cairn, two stones and a bit ---------------------------------------------
@@ -138,10 +140,16 @@ function pebblitSvg(size, circle) {
     return svgDoc(
       size,
       size,
-      `<defs><clipPath id="c"><circle cx="${size / 2}" cy="${size / 2}" r="${size / 2}"/></clipPath></defs><g clip-path="url(#c)"><rect width="${size}" height="${size}" fill="${NIGHT}"/>${body}</g>`,
+      `<defs><clipPath id="c"><circle cx="${size / 2}" cy="${size / 2}" r="${size / 2}"/></clipPath></defs><g clip-path="url(#c)"><rect width="${size}" height="${size}" fill="${GROUND}"/>${body}</g>`,
     );
   }
-  return svgDoc(size, size, body, NIGHT);
+  return svgDoc(size, size, body, GROUND);
+}
+
+/** The cairn alone on a transparent ground (the Title's studio signature). */
+function pebblitMarkOnlySvg(size) {
+  const k = size / 1024;
+  return svgDoc(size, size, pebblitMarkBody(k, 512 * k, 505 * k));
 }
 
 // ---- wordmarks -------------------------------------------------------------------------------
@@ -197,10 +205,9 @@ async function smallestBlob(png) {
   return best;
 }
 
-async function peekWordmark(dark) {
-  const W = 1600;
-  const H = 480;
-  const text = `<text x="${W / 2}" y="${H / 2 + 82}" text-anchor="middle" font-family="Outfit" font-weight="700" font-size="236" letter-spacing="-4" fill="${SAND}">Peek &amp; Find</text>`;
+async function peekWordmark(dark, W = 1600, H = 480) {
+  const f = W / 1600;
+  const text = `<text x="${W / 2}" y="${H / 2 + 82 * f}" text-anchor="middle" font-family="Outfit" font-weight="700" font-size="${236 * f}" letter-spacing="${-4 * f}" fill="${SAND}">Peek &amp; Find</text>`;
   const textLayer = await sharp(svgDoc(W, H, text))
     .png()
     .toBuffer();
@@ -272,6 +279,13 @@ await out('pebblit-profile-circle-1024.png', await png(pebblitSvg(1024, true)));
 await out('pebblit-mark.svg', pebblitSvg(1024, false));
 await out('pebblit-wordmark-dark.png', await pebblitWordmark(true));
 await out('pebblit-wordmark-transparent.png', await pebblitWordmark(false));
+
+// in-game textures (public/brand, loaded by Boot before the first screen; counted as initial load)
+const PUB = resolve(ROOT, 'public/brand');
+mkdirSync(PUB, { recursive: true });
+writeFileSync(resolve(PUB, 'wordmark.png'), await peekWordmark(false, 1200, 360));
+writeFileSync(resolve(PUB, 'pebblit.png'), await sharp(pebblitMarkOnlySvg(256)).png().toBuffer());
+written.push('public/brand/wordmark.png', 'public/brand/pebblit.png');
 
 // preview sheet: the marks at 256 / 128 / 64 px, the profile in its circle, the wordmarks
 const tile = async (file, size) => sharp(resolve(OUT, file)).resize(size, size).png().toBuffer();
