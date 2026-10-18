@@ -15,6 +15,7 @@ import {
 } from './modes/spot5';
 import { HIT_RADIUS_SPOT, SPOT_H, SPOT_W } from '../config';
 import { hitRadiusFor } from './difficulty';
+import { SHUFFLE_LAYOUTS, SHUFFLE_MIN_MOVED_SHARE, twistKindsForMode } from './twist';
 import type { Placed, Scene, Theme } from './types';
 
 const EPS = 1e-6;
@@ -86,7 +87,70 @@ export function validateScene(scene: Scene, theme: Theme): string[] {
   if (scene.mode === 'find') validateFind(scene, theme, errs);
   if (scene.mode === 'odd') validateOdd(scene, errs);
   if (scene.mode === 'spot') validateSpot(scene, errs);
+  validateTwist(scene, theme, errs);
   return errs;
+}
+
+/**
+ * Twist bookkeeping (GDD v1.5 §5a): only a kind the mode can host; shuffle layouts carry the
+ * same items (id, family, frame, flip, flags) and each passes every check of the main layout
+ * (with the target spread relaxed to the Poisson spacing); each layout moves at least half of
+ * the items; a scene without the shuffle twist has no layouts.
+ */
+function validateTwist(scene: Scene, theme: Theme, errs: string[]): void {
+  const kind = scene.twist?.kind;
+  if (kind && !twistKindsForMode(scene.mode).includes(kind)) {
+    errs.push(`twist: ${kind} cannot be hosted by ${scene.mode}`);
+  }
+  if (kind !== 'shuffle') {
+    if (scene.shuffles) errs.push('twist: shuffle layouts without the shuffle twist');
+    return;
+  }
+  const layouts = scene.shuffles ?? [];
+  if (layouts.length !== SHUFFLE_LAYOUTS) {
+    errs.push(`twist: ${String(layouts.length)} shuffle layouts ≠ ${String(SHUFFLE_LAYOUTS)}`);
+    return;
+  }
+  let prev = scene.objects;
+  layouts.forEach((layout, li) => {
+    const tag = `shuffle ${String(li + 1)}`;
+    if (layout.length !== scene.objects.length) {
+      errs.push(`${tag}: ${String(layout.length)} objects ≠ ${String(scene.objects.length)}`);
+      return;
+    }
+    let moved = 0;
+    const moveNeed2 = (scene.spacing / 2) ** 2;
+    for (let i = 0; i < layout.length; i++) {
+      const a = scene.objects[i] as Placed;
+      const b = layout[i] as Placed;
+      if (
+        a.id !== b.id ||
+        a.family !== b.family ||
+        a.frame !== b.frame ||
+        a.flipX !== b.flipX ||
+        a.isTarget !== b.isTarget ||
+        a.isDecoy !== b.isDecoy ||
+        a.decoyKind !== b.decoyKind
+      ) {
+        errs.push(`${tag}: item ${String(i)} is not the same item as in the main layout`);
+      }
+      const p = prev[i] as Placed;
+      if (dist2(p.x, p.y, b.x, b.y) > moveNeed2) moved += 1;
+    }
+    if (moved < SHUFFLE_MIN_MOVED_SHARE * layout.length) {
+      errs.push(`${tag}: only ${String(moved)} of ${String(layout.length)} items moved`);
+    }
+    const copy: Scene = {
+      ...scene,
+      objects: layout,
+      targets: layout.filter((o) => o.isTarget),
+      targetSpacing: scene.spacing,
+    };
+    delete copy.twist;
+    delete copy.shuffles;
+    for (const e of validateScene(copy, theme)) errs.push(`${tag}: ${e}`);
+    prev = layout;
+  });
 }
 
 function samePlaced(a: Placed, b: Placed): boolean {

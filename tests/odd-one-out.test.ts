@@ -32,7 +32,7 @@ describe('generateOdd', () => {
       const level = 6 + (i % 80);
       const seed = sceneSeed('odd', level, i, 5);
       const a = generateOdd(seed, level, KITCHEN);
-      const b = generateScene({ seed, level, mode: 'odd', theme: KITCHEN });
+      const b = generateScene({ seed, level, mode: 'odd', theme: KITCHEN, twist: 'none' });
       expect(a).toEqual(b);
     }
   });

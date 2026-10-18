@@ -2,19 +2,26 @@ import { HIT_RADIUS_FIND, HIT_RADIUS_SPOT } from '../config';
 import type { Mode, Params } from './types';
 import type { Rng } from './rng';
 
-/** Column levels of the difficulty table (GENERATOR.md §2). Values plateau at the last column. */
-const COLS = [1, 10, 30, 80] as const;
-export const PLATEAU_LEVEL = 80;
+/**
+ * Column levels of the difficulty table (GENERATOR.md §2). Values plateau at the last column.
+ * The fifth column (GDD v1.5) is a gentle second ramp for players past level 80: a few more
+ * objects, one more target and more look-alikes, never smaller sprites (0.6 is the legibility
+ * floor); the late-game pressure comes from the twists (twist.ts), not from density alone.
+ */
+const COLS = [1, 10, 30, 80, 150] as const;
+export const PLATEAU_LEVEL = 150;
+/** Level 80 is the end of the first ramp: the table's values there are "medium" on a phone. */
+export const FIRST_PLATEAU_LEVEL = 80;
 
 const TABLE = {
-  objectCount: [12, 24, 42, 60],
-  targetCount: [1, 2, 3, 5],
-  targetScale: [1.0, 0.9, 0.75, 0.6],
-  decoyRatio: [0, 0.15, 0.3, 0.5],
-  maxOcclusion: [0, 0.1, 0.3, 0.4],
-  minSpacing: [150, 120, 95, 80],
-  t3: [8, 12, 18, 25],
-  t2: [15, 22, 32, 45],
+  objectCount: [12, 24, 42, 60, 66],
+  targetCount: [1, 2, 3, 5, 6],
+  targetScale: [1.0, 0.9, 0.75, 0.6, 0.6],
+  decoyRatio: [0, 0.15, 0.3, 0.5, 0.6],
+  maxOcclusion: [0, 0.1, 0.3, 0.4, 0.45],
+  minSpacing: [150, 120, 95, 80, 80],
+  t3: [8, 12, 18, 25, 28],
+  t2: [15, 22, 32, 45, 50],
 } as const;
 
 /** Big scene every 25th level: denser, 7 targets, double star time. */
@@ -57,7 +64,7 @@ export function isBigScene(level: number): boolean {
   return level > 0 && level % BIG_SCENE_EVERY === 0;
 }
 
-/** Level → difficulty parameters. Piecewise-linear between columns, plateau at 80. */
+/** Level → difficulty parameters. Piecewise-linear between columns, plateau at 150. */
 export function params(level: number): Params {
   const L = Math.max(1, Math.floor(level));
   const big = isBigScene(L);

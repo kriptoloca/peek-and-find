@@ -23,10 +23,11 @@ import {
 import { hitRadiusFor, params } from './difficulty';
 import { dist2, visibleFraction } from './geometry';
 import { chooseFindTargets, type TargetPlanItem } from './modes/find';
-import { generateOdd } from './modes/odd-one-out';
+import { generateOdd, oddShuffleLayouts } from './modes/odd-one-out';
 import { generateSpot } from './modes/spot5';
 import { poissonDisc } from './poisson';
 import { Rng } from './rng';
+import { pickTwist, SHUFFLE_LAYOUTS, shuffleRng, twistKindsForMode } from './twist';
 import type {
   DecoyKind,
   Family,
@@ -37,6 +38,8 @@ import type {
   Point,
   Scene,
   Theme,
+  Twist,
+  TwistKind,
 } from './types';
 import { assertValid } from './validate';
 
@@ -47,14 +50,32 @@ export interface GenerateOptions {
   theme: Theme;
   /** Run the invariant checks and throw on violation (dev builds and tests). */
   validate?: boolean;
+  /**
+   * Late-game twist (GDD v1.5 §5a): "auto" (default) lets twist.ts decide from the seed and
+   * level, "none" keeps the scene plain (the daily chain), a kind forces it regardless of the
+   * level (dev `?twist=`); a kind the mode cannot host is dropped.
+   */
+  twist?: TwistKind | 'none' | 'auto';
 }
 
 const EPS = 1e-9;
+
+function resolveTwist(o: GenerateOptions, seed: number): Twist | null {
+  const want = o.twist ?? 'auto';
+  if (want === 'none') return null;
+  if (want === 'auto') return pickTwist(seed, o.level, o.mode);
+  return twistKindsForMode(o.mode).includes(want) ? { kind: want } : null;
+}
 
 /** Entry point. Deterministic: same options → deep-equal scene. */
 export function generateScene(o: GenerateOptions): Scene {
   if (o.mode === 'odd') {
     const scene = generateOdd(o.seed >>> 0, o.level, o.theme);
+    const twist = resolveTwist(o, scene.seed);
+    if (twist) {
+      scene.twist = twist;
+      if (twist.kind === 'shuffle') scene.shuffles = oddShuffleLayouts(scene.objects, scene.seed);
+    }
     if (o.validate) assertValid(scene, o.theme);
     return scene;
   }
@@ -65,7 +86,7 @@ export function generateScene(o: GenerateOptions): Scene {
   }
   let seed = o.seed >>> 0;
   for (let regen = 0; regen < MAX_REGENERATIONS; regen++) {
-    const scene = tryFind(seed, regen, o);
+    const scene = tryFind(seed, regen, o, resolveTwist(o, seed));
     if (scene) {
       if (o.validate) assertValid(scene, o.theme);
       return scene;
@@ -265,62 +286,33 @@ function place(
   return placed;
 }
 
-function tryFind(seed: number, regen: number, o: GenerateOptions): Scene | null {
-  const p = params(o.level);
-  const rng = new Rng(seed);
-  const hitRadius = hitRadiusFor('find');
-  const playable = playableRect();
+interface FindLayout {
+  objects: Placed[];
+  targets: Placed[];
+  spread: number;
+}
 
-  // 1. Poisson slots, relaxing spacing (never below the hard minimum) when too few. Coordinates
-  //    are rounded once here so every later distance check sees the final integers.
-  const hardMin = 2 * hitRadius + ROUNDING_CUSHION;
-  let spacing = Math.max(hardMin, p.minSpacing);
-  let pts = roundPoints(poissonDisc(rng, playable, spacing));
-  for (let i = 0; pts.length < p.objectCount && i < MAX_SPACING_RELAX; i++) {
-    spacing = Math.max(hardMin, spacing * SPACING_RELAX_FACTOR);
-    pts = roundPoints(poissonDisc(rng, playable, spacing));
-  }
-  if (pts.length < p.objectCount) return null;
-  rng.shuffle(pts);
-  if (p.level <= TEACH_FRONT_BAND_UNTIL_LEVEL) {
-    // Teaching levels: front-band slots first so targets come out large and unoccluded.
-    pts = [
-      ...pts.filter((q) => bandOf(q.y, playable) === 2),
-      ...pts.filter((q) => bandOf(q.y, playable) !== 2),
-    ];
-  }
-
-  // 2. Target plan and spread-out target slots.
-  const plan = chooseFindTargets(rng, o.theme, o.level, p.targetCount);
+/**
+ * Steps 2, 4 and 5 of the placement (GENERATOR.md §4) for one slot order: spread-out target
+ * slots, the rest assigned in order, jitters, then occlusion repair. The main layout draws from
+ * the scene stream in the same order as before the twists existed; every shuffle layout draws
+ * from its own stream over a reshuffled slot list, so a twist never changes the main layout of
+ * an existing seed (the only exception: a shuffle layout that cannot be repaired regenerates
+ * the whole scene with seed + 1).
+ */
+function layoutFind(
+  rng: Rng,
+  pts: readonly Point[],
+  builds: readonly Build[],
+  p: Params,
+  playable: GenRect,
+  hitRadius: number,
+  spacing: number,
+): FindLayout | null {
   const slots = pickTargetSlots(pts, p.targetCount, spacing);
   if (!slots) return null;
-  const targetFamilies = new Set(plan.map((it) => it.family.id));
 
-  // 3. Builds: targets, decoys, fillers.
-  const builds: Build[] = [];
-  for (const it of plan) {
-    for (let i = 0; i < it.count; i++) {
-      builds.push({
-        family: it.family,
-        frame: it.frame,
-        isTarget: true,
-        isDecoy: false,
-        flipX: false,
-        extraScale: 1,
-      });
-    }
-  }
-  const decoyCount = Math.min(
-    Math.round(p.decoyRatio * p.objectCount),
-    p.objectCount - p.targetCount,
-  );
-  for (let i = 0; i < decoyCount; i++) {
-    builds.push(buildDecoy(rng, o.theme, plan[i % plan.length] as TargetPlanItem, targetFamilies));
-  }
-  const fillerCount = p.objectCount - p.targetCount - decoyCount;
-  builds.push(...buildFillers(rng, o.theme, fillerCount, targetFamilies, p.objectCount));
-
-  // 4. Slot assignment: targets to their slots, the rest in shuffled order; leftovers are free.
+  // Slot assignment: targets to their slots, the rest in order; leftovers are free.
   const targetSet = new Set(slots.targets);
   const otherSlots: number[] = [];
   const others = p.objectCount - p.targetCount;
@@ -351,7 +343,7 @@ function tryFind(seed: number, regen: number, o: GenerateOptions): Scene | null 
   }
   const targets = objects.filter((ob) => ob.isTarget);
 
-  // 5. Occlusion repair: move a hidden target to a free slot, else draw it on top.
+  // Occlusion repair: move a hidden target to a free slot, else draw it on top.
   const threshold = 1 - p.maxOcclusion - EPS;
   const spread2 = slots.spread ** 2;
   let settled = false;
@@ -393,8 +385,70 @@ function tryFind(seed: number, regen: number, o: GenerateOptions): Scene | null 
     }
   }
   if (!settled) return null;
+  return { objects, targets, spread: slots.spread };
+}
 
-  return {
+function tryFind(
+  seed: number,
+  regen: number,
+  o: GenerateOptions,
+  twist: Twist | null,
+): Scene | null {
+  const p = params(o.level);
+  const rng = new Rng(seed);
+  const hitRadius = hitRadiusFor('find');
+  const playable = playableRect();
+
+  // 1. Poisson slots, relaxing spacing (never below the hard minimum) when too few. Coordinates
+  //    are rounded once here so every later distance check sees the final integers.
+  const hardMin = 2 * hitRadius + ROUNDING_CUSHION;
+  let spacing = Math.max(hardMin, p.minSpacing);
+  let pts = roundPoints(poissonDisc(rng, playable, spacing));
+  for (let i = 0; pts.length < p.objectCount && i < MAX_SPACING_RELAX; i++) {
+    spacing = Math.max(hardMin, spacing * SPACING_RELAX_FACTOR);
+    pts = roundPoints(poissonDisc(rng, playable, spacing));
+  }
+  if (pts.length < p.objectCount) return null;
+  rng.shuffle(pts);
+  if (p.level <= TEACH_FRONT_BAND_UNTIL_LEVEL) {
+    // Teaching levels: front-band slots first so targets come out large and unoccluded.
+    pts = [
+      ...pts.filter((q) => bandOf(q.y, playable) === 2),
+      ...pts.filter((q) => bandOf(q.y, playable) !== 2),
+    ];
+  }
+
+  // 2. Target plan; 3. builds: targets, decoys, fillers.
+  const plan = chooseFindTargets(rng, o.theme, o.level, p.targetCount);
+  const targetFamilies = new Set(plan.map((it) => it.family.id));
+  const builds: Build[] = [];
+  for (const it of plan) {
+    for (let i = 0; i < it.count; i++) {
+      builds.push({
+        family: it.family,
+        frame: it.frame,
+        isTarget: true,
+        isDecoy: false,
+        flipX: false,
+        extraScale: 1,
+      });
+    }
+  }
+  const decoyCount = Math.min(
+    Math.round(p.decoyRatio * p.objectCount),
+    p.objectCount - p.targetCount,
+  );
+  for (let i = 0; i < decoyCount; i++) {
+    builds.push(buildDecoy(rng, o.theme, plan[i % plan.length] as TargetPlanItem, targetFamilies));
+  }
+  const fillerCount = p.objectCount - p.targetCount - decoyCount;
+  builds.push(...buildFillers(rng, o.theme, fillerCount, targetFamilies, p.objectCount));
+
+  // 4–5. Main layout (slots, jitters, occlusion repair).
+  const main = layoutFind(rng, pts, builds, p, playable, hitRadius, spacing);
+  if (!main) return null;
+
+  const scene: Scene = {
     seed,
     mode: 'find',
     theme: o.theme.id,
@@ -403,9 +457,9 @@ function tryFind(seed: number, regen: number, o: GenerateOptions): Scene | null 
     height: SCENE_SIZE,
     playable,
     spacing,
-    targetSpacing: slots.spread,
-    objects,
-    targets,
+    targetSpacing: main.spread,
+    objects: main.objects,
+    targets: main.targets,
     prompt: {
       kind: 'find',
       items: plan.map((it) => ({ family: it.family.id, icon: it.frame, count: it.count })),
@@ -413,6 +467,21 @@ function tryFind(seed: number, regen: number, o: GenerateOptions): Scene | null 
     params: p,
     regenerations: regen,
   };
+  if (twist) scene.twist = twist;
+  if (twist?.kind === 'shuffle') {
+    // 6. Shuffle layouts: the same builds over a reshuffled slot list, repaired like the main
+    //    one. The target spread of a shuffle layout may relax down to 1 × spacing.
+    const shuffles: Placed[][] = [];
+    for (let i = 1; i <= SHUFFLE_LAYOUTS; i++) {
+      const alt = shuffleRng(seed, i);
+      const altPts = alt.shuffle([...pts]);
+      const lay = layoutFind(alt, altPts, builds, p, playable, hitRadius, spacing);
+      if (!lay) return null;
+      shuffles.push(lay.objects);
+    }
+    scene.shuffles = shuffles;
+  }
+  return scene;
 }
 
 export { bandOf, playableRect } from './common';

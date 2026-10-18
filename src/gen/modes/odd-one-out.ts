@@ -4,6 +4,7 @@ import { bandOf, playableRect } from '../common';
 import { FLIPPABLE_TAG, ROUNDING_CUSHION } from '../constants';
 import { hitRadiusFor, params } from '../difficulty';
 import { Rng } from '../rng';
+import { SHUFFLE_LAYOUTS, shuffleRng } from '../twist';
 import type { Family, OddInfo, OddKind, Placed, Scene, Theme } from '../types';
 
 /** n = clamp(8 + level, 8, 36) instances (GENERATOR.md §6). */
@@ -144,4 +145,31 @@ export function generateOdd(seed: number, level: number, theme: Theme): Scene {
     regenerations: 0,
     odd,
   };
+}
+
+/**
+ * Shuffle twist for Odd One Out: every item takes another item's cell (position, band, draw
+ * order and the rotation jitter travel with the cell; frame, size and flip stay with the item),
+ * so the grid invariants hold by construction and the odd one lands somewhere new.
+ */
+export function oddShuffleLayouts(objects: readonly Placed[], seed: number): Placed[][] {
+  const out: Placed[][] = [];
+  for (let i = 1; i <= SHUFFLE_LAYOUTS; i++) {
+    const rng = shuffleRng(seed, i);
+    const order = rng.shuffle(objects.map((_, k) => k));
+    out.push(
+      objects.map((o, k) => {
+        const cell = objects[order[k] as number] as Placed;
+        return {
+          ...o,
+          x: cell.x,
+          y: cell.y,
+          z: cell.z,
+          band: cell.band,
+          rotation: cell.rotation ?? 0,
+        };
+      }),
+    );
+  }
+  return out;
 }

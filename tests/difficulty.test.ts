@@ -21,22 +21,31 @@ describe('params', () => {
     expect(params(10)).toMatchObject({ objectCount: 24, targetCount: 2, minSpacing: 120, t3: 12 });
     expect(params(30)).toMatchObject({ objectCount: 42, targetCount: 3, minSpacing: 95, t3: 18 });
     expect(params(80)).toMatchObject({ objectCount: 60, targetCount: 5, minSpacing: 80, t3: 25 });
+    // GDD v1.5: a gentle second ramp to 150 (a big-scene level, so read the plateau at 151);
+    // sprites never go below the 0.6 floor
+    expect(params(151)).toMatchObject({ objectCount: 66, targetCount: 6, targetScale: 0.6 });
+    expect(params(151)).toMatchObject({ decoyRatio: 0.6, minSpacing: 80, t3: 28, t2: 50 });
+    expect(params(149).objectCount).toBe(66);
   });
 
-  it('interpolates between columns and plateaus at 80', () => {
+  it('interpolates between columns and plateaus at 150', () => {
     const l5 = params(5);
     expect(l5.objectCount).toBeGreaterThan(12);
     expect(l5.objectCount).toBeLessThan(24);
+    expect(params(115).objectCount).toBe(63);
+    expect(params(115).targetCount).toBe(6);
     expect(params(200)).toEqual({
-      ...params(80),
+      ...params(151),
       level: 200,
       bigScene: true,
       targetCount: 7,
-      objectCount: 78,
-      t3: 50,
-      t2: 90,
+      objectCount: 80,
+      t3: 56,
+      t2: 100,
     });
-    expect(params(81)).toEqual({ ...params(80), level: 81 });
+    expect(params(301)).toEqual({ ...params(151), level: 301 });
+    expect(params(81).objectCount).toBe(params(80).objectCount);
+    expect(params(81).decoyRatio).toBeGreaterThan(params(80).decoyRatio);
   });
 
   it('is monotonic and keeps spacing ≥ 2 × hit radius', () => {
@@ -64,7 +73,8 @@ describe('params', () => {
     expect(p.objectCount).toBeGreaterThan(base.objectCount);
     expect(p.objectCount).toBeLessThanOrEqual(80);
     expect(p.t3).toBeCloseTo(2 * (params(25).t3 / 2));
-    expect(params(100).objectCount).toBe(78);
+    expect(params(100).objectCount).toBe(80);
+    expect(params(75).objectCount).toBe(75);
   });
 
   it('clamps nonsense levels to 1', () => {

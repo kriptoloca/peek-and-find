@@ -123,6 +123,16 @@ export interface SpotInfo {
   differences: Difference[];
 }
 
+export type TwistKind = 'shuffle' | 'memory';
+
+/**
+ * Late-game twist of a scene (GDD v1.5 §5a): "shuffle" slides every object to a new place every
+ * few seconds, "memory" hides the prompt icons after a short look. Seeded per scene.
+ */
+export interface Twist {
+  kind: TwistKind;
+}
+
 export interface Scene {
   seed: number;
   mode: Mode;
@@ -145,4 +155,12 @@ export interface Scene {
   odd?: OddInfo;
   /** Present for mode "spot". */
   spot?: SpotInfo;
+  /** Late-game twist, when the scene has one. */
+  twist?: Twist;
+  /**
+   * Shuffle twist: alternative layouts of the same objects (same ids, frames and flips; the
+   * positions, bands and therefore sizes differ), each validated like the main one. The round
+   * cycles main → shuffles[0] → shuffles[1] → main …
+   */
+  shuffles?: Placed[][];
 }

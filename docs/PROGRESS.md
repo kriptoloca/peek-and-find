@@ -6,6 +6,25 @@ Single source of truth for "where did we leave off". Update at the end of every 
 Epic: 9 done with placeholder art and sound (9g visual review applied); 10 and 11 done except the device/QA-tool items; 12 done except the uploads · Next: the real art/sound drop-in, then the uploads (Playgama console, QA tool) · Last update: 2026-10-17 · Branch: main
 Repo: https://github.com/kriptoloca/peek-and-find
 
+## Session plan (2026-10-18, Epic 13: late-game twists + second ramp)
+Hasan's phone pass: level 80 feels "medium"; asked for creative late-game pressure (objects
+changing places after a while) and a curve that hooks from level 1 to the end without
+frustrating. Decisions in docs/questions.md (same date).
+- [ ] Difficulty table: fifth column at L150 (gentle second ramp), plateau 80 → 150.
+- [ ] `src/gen/twist.ts` (pure): shuffle from L30 (Find, Odd), memory from L45 (Find); never on
+      Spot, big scenes or the daily chain; chance 25 % → 50 % by L80; seeded per scene.
+- [ ] Generator: shuffle scenes carry two extra validated layouts (`Scene.shuffles`); Odd
+      layouts permute the grid cells; validator checks every layout.
+- [ ] Rules: the round tracks the current layout; taps resolve against it; taps ignored while
+      sprites slide.
+- [ ] GameScene/HUD: warning pulse 0.9 s before each shuffle (first at 8 s, then every 8 s),
+      450 ms slide; memory hides the prompt icons after 3 s, a tap on the prompt (or a find)
+      peeks for 1 s; shuffle icon in the HUD; `?twist=` dev param; dev hooks.
+- [ ] UI frames `shuffle`, `memory` (pipeline SVG + runtime placeholder).
+- [ ] Tests: unit (table, picker, layouts, validator, rules) + e2e (shuffle moves a target and
+      the tap counts at the new place; memory hides and peeks; daily has no twist).
+- [ ] Docs: GDD v1.5, GENERATOR.md, questions.md, PROGRESS.md.
+
 ## Epic board
 | # | Epic | State | Gate |
 |---|---|---|---|
