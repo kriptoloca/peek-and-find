@@ -35,6 +35,8 @@ play rule):
 - Submitting to moderation stays a human action in the console.
 - Sandbox republishing: up to 15 publications per rolling hour per game.
 
+QA tool (console menu "QA tool", 2026-10-18): it asks for a game URL; give it the production GitHub Pages build `https://kriptoloca.github.io/peek-and-find/` (same game code as the uploaded ZIP; not `/test/`, which carries the dev hooks). In the tool: Play, a hint (rewarded), three wrong taps then Continue (rewarded), three scenes past 120 s (interstitial), a tab switch (pause).
+
 Order: test the sandbox link on a phone and a desktop (load, sound, pause menu, a reload keeps
 the level), run the console's QA tool, then the share post and the free run, then friends and
 the channel. A 5-minute average needs about 20 scenes per player; the first scenes are the
