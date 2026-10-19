@@ -8,8 +8,6 @@ const TAU = Math.PI * 2;
 /** SFX list from ASSETS.md "Audio"; kept in sync with src/data/audio-manifest.json by a test. */
 export const SFX_NAMES = [
   'tap_correct_1',
-  'tap_correct_2',
-  'tap_correct_3',
   'tap_wrong',
   'pop',
   'sparkle',
@@ -143,14 +141,6 @@ export function renderSfx(name) {
     case 'tap_correct_1':
       out = tone({ freq: 659.25, dur: 0.16, type: 'tri', decay: 0.1, gain: 0.5 });
       out = mix(out, tone({ freq: 1318.5, dur: 0.1, decay: 0.05, gain: 0.12 }));
-      break;
-    case 'tap_correct_2':
-      out = tone({ freq: 783.99, dur: 0.16, type: 'tri', decay: 0.1, gain: 0.5 });
-      out = mix(out, tone({ freq: 1568, dur: 0.1, decay: 0.05, gain: 0.12 }));
-      break;
-    case 'tap_correct_3':
-      out = tone({ freq: 987.77, dur: 0.16, type: 'tri', decay: 0.1, gain: 0.5 });
-      out = mix(out, tone({ freq: 1975.5, dur: 0.1, decay: 0.05, gain: 0.12 }));
       break;
     case 'tap_wrong':
       out = tone({ freq: 170, dur: 0.22, type: 'soft', decay: 0.16, slide: 0.7, gain: 0.5 });

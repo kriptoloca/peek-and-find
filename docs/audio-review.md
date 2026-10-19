@@ -58,6 +58,6 @@ Measured levels (full scale = 1.0):
 1. Replace `music_loop` with a 24–30 s mellow loop (Kenney "Music Jingles"/freesound CC0 or a
    licensed track), seamless, mono, ≤ 150 KB in both formats. Drop it into `assets/audio/` and
    run `npm run audio`.
-2. Keep the synthesized SFX as the fallback; replace `tap_correct_1/2/3`, `scene_complete` and
+2. Keep the synthesized SFX as the fallback; replace `tap_correct_1` (the variants _2/_3 were retired in v1.8), `scene_complete` and
    `star_*` with the CC0 pack when it is chosen so the win moment has more body.
 3. Wire `sparkle` to the hint glow (currently `hint_reveal` only) or delete it from the manifest.

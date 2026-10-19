@@ -3,30 +3,33 @@
 Single source of truth for "where did we leave off". Update at the end of every epic and whenever a decision changes the plan. Read this first at the start of every session.
 
 ## Status
-Epic: 14 (pause menu, GDD v1.6) and 13 (late-game twists + second ramp, GDD v1.5) done in code; 9 done with placeholder art and sound; 10 and 11 done except the device/QA-tool items; 12 done except the uploads · Next: Hasan's phone pass of the twists, the real art/sound drop-in, then the uploads (Playgama console, QA tool) · 0.1.2 (hearts carry over + host focus fix) ready for Update Game · Last update: 2026-10-18 · Branch: main
+Epic: 16 (feel pass, GDD v1.8: success outweighs failure, collect to HUD, rising combo, win beat) done in code, release 0.1.3 ready for Update Game, **phone feel check pending (Hasan)**; 14 (pause menu, GDD v1.6) and 13 (late-game twists + second ramp, GDD v1.5) done in code; 9 done with placeholder art and sound; 10 and 11 done except the device/QA-tool items; 12 done except the uploads · Next: Hasan's phone pass of the twists, the real art/sound drop-in, then the uploads (Playgama console, QA tool) · 0.1.3 (feel pass; includes 0.1.2 hearts carry over + host focus fix) ready for Update Game · Last update: 2026-10-19 · Branch: main
 Repo: https://github.com/kriptoloca/peek-and-find
 
 ## Session plan (2026-10-19, Epic 16: feel pass, GDD v1.8, release 0.1.3)
 Hasan chose "1": only the feel fix on Peek & Find, planned with `pebblit-game-craft` (workflow B),
 verified with Playwright. Spec in GDD §3a, audit and decisions in docs/questions.md (feel pass).
-- [ ] Docs first: GDD v1.8 §3/§3a/§21, questions.md audit and decision, this plan.
-- [ ] `src/game/feel.ts` (pure): timings, gains, combo step, detune, shake intensity; haptic
+- [x] Docs first: GDD v1.8 §3/§3a/§21, questions.md audit and decision, this plan.
+- [x] `src/game/feel.ts` (pure): timings, gains, combo step, detune, shake intensity; haptic
       patterns with failure ≤ success; `audio.play(name, { gain, detune })`; `correctSfx` retired.
-- [ ] Failure soft: no screen shake, wobble ±8 px × 3, `tap_wrong` at gain 0.5, `heart_lose`
+- [x] Failure soft: no screen shake, wobble ±8 px × 3, `tap_wrong` at gain 0.5, `heart_lose`
       only on the losing tap, haptics 8 ms / 30 ms.
-- [ ] Success heavy: 45 ms hit stop (wall-clock restore, pause-safe), screen kick with the combo
+- [x] Success heavy: 45 ms hit stop (wall-clock restore, pause-safe), screen kick with the combo
       step, `tap_correct_1` at gain 1.4 rising +2 semitones per step (cap 3).
-- [ ] Collect to HUD: the found object flies to its prompt icon (380 ms) and leaves the board;
+- [x] Collect to HUD: the found object flies to its prompt icon (380 ms) and leaves the board;
       the HUD counts down on arrival with `sparkle`; Spot 5 flies a ring token; a hint ring on
       the found target goes with it; the shuffle slides only what is left.
-- [ ] Win beat: the last find lands first, the win sequence 450 ms later (scene clock, round
-      guard); taps ignored and the menu closed during the beat; camera effects reset on freeze.
-- [ ] Dev hooks (`onBoard`, `hudRemaining`, feel log, `overlay`) and `tests/e2e/feel.spec.ts`:
+- [x] Win beat: the last find lands first, the win sequence 200 ms after the last flight lands
+      (scene clock, round guard, 1.5 s safety net); taps ignored and the menu closed during the
+      beat; camera effects reset on freeze.
+- [x] Dev hooks (`onBoard`, `hudRemaining`, feel log, `overlay`) and `tests/e2e/feel.spec.ts`:
       correct cascade and arrival, combo rise and reset, quiet failure without shake, the win
       beat after the last arrival, a flight frozen by the menu, Spot keeps its objects.
-- [ ] Unit tests (feel, haptics, audio keys), full check + unit + e2e green.
-- [ ] `code-review` + adversarial audit, KRİTİK/YÜKSEK closed.
-- [ ] Release 0.1.3: ZIP + SHA, PROGRESS board/measured, skill teardown updated; Hasan: Update
+- [x] Unit tests (feel, haptics, audio keys), full check + unit + e2e green.
+- [x] `code-review` + adversarial audit, KRİTİK/YÜKSEK closed: 0 KRİTİK, 1 YÜKSEK (a found
+      object's invisible tap circle swallowed taps), 2 ORTA, 13 DÜŞÜK, all fixed
+      (docs/questions.md, feel pass); e2e made speed-independent with `?feelslow=K`.
+- [x] Release 0.1.3: ZIP + SHA, PROGRESS board/measured, skill teardown updated; Hasan: Update
       Game, judge on the iPhone.
 
 ## Session plan (2026-10-18, Epic 13: late-game twists + second ramp)
@@ -77,6 +80,7 @@ frustrating. Decisions in docs/questions.md (same date).
 | 13 | Late-game twists (shuffle from L30, memory from L45; GDD v1.5 §5a) + second difficulty ramp to L150; `?twist=` dev param; HUD marker and "?" prompt | done (code) | 189 unit + 40 e2e; twist layouts validated like the main one; adversarial audit 0/1/1/10 all closed (docs/questions.md 2026-10-18); **phone pass at L30–60 pending (Hasan)** |
 | 14 | In-game pause menu (GDD v1.6 §9): pause button freezes the scene, Resume / Sound / Music / Home; star timer leaves frozen time out (also fixes the platform-pause star loss) | done (code) | 200 unit + 59 e2e (`menu.spec`); **phone check pending (Hasan)** |
 | 15 | Hearts carry over (GDD v1.7 §6): one back on entering every 20th level, never above three; hearts are written on every change, a loss leaves one for the Retry, Continue gives three; the daily chain keeps its own | done (code) | `src/game/hearts.ts`, save field `hearts` (old saves read as three, no version bump), `?hearts=N` dev param; `tests/hearts.test.ts`, `tests/e2e/hearts.spec.ts`; store "How to play" updated (Playgama field by hand, Hasan) |
+| 16 | Feel pass (GDD v1.8 §3a, `pebblit-game-craft` workflow B): failure local and soft (no screen shake, ±8 px wobble, quiet sounds, short haptics), success heavy (45 ms hit stop, screen kick and pitch rising with the combo), found objects fly into their HUD icon and the count drops on arrival, the win starts a beat after the last landing; sounds compared as played (file level + gain) | done (code) | `src/game/feel.ts`, `tests/feel.test.ts`, `tests/e2e/feel.spec.ts` (10), `?feelslow=K`; audit 0/1/2/13 all closed; release 0.1.3; **phone feel check pending (Hasan)** |
 | 12 | Store assets, submission ZIP | done (code) | `npm run zip` → deterministic `release/peek-and-find-0.1.0.zip` (3.27 MB, index.html at the root, no /test/, limits checked, SHA-256 printed); `docs/store/`: listing, thumbnail brief, video script, submission notes; `tests/store.test.ts` bans young-audience wording; **uploads and the thumbnails need the Playgama account and the art pack (Hasan)** |
 
 ## Denetim özeti (2026-10-17, düşman denetçi, HEAD dcfa024 → bu commit)
@@ -85,6 +89,8 @@ frustrating. Decisions in docs/questions.md (same date).
 | --- | --- | --- | --- | --- | --- |
 | Sistem mantığı (CLAUDE.md/GDD/GENERATOR) | 0 | 2 | 6 | 17 | YÜKSEK 2/2 düzeltildi; ORTA 5 düzeltildi, 1 kayıt; DÜŞÜK 12 düzeltildi, 5 kayıt |
 | E2E (oyuncu gözünden) | 2 | 5 | 10 | 7 | KRİTİK 2/2, YÜKSEK 5/5 düzeltildi; ORTA 8 düzeltildi, 2 kayıt; DÜŞÜK 5 düzeltildi, 2 kayıt |
+
+| His geçişi (2026-10-19, code-review + düşman denetçi) | 0 | 1 | 2 | 13 | Hepsi düzeltildi (questions.md "feel pass") |
 
 Gerekçeli kayıtlar docs/questions.md "adversarial audit" bölümlerinde. İkinci koşu (3259086 üzerinde): sistem denetimi ilk tur bulgularını 14 kapandı / 5 kısmen / 1 açık / 5 kayıt olarak hükme bağladı ve 1 ORTA + 11 DÜŞÜK yeni bulgu verdi; hepsi bu commit'te düzeltildi ya da kaydedildi (questions.md "second round"). E2E ikinci turu ilk tur bulgularını 13 kapandı / 6 kısmen / 3 açık / 2 kayıt olarak hükme bağladı ve 2 YÜKSEK (Spot piksel metriği) + 4 ORTA + 6 DÜŞÜK yeni bulgu verdi; YÜKSEK ve ORTA'ların hepsi bu commit'te düzeltildi, DÜŞÜK'ler düzeltildi ya da kaydedildi (questions.md "E2E re-audit").
 
@@ -95,7 +101,8 @@ Gerekçeli kayıtlar docs/questions.md "adversarial audit" bölümlerinde. İkin
 - [ ] Art pack: 2–3 candidate links, **SVG sources required** (ASSETS.md). Flat, cute but not childish, no nursery palette. Input contract and drop-in workflow: `assets/README.md`.
 - [ ] Sounds: download Kenney "Interface Sounds" / "Digital Audio" (CC0) or pick freesound CC0 clips, drop them as `assets/audio/<name>.wav|ogg` (names in `src/data/audio-manifest.json`), run `npm run audio`. Until then the synthesized placeholders play.
 - [x] Playgama developer account opened and YouTube channel created (2026-10-18).
-- [ ] **Update Game on the Playgama console with `release/peek-and-find-0.1.2.zip`** (hearts carry over + host focus fix, SHA in `docs/store/submission.md`; also paste the new "How to play" text from `docs/store/listing.md` into the form): same game id, dashboard numbers, likes and sandbox targets; the sandbox republish needs no moderation. Then on the phone: after an interstitial the next scene must appear without a tap, and if the dim does stay, the first tap must not cost a heart.
+- [ ] **Update Game on the Playgama console with `release/peek-and-find-0.1.3.zip`** (feel pass; it includes 0.1.2: hearts carry over + host focus fix; SHA in `docs/store/submission.md`; if 0.1.2's "How to play" text from `docs/store/listing.md` is not in the form yet, paste it too): same game id, dashboard numbers, likes and sandbox targets; the sandbox republish needs no moderation. Then on the phone: after an interstitial the next scene must appear without a tap, and if the dim does stay, the first tap must not cost a heart.
+- [ ] **Feel check on the iPhone (0.1.3)**, three lines back: (1) does a correct tap now feel heavier than a wrong one; (2) is the short freeze on a find felt as a "thunk" or seen as a stutter (stutter → `HIT_STOP_MS` to 0 in `src/game/feel.ts`); (3) is the screen kick too much on the fourth find in a row. Test link after the deploy: `https://kriptoloca.github.io/peek-and-find/test/?level=12`; for a slowed look at the flight: `https://kriptoloca.github.io/peek-and-find/test/?level=12&feelslow=4`.
 - [ ] Playgama Sandbox (live 2026-10-18; targets 100 plays and 5:00 average play time; `docs/store/launch-plan.md` "Playgama Sandbox"): test the sandbox link on phone and desktop, QA tool run 2026-10-18 clean (certification checklist row 10; Continue still to exercise), post about the game and start the free share-bonus run from "Get More Players" (no paid traffic), then share the link.
 - [x] Add Game on developer.playgama.com done 2026-10-18 (`docs/store/launch-plan.md` step 1: fields in `docs/store/listing.md`, ZIP `peek-and-find-0.1.0.zip` SHA `cadf90ac…2bb5`, media from `docs/store/brand/` and `npm run screenshots`), then forward Playgama's feedback. YouTube Playables interest form in parallel. Then `npm run zip` and the upload steps in `docs/store/submission.md`; listing text in `docs/store/listing.md`; icon and profile photo ready in `docs/store/brand/` (2026-10-18); thumbnails per `docs/store/thumbnail-brief.md` once the art pack is in.
 - [ ] Phone test of the Bridge build (links in README.md → Test links; `https://kriptoloca.github.io/peek-and-find/test/?fakeads=1&adfast=1`). First report (2026-10-17): no sound heard on iPhone Safari; the ringer switch silences Web Audio there, now worked around (`src/platform/ios-unmute.ts`). Third report (2026-10-17, production link, level 10): still no music, no vibration (iPhone: expected, no API). Diagnostics screenshot received (2026-10-17 19:13): the chain works on iOS 26 (ogg decoded, context running, music playing, bus RMS 0.02); the loop was ≈ −30 dBFS, raised by ≈ 8 dB. **Retest 2026-10-17 evening: sound and music audible on the iPhone, home button works.** Audio diagnostics screenshot 2026-10-18 12:12 (iPhone, in play): ogg+m4a+webAudio true, context running, locked false, music playing, bus level 0.047, dropped 0, missing none, iOS unmute element playing (3 kicks); SFX chain heard (heart_lose, tap_correct, scene_complete, confetti, stars). Audio on iPhone is closed. Still open on the phone: `?fakeads=1&adfast=1` flow, rotation, Android haptics, L80 profile. `?fakeads=1&adfast=1` on iPhone — interstitial after 3 scenes, hint bulb, Continue on the fail screen, rotation during an ad.
@@ -114,7 +121,7 @@ See `docs/questions.md` (every deviation from the spec with its reason).
 ## Measured
 | Metric | Value |
 |---|---|
-| Tests | 200 unit + 59 e2e locally, +1 on the live site (+ `npm run tour`, 17 screenshot flows, not a gate) |
+| Tests | 209 unit + 69 e2e locally, +1 on the live site (+ `npm run tour`, 17 screenshot flows, not a gate) |
 | Bundle (dist/) | 5.33 MB shipped (61 files); initial load before GameReady 3.15 MB (OGG) / 3.17 MB (M4A): bundle 1.23 + Bridge 0.29 + kitchen and beach atlases 1.05 (beach unlocks at level 4, so it preloads at boot) + UI 0.03 + backgrounds + audio 0.16 (`docs/size-report.md`) |
 | Atlases | 2048×2048 per theme, 112 frames at 208 px; UI 1024×512 |
 | Level 80 generation | ≈ 0.4 ms; with the shuffle twist (two extra layouts) still well under 50 ms per scene |
@@ -122,6 +129,7 @@ See `docs/questions.md` (every deviation from the spec with its reason).
 | CI | 8/8 runs green on main before this epic |
 
 ## Next steps (in order)
+0. **Feel check of 0.1.3** (Hasan, see Hasan's steps): tune only the constants in `src/game/feel.ts` from the three answers; then decide the next lever with `pebblit-game-craft` (Face: a character, or Share: a daily result card). Open questions from 2026-10-19 still waiting for Hasan: an in-game leaderboard by total stars, and the next game (bus-jam genre with a twist).
 0. **Phone check of the pause menu** (Hasan): any scene, tap the bottom-left pause button → Sound/Music toggles, Resume continues the same scene, Home exits: `https://kriptoloca.github.io/peek-and-find/test/?level=12`.
 0. **Phone pass of the twists** (Hasan): `https://kriptoloca.github.io/peek-and-find/test/?level=40&twist=shuffle` (board slides every ~10 s, marker pulses before), `https://kriptoloca.github.io/peek-and-find/test/?level=46&twist=memory` (prompt hides at 3 s, tap the "?" to peek), then a natural run from `https://kriptoloca.github.io/peek-and-find/test/?level=30` for ten scenes: pressure or help? Knobs in `src/gen/twist.ts`.
 1. **Phone pass of the whole loop** (Hasan): sound on iPhone Safari after the first tap, music toggle, interstitial flow with `?fakeads=1&adfast=1`, rotation. Report in 3 lines.
@@ -131,4 +139,4 @@ See `docs/questions.md` (every deviation from the spec with its reason).
 5. Open tuning items (density/overlap, mirror decoys, empty taps, frame size) stay here until Hasan's feedback on L30/L60. Decided 2026-10-17: second theme at level 4, Odd cells at ±3°.
 6. Visual: when the real pack lands, re-run `npm run tour` and re-check the contrast gate output; recommendations for the pack are in docs/visual-review.md §4.
 
-Dev shortcuts: `?level=N`, `?mode=find|odd|spot`, `?twist=shuffle|memory|none`, `?daily=1`, `?today=YYYYMMDD`, `?reset=1`, `?fakeads=1`, `?adfast=1`, `?debug=true` (SDK logs), `?renderer=canvas` (Canvas renderer, e2e on GPU-less machines), `?audiodebug=1` (audio state drawn on screen for phone tests), triple-tap top-left for the dev menu, `/#gen` (M cycles modes). `__peekDebug.state().atlasKeys` lists the loaded atlases, `.audio` the sound state (locked, music, last SFX).
+Dev shortcuts: `?level=N`, `?mode=find|odd|spot`, `?twist=shuffle|memory|none`, `?daily=1`, `?today=YYYYMMDD`, `?reset=1`, `?hearts=N`, `?feelslow=K` (feel timings K× slower, max 20), `?fakeads=1`, `?adfast=1`, `?debug=true` (SDK logs), `?renderer=canvas` (Canvas renderer, e2e on GPU-less machines), `?audiodebug=1` (audio state drawn on screen for phone tests), triple-tap top-left for the dev menu, `/#gen` (M cycles modes). `__peekDebug.state().atlasKeys` lists the loaded atlases, `.audio` the sound state (locked, music, last SFX).

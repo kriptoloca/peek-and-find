@@ -18,6 +18,12 @@ describe('haptics', () => {
     }
   });
 
+  it('failure never outweighs success (GDD v1.8 §3a)', () => {
+    const on = (p: number[]): number => p.filter((_, i) => i % 2 === 0).reduce((a, b) => a + b, 0);
+    expect(Math.max(...HAPTIC_PATTERNS.wrong)).toBeLessThan(Math.min(...HAPTIC_PATTERNS.correct));
+    expect(on(HAPTIC_PATTERNS.lost)).toBeLessThan(on(HAPTIC_PATTERNS.won));
+  });
+
   it('detects support and fires the pattern of the kind', () => {
     const calls: (number | number[])[] = [];
     const nav = { vibrate: (p: number | number[]): boolean => (calls.push(p), true) };

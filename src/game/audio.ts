@@ -17,6 +17,12 @@ import { persistProgress, progress } from './state';
 export const AUDIO_INDEX_KEY = 'audio-index';
 export const AUDIO_INDEX_URL = 'audio/index.json';
 const SFX_VOLUME = 0.6;
+
+/** Per-play options: `gain` scales the SFX volume, `detune` shifts the pitch in cents. */
+export interface SfxOptions {
+  gain?: number;
+  detune?: number;
+}
 /** 0.35 was inaudible on an iPhone speaker (docs/audio-review.md, phone test 3). */
 const MUSIC_VOLUME = 0.5;
 const DEBUG_HISTORY = 8;
@@ -91,7 +97,7 @@ class AudioManager {
   private levelBuf: Float32Array<ArrayBuffer> | null = null;
   private device: { ogg: boolean; m4a: boolean; webAudio: boolean } | null = null;
   /** SFX asked for while the context was still locked; played the moment it unlocks. */
-  private pendingSfx: SfxName | null = null;
+  private pendingSfx: { name: SfxName; opts: SfxOptions } | null = null;
   private unsubscribePause: (() => void) | null = null;
 
   /** Binds the game-wide sound manager and the platform's audio state. */
@@ -118,7 +124,7 @@ class AudioManager {
       // resolved; play it now instead of dropping it.
       const pending = this.pendingSfx;
       this.pendingSfx = null;
-      if (pending) this.play(pending);
+      if (pending) this.play(pending.name, pending.opts);
     });
     this.refresh();
   }
@@ -137,20 +143,26 @@ class AudioManager {
     );
   }
 
-  play(name: SfxName): void {
+  /**
+   * Plays an SFX. `gain` scales the SFX volume (GDD v1.8 §3a: success louder than failure),
+   * `detune` shifts the pitch in cents (the combo rise).
+   */
+  play(name: SfxName, opts: SfxOptions = {}): void {
     if (!this.sound || !this.cache || !this.sfxAllowed()) {
       this.dropped += 1;
       return;
     }
     if (this.sound.locked) {
-      this.pendingSfx = name;
+      // Keep the gain and pitch: a wrong tap replayed at full volume would outweigh success.
+      this.pendingSfx = { name, opts };
       return;
     }
     if (!this.cache.exists(name)) {
       this.dropped += 1;
       return;
     }
-    if (this.sound.play(name, { volume: SFX_VOLUME })) {
+    const volume = Math.min(1, SFX_VOLUME * (opts.gain ?? 1));
+    if (this.sound.play(name, { volume, detune: opts.detune ?? 0 })) {
       this.played.push(name);
       if (this.played.length > DEBUG_HISTORY) this.played.shift();
     }

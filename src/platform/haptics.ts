@@ -6,12 +6,16 @@
  */
 export type HapticKind = 'correct' | 'wrong' | 'won' | 'lost';
 
-/** Milliseconds on/off, per Vibration API. Keep every pattern ≤ 200 ms in total. */
+/**
+ * Milliseconds on/off, per Vibration API. Keep every pattern ≤ 200 ms in total. Failure never
+ * outweighs success (GDD v1.8 §3a): the wrong tap is shorter than the correct one, the lost
+ * scene lighter than the won one.
+ */
 export const HAPTIC_PATTERNS: Record<HapticKind, number[]> = {
-  correct: [12],
-  wrong: [40, 50, 40],
-  won: [15, 40, 30],
-  lost: [90],
+  correct: [15],
+  wrong: [8],
+  won: [20, 40, 40],
+  lost: [30],
 };
 
 type Vibrator = { vibrate?: (pattern: number | number[]) => boolean };

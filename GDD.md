@@ -34,15 +34,15 @@ Rule: the right move is the loudest moment; failure stays local and soft. Values
 | …arrival in the HUD | the icon bounces 1.25×, the badge counts down now | `sparkle` at gain 0.6, same pitch step | none | none |
 | Correct tap, Spot 5 | rings stay on both images (the comparison needs them); a green ring token flies from the tapped image to the Spot icon | as Find | as Find | 15 ms |
 | Wrong tap | the object wobbles ±8 px, 3 × 40 ms; the lost heart bumps 1.25× | `tap_wrong` at gain 0.5 | none | 8 ms |
-| Losing tap | as wrong, then the fail overlay | `tap_wrong` + `heart_lose` at gain 0.8 | none | 30 ms |
-| Last find | its full find cascade first; after a 450 ms beat: shake 120 ms at 0.004, `scene_complete` + `confetti`, confetti, stars | | | 20-40-40 ms |
+| Losing tap | as wrong, then the fail overlay | `tap_wrong` + `heart_lose` at gain 0.45 (the heart file is the loudest; together they stay under one correct tap) | none | 30 ms |
+| Last find | its full find cascade first; once every flight has landed, a 200 ms beat, then: shake 120 ms at 0.0045 (at least the strongest combo kick), `scene_complete` + `confetti`, confetti, stars (about 0.7 s after the last tap) | | | 20-40-40 ms |
 
 - **Combo step** = finds in a row in this scene since the last wrong tap, first find = step 0, cap 3. A wrong tap resets it quietly.
-- **Board empties**: found objects leave the board (Find, Odd); the shuffle twist slides only what is left. Spot 5 keeps its objects.
-- **The star timer stops at the last tap**, so the win beat costs no stars; taps during the beat are ignored and the pause menu stays closed, as over the win overlay.
-- **Input stays open** during flights; a second find while the first flies is fine.
+- **Board empties**: found objects leave the board (Find, Odd); the shuffle twist slides only what is left. Spot 5 keeps its objects. A found object's tap circle goes with it 0.3 s after the find (until then its flyer still covers the spot, so a double tap stays free); after that a tap there lands on whatever is visible underneath, or on nothing.
+- **The star timer stops at the last tap**, so the win beat costs no stars; taps during the beat are ignored and the pause menu stays closed, as over the win overlay. If a flight never lands, a 1.5 s safety net (scene clock, from the last tap) starts the win anyway.
+- **Input stays open** during flights; a second find while the first flies is fine. A rotation or resize during a flight lands it at once (the HUD icon has moved).
 - **Pause and menu** freeze flights, the beat and the hit stop (tweens and the scene clock); a pending hit stop never resumes a paused game; camera effects are reset when the game freezes.
-- **Failure never outweighs success**: haptic and sound gains are unit-tested for it.
+- **Failure never outweighs success**: haptics and the sounds as played (file level plus gain, `SFX_FILE_DB` in `src/game/feel.ts`) are unit-tested for it; the pipeline test re-measures the files, so new sounds must come with new levels.
 
 ## 4. Modes (rotate automatically, player never chooses)
 | Mode | Prompt (icon-only) | Win | Rotation |

@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import type { Layout, Rect } from './layout';
 import type { PromptCount } from './rules';
 import { addImage, fitImage, setImageFrame } from './assets';
+import { ARRIVE_BOUNCE_MS, ARRIVE_BOUNCE_SCALE, HEART_BUMP_MS, HEART_BUMP_SCALE } from './feel';
 import { UI } from './textures/placeholders';
 
 const ICON_MAX = 120;
@@ -23,6 +24,9 @@ interface PromptItemView {
   badge: Phaser.GameObjects.Image;
   count: Phaser.GameObjects.Text;
   key: string;
+  /** What the HUD shows: it counts down when a found object lands (GDD v1.8 §3a). */
+  remaining: number;
+  total: number;
 }
 
 /**
@@ -225,11 +229,16 @@ export class Hud {
     this.hearts.forEach((h, i) => setImageFrame(h, i < n ? UI.heart : UI.heartEmpty));
   }
 
-  /** Brief scale bump on the heart that was just lost. */
+  /** Soft bump on the heart that was just lost (failure stays light, GDD v1.8 §3a). */
   pulseHeart(index: number): void {
     const h = this.hearts[index];
     if (!h) return;
-    this.scene.tweens.add({ targets: h, scale: h.scale * 1.4, yoyo: true, duration: 120 });
+    this.scene.tweens.add({
+      targets: h,
+      scale: h.scale * HEART_BUMP_SCALE,
+      yoyo: true,
+      duration: HEART_BUMP_MS,
+    });
   }
 
   setPrompt(counts: PromptCount[]): void {
@@ -252,7 +261,7 @@ export class Hud {
           })
           .setOrigin(0.5);
         this.container.add([icon, badge, count]);
-        return { icon, badge, count, key: c.icon };
+        return { icon, badge, count, key: c.icon, remaining: c.remaining, total: c.total };
       });
       if (this.promptHiddenFlag) this.applyPromptFrames();
       else this.reapply();
@@ -260,14 +269,56 @@ export class Hud {
     counts.forEach((c, i) => {
       const it = this.items[i];
       if (!it) return;
-      it.count.setText(`×${String(c.remaining)}`);
-      const done = c.remaining === 0;
-      // A "×1" badge is noise: the badge only appears when there is something to count.
-      const showBadge = c.total > 1;
-      it.icon.setAlpha(done ? 0.35 : 1);
-      it.badge.setVisible(showBadge).setAlpha(done ? 0.35 : 1);
-      it.count.setVisible(showBadge).setAlpha(done ? 0.35 : 1);
+      it.remaining = c.remaining;
+      it.total = c.total;
+      this.renderCount(it);
     });
+  }
+
+  private renderCount(it: PromptItemView): void {
+    it.count.setText(`×${String(it.remaining)}`);
+    const done = it.remaining === 0;
+    // A "×1" badge is noise: the badge only appears when there is something to count.
+    const showBadge = it.total > 1;
+    it.icon.setAlpha(done ? 0.35 : 1);
+    it.badge.setVisible(showBadge).setAlpha(done ? 0.35 : 1);
+    it.count.setVisible(showBadge).setAlpha(done ? 0.35 : 1);
+  }
+
+  /**
+   * A found object landed in its prompt icon (collect to HUD, GDD v1.8 §3a): the shown count
+   * goes down by one and the icon bounces. The rules already counted the find at the tap.
+   */
+  tickDown(icon: string): void {
+    const it = this.items.find((i) => i.key === icon);
+    if (!it) return;
+    it.remaining = Math.max(0, it.remaining - 1);
+    this.renderCount(it);
+    const targets = [it.icon, it.badge, it.count];
+    this.scene.tweens.killTweensOf(targets);
+    this.reapply();
+    this.scene.tweens.add({
+      targets,
+      scale: `*=${String(ARRIVE_BOUNCE_SCALE)}`,
+      yoyo: true,
+      duration: ARRIVE_BOUNCE_MS,
+      ease: 'Quad.easeOut',
+      onComplete: () => {
+        this.reapply();
+      },
+    });
+  }
+
+  /** Canvas center and size of a prompt icon (the target of a collect flight), or null. */
+  promptCenter(icon: string): { x: number; y: number; size: number } | null {
+    const it = this.items.find((i) => i.key === icon);
+    if (!it) return null;
+    return { x: it.icon.x, y: it.icon.y, size: it.icon.displayWidth };
+  }
+
+  /** Sum of the counts the HUD shows right now (dev hooks: arrivals vs the rules). */
+  displayedRemaining(): number {
+    return this.items.reduce((sum, it) => sum + it.remaining, 0);
   }
 
   /** Teaching levels: the prompt icon breathes a few times so the eye lands on "find this". */
@@ -282,18 +333,6 @@ export class Hud {
         ease: 'Sine.easeInOut',
       });
     }
-  }
-
-  /** Pop the badge of the prompt item that just decremented. */
-  pulsePrompt(icon: string): void {
-    const it = this.items.find((i) => i.key === icon);
-    if (!it) return;
-    this.scene.tweens.add({
-      targets: [it.icon, it.badge, it.count],
-      scale: '*=1.2',
-      yoyo: true,
-      duration: 110,
-    });
   }
 
   /** Re-runs the last layout (square bands/columns or Spot bands) after items were rebuilt. */
@@ -380,6 +419,10 @@ export class Hud {
     const bx = x + icon * 0.42;
     const by = y + icon * 0.38;
     it.badge.setDisplaySize(BADGE_SIZE, BADGE_SIZE).setPosition(bx, by);
-    it.count.setPosition(bx, by + 1).setFontSize(Math.round(BADGE_SIZE * 0.6));
+    // The count is sized by its font: scale 1 is its rest, so a killed bounce never sticks.
+    it.count
+      .setScale(1)
+      .setPosition(bx, by + 1)
+      .setFontSize(Math.round(BADGE_SIZE * 0.6));
   }
 }

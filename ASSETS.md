@@ -33,7 +33,7 @@ Tags per family (for decoys): `round` (apple, egg, ball, coconut, planet, moon, 
 Icons: play, daily, check, streak-flame, heart (full/empty), star (full/empty), hint-bulb, home (back to Title), sound on/off, music on/off, "≠" (odd), "⟷5" (spot), continue-play, retry, close. Buttons: 2 rounded shapes (9-slice). Confetti: 3 small shapes. Logo: Pebblit mark + "Peek & Find" wordmark (the only text asset).
 
 ## Audio (CC0 from Kenney Audio / freesound, trimmed, OGG + M4A fallback for Safari)
-15 SFX files: tap_correct_1/2/3 (pitch variants), tap_wrong, pop, sparkle, scene_complete, star_1/2/3, heart_lose, hint_reveal, button, confetti, daily_complete. One music loop ≤ 150 KB, 20–30 s, mellow. Total audio ≤ 1 MB.
+13 SFX files: tap_correct_1 (its pitch rises with the combo through detune, GDD v1.8 §3a; the variants _2/_3 were retired), tap_wrong, pop, sparkle, scene_complete, star_1/2/3, heart_lose, hint_reveal, button, confetti, daily_complete. One music loop ≤ 150 KB, 20–30 s, mellow. Total audio ≤ 1 MB.
 
 ## Budget
 Per theme atlas ≤ 2.5 MB (color variants roughly double the frame count) · UI atlas ≤ 400 KB · backgrounds ≤ 1.2 MB · audio ≤ 1 MB · code ≤ 1.5 MB (Phaser ≈ 1.2 MB) → initial load ≈ 5–6 MB, target ≤ 8 MB (boot loads UI + first theme + its background only; other themes load from the bundle on preload, never from the network).

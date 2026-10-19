@@ -1,4 +1,5 @@
 import { starsFor } from '../gen/difficulty';
+import { FOUND_TAP_GRACE_MS } from './feel';
 import { HEARTS_MAX, clampHearts } from './hearts';
 import { dist2 } from '../gen/geometry';
 import type { Placed, Scene } from '../gen/types';
@@ -10,7 +11,8 @@ export type RoundStatus = 'intro' | 'playing' | 'won' | 'lost';
 export interface Round {
   scene: Scene;
   hearts: number;
-  found: Set<string>;
+  /** Found target ids with the ms timestamp of the find. */
+  found: Map<string, number>;
   wrongTaps: number;
   /** ms timestamp when the timer started (after pop-in); null during intro. */
   startedAt: number | null;
@@ -90,7 +92,7 @@ export function newRound(scene: Scene, hearts: number = HEARTS_MAX): Round {
   return {
     scene,
     hearts: clampHearts(hearts),
-    found: new Set(),
+    found: new Map(),
     wrongTaps: 0,
     startedAt: null,
     finishedAt: null,
@@ -145,12 +147,27 @@ export function remainingTargets(r: Round): number {
   return totalTargets(r.scene) - r.found.size;
 }
 
+/**
+ * What a tap can land on now. Find and Odd: a found object has left the board (GDD v1.8 §3a), so
+ * its circle takes no taps once FOUND_TAP_GRACE_MS has passed (until then its flyer still covers
+ * the spot and a repeat tap is free); otherwise it would swallow taps meant for the objects it
+ * no longer hides. Spot 5 keeps its differences in the picture, so they stay as they are.
+ */
+function liveTargets(r: Round, now: number): readonly HitTarget[] {
+  const all = hitTargets(r.scene, r.layout);
+  if (r.scene.mode === 'spot' || r.found.size === 0) return all;
+  return all.filter((o) => {
+    const at = r.found.get(o.id);
+    return at === undefined || now - at < FOUND_TAP_GRACE_MS;
+  });
+}
+
 /** Applies a tap in scene coordinates. Mutates the round and reports what happened. */
 export function applyTap(r: Round, x: number, y: number, now: number): TapResult {
   // Fast players tap while sprites are still popping in: that tap starts the round and counts.
   if (r.status === 'intro') startRound(r, now);
   if (r.status !== 'playing' || r.moving) return { kind: 'ignored' };
-  const hit = resolveTap(hitTargets(r.scene, r.layout), x, y);
+  const hit = resolveTap(liveTargets(r, now), x, y);
   if (!hit) {
     // Spot 5: a tap inside an image that hits no difference is a wrong guess (GDD §3 hearts).
     if (r.scene.mode !== 'spot') return { kind: 'none' };
@@ -162,7 +179,7 @@ export function applyTap(r: Round, x: number, y: number, now: number): TapResult
   }
   if (hit.isTarget) {
     if (r.found.has(hit.id)) return { kind: 'already', target: hit };
-    r.found.add(hit.id);
+    r.found.set(hit.id, now);
     const remaining = remainingTargets(r);
     const won = remaining === 0;
     if (won) {

@@ -31,7 +31,9 @@ that touches gameplay.
    (camera) above local motion, longer and louder above shorter and softer, and a haptic above
    none. Two cues can outweigh four small ones. Compare the sounds by ear or by measuring the
    files (peak and RMS, length); a failure sound louder than the success sound is an inversion
-   on its own.
+   on its own. Compare them **as played**: file level plus 20·log10(gain), and the sum when two
+   play on one tap. Keep the measured file levels next to the gains and test the order, so new
+   sound files cannot quietly flip it.
 3. **Flag the problems:**
    - an **inversion**: any failure row stronger than the main success row;
    - **dead time**: after a success, the screen goes still while the player thinks;
@@ -70,6 +72,12 @@ camera (90 ms) and vibrated longest (40-50-40 ms on Android), while the correct 
 - **Input during a cascade.** Keep input open while a cascade plays unless the next move
   depends on its result; a cascade that blocks taps turns satisfaction into waiting.
 - **Board clear.** When the last item goes, a sweep, a beat of silence, then the win sound.
+  Start the win from the last landing (plus the beat), not from a timer set at the tap: a
+  fixed delay races the flight and loses on a slow frame. Keep a long safety timer in case a
+  flight never lands.
+- **Removed means removed.** When a found item leaves the board, its tap area must go too,
+  after a short grace while its flyer still covers the spot (so a double tap stays free);
+  otherwise an invisible circle swallows taps meant for what is now visible.
 - **Win sequence.** Stars appear one by one with rising sounds (Peek & Find already does this),
   then the next level starts without a menu in between.
 - **Near-miss honesty.** A wrong tap next to the target shows where the target was only if
@@ -78,7 +86,8 @@ camera (90 ms) and vibrated longest (40-50-40 ms on Android), while the correct 
 ## 4. Phaser 3 notes
 
 - Camera: `this.cameras.main.shake(durationMs, intensity)`; for a directional kick, tween the
-  camera's scroll by a few pixels and back.
+  camera's scroll by a few pixels and back. A shake call is ignored while one runs unless
+  `force` is true (`shake(ms, intensity, true)`), so a fast combo needs it.
 - Hit stop: set `this.tweens.timeScale` and `this.time.timeScale` near zero for 40–60 ms, then
   restore them with a wall-clock timer; the scene clock is what you are stopping. Check what
   else runs on that clock: delayed calls and gameplay timers slip by the stop, a score timer

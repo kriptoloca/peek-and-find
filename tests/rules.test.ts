@@ -3,6 +3,7 @@ import { KITCHEN } from '../src/data/themes';
 import { sceneSeed } from '../src/gen/rng';
 import { generateScene } from '../src/gen/scene-gen';
 import type { Placed } from '../src/gen/types';
+import { FOUND_TAP_GRACE_MS } from '../src/game/feel';
 import { HEARTS_MAX } from '../src/game/hearts';
 import {
   advanceLayout,
@@ -101,6 +102,35 @@ describe('round flow', () => {
     expect(edge.kind).toBe('correct');
   });
 
+  it('a found object leaves the board: after the grace its circle no longer swallows taps', () => {
+    // Two targets of one family, circles overlapping: the tap at P is nearer A's center.
+    const a = obj('a', 100, 100, true, 85);
+    const b = obj('b', 200, 100, true, 85);
+    const base = scene(9);
+    const s = { ...base, objects: [a, b], targets: [a, b] };
+    const r = newRound(s);
+    startRound(r, 0);
+    expect(applyTap(r, a.x, a.y, 1000).kind).toBe('correct');
+    const px = 145;
+    // While the flyer still covers the spot, a tap there is free...
+    expect(applyTap(r, px, 100, 1000 + FOUND_TAP_GRACE_MS - 1).kind).toBe('already');
+    // ...then the visible object B takes it.
+    const res = applyTap(r, px, 100, 1000 + FOUND_TAP_GRACE_MS);
+    expect(res).toMatchObject({ kind: 'correct', target: { id: 'b' }, won: true });
+  });
+
+  it('a tap on the empty spot a found object left is free, not a find or a penalty', () => {
+    const a = obj('a', 100, 100, true, 85);
+    const far = obj('b', 600, 600, true, 85);
+    const base = scene(9);
+    const s = { ...base, objects: [a, far], targets: [a, far] };
+    const r = newRound(s);
+    startRound(r, 0);
+    applyTap(r, a.x, a.y, 1000);
+    expect(applyTap(r, a.x, a.y, 5000).kind).toBe('none');
+    expect(r.hearts).toBe(HEARTS_MAX);
+  });
+
   it('finds targets, never penalises a repeat tap, and wins on the last one', () => {
     const r = newRound(scene(30, 3));
     startRound(r, 0);
@@ -108,6 +138,7 @@ describe('round flow', () => {
     expect(remainingTargets(r)).toBe(targets.length);
     const first = applyTap(r, targets[0]!.x, targets[0]!.y, 100);
     expect(first).toMatchObject({ kind: 'correct', remaining: targets.length - 1, won: false });
+    // A quick repeat tap lands on the flyer that still covers the spot: free.
     expect(applyTap(r, targets[0]!.x, targets[0]!.y, 200)).toMatchObject({ kind: 'already' });
     expect(r.hearts).toBe(HEARTS_MAX);
     for (let i = 1; i < targets.length - 1; i++) applyTap(r, targets[i]!.x, targets[i]!.y, 300);
@@ -250,8 +281,9 @@ describe('shuffle twist in the round (GDD v1.5 §5a)', () => {
     advanceLayout(r);
     expect(r.layout).toBe(0);
     expect(roundObjects(r)).toBe(scene.objects);
-    // a found target stays found across layouts
-    expect(applyTap(r, t0.x, t0.y, 200).kind).toBe('already');
+    // a found target stays found across layouts (and has left the board after the grace)
+    expect(r.found.has(t0.id)).toBe(true);
+    expect(applyTap(r, t0.x, t0.y, 200).kind).not.toBe('correct');
   });
 
   it('ignores taps while the sprites move', () => {

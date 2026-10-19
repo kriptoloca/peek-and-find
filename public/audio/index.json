@@ -7,18 +7,6 @@
       "source": "placeholder",
       "music": false
     },
-    "tap_correct_2": {
-      "ogg": "audio/tap_correct_2.ogg",
-      "m4a": "audio/tap_correct_2.m4a",
-      "source": "placeholder",
-      "music": false
-    },
-    "tap_correct_3": {
-      "ogg": "audio/tap_correct_3.ogg",
-      "m4a": "audio/tap_correct_3.m4a",
-      "source": "placeholder",
-      "music": false
-    },
     "tap_wrong": {
       "ogg": "audio/tap_wrong.ogg",
       "m4a": "audio/tap_wrong.m4a",

@@ -24,8 +24,30 @@ import { HEARTS_MAX, clampHearts, heartsForLevel } from '../hearts';
 import { ResumeGrace } from '../resume-grace';
 import { audio } from '../audio';
 import { haptic, setHapticsEnabled } from '../../platform/haptics';
-import { correctSfx, starSfx } from '../audio-keys';
-import { clearFx, confetti, popCorrect, shakeWrong, sparkle } from '../fx';
+import { ARRIVE_SFX, CORRECT_SFX, LOST_SFX, WRONG_SFX, starSfx } from '../audio-keys';
+import {
+  burstRing,
+  clearFx,
+  confetti,
+  flyToHud,
+  shakeWrong,
+  sparkle,
+  stopWobble,
+  type Flight,
+} from '../fx';
+import {
+  CORRECT_SHAKE_MS,
+  GAIN,
+  HIT_STOP_MS,
+  WIN_BEAT_MS,
+  WIN_FALLBACK_MS,
+  WIN_SHAKE_INTENSITY,
+  WIN_SHAKE_MS,
+  comboDetune,
+  comboStep,
+  correctShakeIntensity,
+  type FeelEvent,
+} from '../feel';
 import { TITLE_FRAME, frameColorFor, hexOf } from '../frame-color';
 import { Hud } from '../hud';
 import { computeLayout, type Layout, type Rect } from '../layout';
@@ -98,6 +120,10 @@ const STAR_REVEAL_DELAY_MS = 120;
 const STAR_REVEAL_STAGGER_MS = 140;
 /** The lost-heart sound trails the wrong-tap sound. */
 const HEART_LOSE_DELAY_MS = 150;
+/** Dev hooks keep this many feel events. */
+const FEEL_LOG_SIZE = 40;
+/** Dev builds: the largest `?feelslow=` stretch of the feel timings. */
+const FEEL_SLOW_MAX = 20;
 const DEPTH_PAUSE = 50;
 
 /** Session-wide interstitial gate (wall clock, so pauses and slow frames do not shorten it). */
@@ -175,6 +201,22 @@ export class GameScene extends Phaser.Scene {
   private shufflesDone = 0;
   /** Hint rings on screen with the target they mark; a slide carries them along. */
   private hintRings: { img: Phaser.GameObjects.Image; targetId: string }[] = [];
+  /** Finds in a row in this scene since the last wrong tap (combo, GDD v1.8 §3a). */
+  private findsInRow = 0;
+  /** Wall-clock timer that ends the hit stop; null when none is running. */
+  private hitStopTimer: number | null = null;
+  /** The last find lands first; the win sequence waits for this beat (GDD v1.8 §3a). */
+  private winBeat: Phaser.Time.TimerEvent | null = null;
+  /** Won round whose win sequence has not started yet; it starts once, then this is null. */
+  private winPendingFor: Round | null = null;
+  /** Collect flights in the air in this scene; the win waits until all of them land. */
+  private readonly flights = new Set<Flight>();
+  /** Dev builds: `?feelslow=K` stretches the feel timings K times (deterministic e2e). */
+  private feelSlow = 1;
+  /** Dev hooks: camera shakes started in this scene (any caller, from the camera's event). */
+  private shakeStarts = 0;
+  /** Dev hooks: the last feel events (correct, arrive, wrong, win), newest last. */
+  private readonly feelLog: FeelEvent[] = [];
 
   constructor() {
     super('Game');
@@ -199,6 +241,8 @@ export class GameScene extends Phaser.Scene {
     this.menuMusic = null;
     this.menuDownOn = null;
     this.pauseTapConsumed = false;
+    this.feelSlow = 1;
+    this.shakeStarts = 0;
   }
 
   create(): void {
@@ -209,6 +253,11 @@ export class GameScene extends Phaser.Scene {
     this.hud = new Hud(this);
     this.input.on(Phaser.Input.Events.POINTER_DOWN, this.onPointer);
     this.input.on(Phaser.Input.Events.POINTER_UP, this.onPointerUp);
+    if (import.meta.env.DEV) {
+      this.cameras.main.on(Phaser.Cameras.Scene2D.Events.SHAKE_START, () => {
+        this.shakeStarts += 1;
+      });
+    }
     this.scale.on(Phaser.Scale.Events.RESIZE, this.relayout);
     // Without the SDK (stub platform) nobody reports a hidden page; Phaser's own visibility
     // events freeze the scene the same way, and a visible page re-reads the platform's pause.
@@ -230,11 +279,16 @@ export class GameScene extends Phaser.Scene {
     this.unsubscribePause = this.platform.onPause((p) => {
       this.setPaused(p);
     });
-    // A restarted scene keeps its tween/clock managers: make sure they run.
+    // A restarted scene keeps its tween/clock managers: make sure they run at full speed.
     this.tweens.resumeAll();
     this.time.paused = false;
+    this.endHitStop();
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.grace.dispose();
+      this.endHitStop();
+      this.winBeat = null;
+      this.winPendingFor = null;
+      this.flights.clear();
       this.unsubscribePause?.();
       this.unsubscribePause = null;
       if (import.meta.env.DEV) uninstallDebug();
@@ -295,6 +349,8 @@ export class GameScene extends Phaser.Scene {
     if (frozen) {
       this.tweens.pauseAll();
       this.time.paused = true;
+      // A screen kick must not run on under the dim (the camera is not on the scene clock).
+      this.cameras.main.resetFX();
     } else {
       this.time.paused = false;
       this.tweens.resumeAll();
@@ -409,6 +465,9 @@ export class GameScene extends Phaser.Scene {
   // ---- layout -------------------------------------------------------------------------------
 
   private readonly relayout = (): void => {
+    // A rotation moves the HUD icons: flights in the air land at once instead of flying to an
+    // empty spot.
+    for (const f of [...this.flights]) f.finish();
     const { width, height } = this.scale.gameSize;
     this.cameras.main.setViewport(0, 0, width, height);
     this.layoutNow = computeLayout(width, height);
@@ -458,20 +517,25 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** Pointer (design px) → scene coordinates of the square or of either Spot image. */
-  private toScene(px: number, py: number): { x: number; y: number } | null {
+  private toScene(px: number, py: number): { x: number; y: number; image: 'a' | 'b' } | null {
     const r = this.round;
     if (!r) return null;
     const inside = (rect: Rect): boolean =>
       px >= rect.x && py >= rect.y && px <= rect.x + rect.w && py <= rect.y + rect.h;
     if (r.scene.mode === 'spot') {
       const sp = this.layoutNow.spot;
-      if (inside(sp.a)) return { x: (px - sp.a.x) / sp.scale, y: (py - sp.a.y) / sp.scale };
-      if (inside(sp.b)) return { x: (px - sp.b.x) / sp.scale, y: (py - sp.b.y) / sp.scale };
+      const at = (rect: Rect, image: 'a' | 'b') => ({
+        x: (px - rect.x) / sp.scale,
+        y: (py - rect.y) / sp.scale,
+        image,
+      });
+      if (inside(sp.a)) return at(sp.a, 'a');
+      if (inside(sp.b)) return at(sp.b, 'b');
       return null;
     }
     const s = this.layoutNow.scene;
     if (!inside(s)) return null;
-    return { x: px - s.x, y: py - s.y };
+    return { x: px - s.x, y: py - s.y, image: 'a' };
   }
 
   // ---- level lifecycle ----------------------------------------------------------------------
@@ -506,6 +570,12 @@ export class GameScene extends Phaser.Scene {
     this.round = null;
     this.shufflesDone = 0;
     this.hintRings = [];
+    this.findsInRow = 0;
+    this.winBeat?.remove(false);
+    this.winBeat = null;
+    this.winPendingFor = null;
+    // clearFx kills the flights' tweens, so their arrivals never run: none is in the air.
+    this.flights.clear();
     clearFx(this, this.fx);
     this.world.removeAll(true);
     this.worldB.removeAll(true);
@@ -733,8 +803,9 @@ export class GameScene extends Phaser.Scene {
     const onHudButton =
       this.hud.hitsHint(pointer.x, pointer.y) || this.hud.hitsPause(pointer.x, pointer.y);
     if (onHudButton && this.round?.status !== 'won') return;
-    // The skip may start the next scene before this tap's pointer-up reaches the HUD button.
-    if (onHudButton) this.pauseTapConsumed = true;
+    // The skip may start the next scene before this tap's pointer-up reaches the pause button.
+    // Only the pause button consumes the flag; a hint tap here must not leave it set.
+    if (onHudButton && this.hud.hitsPause(pointer.x, pointer.y)) this.pauseTapConsumed = true;
     if (this.overlay) {
       this.onOverlayTap(pointer);
       return;
@@ -758,11 +829,11 @@ export class GameScene extends Phaser.Scene {
     if (wasIntro && r.status !== 'intro') this.armTwist(r);
     switch (res.kind) {
       case 'correct':
-        this.onCorrect(res.target);
-        if (res.won) this.onWon();
+        this.onCorrect(res.target, local.image);
+        if (res.won) this.awaitWin(r);
         break;
       case 'wrong':
-        this.onWrong(res.object, res.hearts);
+        this.onWrong(res.object, res.hearts, res.lost);
         if (res.lost) this.onLost();
         break;
       case 'none':
@@ -782,37 +853,153 @@ export class GameScene extends Phaser.Scene {
     if (this.menuButtonAt(pointer) === down) this.onMenuTap(down);
   };
 
-  private onCorrect(target: HitTarget): void {
+  /**
+   * Correct tap (GDD v1.8 §3a): a short hit stop and a screen kick that grow with the combo, a
+   * rising sound, and the object leaves the board: it flies into its prompt icon, where the HUD
+   * counts down on arrival. Spot 5 keeps its objects and flies a ring token instead.
+   */
+  private onCorrect(target: HitTarget, image: 'a' | 'b'): void {
     const r = this.round;
     if (!r) return;
-    audio.play(correctSfx(r.found.size - 1));
+    this.findsInRow += 1;
+    const step = comboStep(this.findsInRow);
+    const detune = comboDetune(step);
+    const shake = correctShakeIntensity(step);
+    audio.play(CORRECT_SFX, { gain: GAIN.correct, detune });
     haptic('correct');
+    this.hitStop();
+    // force: a find right after another restarts the kick at its stronger step.
+    this.cameras.main.shake(CORRECT_SHAKE_MS * this.feelSlow, shake, true);
+    this.logFeel({ kind: 'correct', step, detune, shake });
+    this.dropHintRings(target.id);
+    const counts = promptCounts(r);
+    const modeItem = counts.find((c) => c.family === 'spot' || c.family === 'odd');
+    const placed = roundObjects(r).find((o) => o.id === target.id);
+    const icon = modeItem ? modeItem.icon : (placed?.frame ?? '');
+    let flyer: Phaser.GameObjects.Image | null = null;
+    let tint: number | undefined;
     if (r.scene.mode === 'spot') {
       // Ring the difference on both images; the object may be absent in one of them.
-      for (const image of ['a', 'b'] as const) {
-        const c = this.toCanvas(target.x, target.y, image);
-        const d = target.hitRadius * 2 * this.world.scaleX;
+      const d = target.hitRadius * 2 * this.world.scaleX;
+      for (const im of ['a', 'b'] as const) {
+        const c = this.toCanvas(target.x, target.y, im);
         const ring = addImage(this, c.x, c.y, UI.ring)
           .setDisplaySize(d, d)
           .setTint(COLOR_SPOT_RING);
         this.fx.add(ring);
         sparkle(this, c.x, c.y, this.fx);
       }
+      // The token leaves from the image the player tapped.
+      const from = this.toCanvas(target.x, target.y, image);
+      flyer = addImage(this, from.x, from.y, UI.ring).setDisplaySize(d, d);
+      tint = COLOR_SPOT_RING;
     } else {
       const img = this.sprites.get(target.id);
       if (img) {
         const c = this.toCanvas(img.x, img.y);
-        popCorrect(this, img, this.fx, c.x, c.y);
+        const k = this.world.scaleX;
+        // Sized from the layout, not the sprite: a tap during the pop-in counts, and the sprite
+        // may still be at scale 0 then.
+        const rest = (placed?.size ?? img.displayWidth) / Math.max(img.width, img.height, 1);
+        burstRing(this, this.fx, c.x, c.y, (placed?.size ?? img.displayWidth) * k);
         sparkle(this, c.x, c.y, this.fx);
+        // The board empties: the object leaves it and a copy flies into the HUD.
+        flyer = addImage(this, c.x, c.y, placed?.frame ?? icon)
+          .setScale(rest * k)
+          .setRotation(img.rotation)
+          .setFlipX(img.flipX);
+        stopWobble(img);
+        this.tweens.killTweensOf(img);
+        img.destroy();
+        this.sprites.delete(target.id);
       }
     }
-    const counts = promptCounts(r);
-    this.hud.setPrompt(counts);
-    const modeItem = counts.find((c) => c.family === 'spot' || c.family === 'odd');
-    const placed = r.scene.objects.find((o) => o.id === target.id);
-    const icon = modeItem ? modeItem.icon : (placed?.frame ?? '');
-    this.hud.pulsePrompt(icon);
     if (r.scene.twist?.kind === 'memory') this.hud.peekPrompt(MEMORY_PEEK_MS);
+    const land = (): void => {
+      if (this.round !== r) return;
+      this.hud.tickDown(icon);
+      audio.play(ARRIVE_SFX, { gain: GAIN.arrive, detune });
+      this.logFeel({ kind: 'arrive', step, detune });
+      if (this.winPendingFor === r && this.flights.size === 0) this.armWin(r, WIN_BEAT_MS);
+    };
+    if (!flyer || !this.hud.promptCenter(icon)) {
+      flyer?.destroy();
+      land();
+      return;
+    }
+    this.fx.add(flyer);
+    const flight = flyToHud(
+      this,
+      flyer,
+      { dest: () => this.hud.promptCenter(icon), tint, slow: this.feelSlow },
+      () => {
+        this.flights.delete(flight);
+        land();
+      },
+    );
+    this.flights.add(flight);
+  }
+
+  /**
+   * The winning tap: the win sequence waits until every flight has landed, then a beat
+   * (WIN_BEAT_MS), so the last find is felt on its own first. If a flight never lands, the
+   * fallback starts the win anyway. Both timers run on the scene clock, so they freeze with the
+   * pause like the flights do.
+   */
+  private awaitWin(r: Round): void {
+    this.winPendingFor = r;
+    this.armWin(r, this.flights.size === 0 ? WIN_BEAT_MS : WIN_FALLBACK_MS);
+  }
+
+  private armWin(r: Round, delayMs: number): void {
+    this.winBeat?.remove(false);
+    this.winBeat = this.time.delayedCall(delayMs * this.feelSlow, () => {
+      this.winBeat = null;
+      if (this.winPendingFor !== r) return;
+      this.winPendingFor = null;
+      if (this.round === r && r.status === 'won') this.onWon();
+    });
+  }
+
+  /**
+   * Hit stop: tweens and the scene clock stand still for HIT_STOP_MS, restored on the wall
+   * clock. The star timer reads `time.now`, which ignores the time scale, so it loses nothing;
+   * the pause flags are separate from the time scale, so a restore never resumes a frozen game.
+   */
+  private hitStop(): void {
+    if (HIT_STOP_MS <= 0) return;
+    this.tweens.timeScale = 0;
+    this.time.timeScale = 0;
+    if (this.hitStopTimer !== null) window.clearTimeout(this.hitStopTimer);
+    this.hitStopTimer = window.setTimeout(() => {
+      this.hitStopTimer = null;
+      this.endHitStop();
+    }, HIT_STOP_MS * this.feelSlow);
+  }
+
+  private endHitStop(): void {
+    if (this.hitStopTimer !== null) {
+      window.clearTimeout(this.hitStopTimer);
+      this.hitStopTimer = null;
+    }
+    this.tweens.timeScale = 1;
+    this.time.timeScale = 1;
+  }
+
+  /** Removes the hint rings that mark a target (it was just found). */
+  private dropHintRings(targetId: string): void {
+    for (const h of this.hintRings) {
+      if (h.targetId !== targetId) continue;
+      this.tweens.killTweensOf(h.img);
+      h.img.destroy();
+    }
+    this.hintRings = this.hintRings.filter((h) => h.targetId !== targetId);
+  }
+
+  private logFeel(e: Omit<FeelEvent, 't' | 'level'>): void {
+    if (!import.meta.env.DEV) return;
+    this.feelLog.push({ ...e, t: this.time.now, level: this.round?.scene.level ?? 0 });
+    if (this.feelLog.length > FEEL_LOG_SIZE) this.feelLog.shift();
   }
 
   // ---- twists (GDD v1.5 §5a) ---------------------------------------------------------------
@@ -851,7 +1038,7 @@ export class GameScene extends Phaser.Scene {
 
   /**
    * Slides every sprite to the next validated layout (rules.advanceLayout). Taps are ignored
-   * while the sprites move; found targets travel too (dimmed), and a hint ring follows the
+   * while the sprites move; found targets have left the board (GDD v1.8 §3a), and a hint ring follows the
    * target it marks. The next slide comes one cadence after this one started.
    */
   private doShuffle(r: Round): void {
@@ -879,6 +1066,8 @@ export class GameScene extends Phaser.Scene {
     for (const o of layout) {
       const img = this.sprites.get(o.id);
       if (!img) continue;
+      // A wrong-tap wobble still running would put the sprite back at its old place afterwards.
+      stopWobble(img);
       img.setDepth(o.z);
       const k = o.size / Math.max(img.width, img.height);
       this.tweens.add({
@@ -915,20 +1104,28 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  private onWrong(object: HitTarget | null, hearts: number): void {
+  /**
+   * Wrong tap (GDD v1.8 §3a): failure stays local and soft. The object wobbles, the heart bumps,
+   * one quiet sound, no screen shake; the losing tap adds the heart sound. The combo resets.
+   */
+  private onWrong(object: HitTarget | null, hearts: number, lost: boolean): void {
     this.carryHearts(hearts);
-    audio.play('tap_wrong');
-    haptic('wrong');
-    this.time.delayedCall(HEART_LOSE_DELAY_MS, () => {
-      audio.play('heart_lose');
-    });
+    this.findsInRow = 0;
+    audio.play(WRONG_SFX, { gain: GAIN.wrong });
+    if (lost) {
+      this.time.delayedCall(HEART_LOSE_DELAY_MS, () => {
+        audio.play(LOST_SFX, { gain: GAIN.lost });
+      });
+    } else {
+      haptic('wrong');
+    }
     if (object) {
       const img = this.sprites.get(object.id);
       if (img) shakeWrong(this, img);
     }
     this.hud.setHearts(hearts);
     this.hud.pulseHeart(hearts);
-    this.cameras.main.shake(90, 0.004);
+    this.logFeel({ kind: 'wrong', shake: 0, lost });
   }
 
   // ---- overlays -----------------------------------------------------------------------------
@@ -941,6 +1138,10 @@ export class GameScene extends Phaser.Scene {
     adGate.onSceneCompleted();
     this.platform.sendMessage('level_completed');
     this.platform.sendMessage('gameplay_stopped');
+    // The HUD may still wait for an arrival if the beat was cut short; show the rules' truth.
+    this.hud.setPrompt(promptCounts(r));
+    this.cameras.main.shake(WIN_SHAKE_MS, WIN_SHAKE_INTENSITY);
+    this.logFeel({ kind: 'win', shake: WIN_SHAKE_INTENSITY });
     audio.play('scene_complete');
     audio.play('confetti');
     haptic('won');
@@ -1201,6 +1402,8 @@ export class GameScene extends Phaser.Scene {
     if (mode === 'find' || mode === 'odd' || mode === 'spot') this.forcedMode = mode;
     const twist = q.get('twist');
     if (twist === 'shuffle' || twist === 'memory' || twist === 'none') this.forcedTwist = twist;
+    const slow = Number(q.get('feelslow'));
+    if (Number.isFinite(slow) && slow >= 1) this.feelSlow = Math.min(FEEL_SLOW_MAX, slow);
     const today = q.get('today');
     if (today && /^\d{8}$/.test(today)) this.dailyKey = today;
     if (q.get('daily') === '1') this.dailyIndex = 0;
@@ -1395,6 +1598,14 @@ export class GameScene extends Phaser.Scene {
         elapsed: this.round ? elapsedSeconds(this.round, this.time.now) : 0,
         messages: [...sentPlatformMessages()],
         frameColor: hexOf(this.frameColor),
+        onBoard: [...this.sprites.values()].filter((s) => s.visible).length,
+        hudRemaining: this.hud.displayedRemaining(),
+        feel: [...this.feelLog],
+        overlay: this.overlay ? (this.round?.status ?? null) : null,
+        timeScale: this.tweens.timeScale,
+        shaking: this.cameras.main.shakeEffect.isRunning,
+        shakeStarts: this.shakeStarts,
+        flights: this.flights.size,
       }),
     });
   }

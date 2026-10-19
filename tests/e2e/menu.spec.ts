@@ -196,6 +196,8 @@ test('the menu never opens over the win overlay: the pause spot skips the auto-a
   await waitState(page, (s) => s.status === 'playing', 'playing');
   const won = await winScene(page);
   expect(won.status).toBe('won');
+  // The win overlay comes after the last find's beat (GDD v1.8 §3a).
+  await waitState(page, (s) => s.overlay === 'won', 'win overlay');
   await tapButton(page, 'pauseCenter');
   await page.waitForTimeout(300);
   expect(await page.evaluate(() => window.__peekDebug?.menu() ?? null)).toBeNull();

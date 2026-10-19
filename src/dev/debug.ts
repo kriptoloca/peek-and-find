@@ -3,6 +3,7 @@
  * survive tree-shaking: GameScene calls installDebug() inside `if (import.meta.env.DEV)`).
  */
 import type { AudioDebug } from '../game/audio';
+import type { FeelEvent } from '../game/feel';
 
 export interface DebugPoint {
   id: string;
@@ -96,6 +97,22 @@ export interface PeekDebug {
     elapsed: number;
     /** Bridge lifecycle messages sent so far (in order). */
     messages: string[];
+    /** Objects still visible on the board (image A); found ones leave it (GDD v1.8 §3a). */
+    onBoard: number;
+    /** Sum of the counts the HUD shows; it lags the rules until each found object lands. */
+    hudRemaining: number;
+    /** Last feel events: correct, arrive, wrong, win (scene clock, level, combo step). */
+    feel: FeelEvent[];
+    /** Which overlay is up: 'won', 'lost' (or another status), null when none. */
+    overlay: string | null;
+    /** Tween time scale: 0 during a hit stop, 1 otherwise. */
+    timeScale: number;
+    /** A camera shake (screen kick) is running right now. */
+    shaking: boolean;
+    /** Camera shakes started in this scene, by any caller (the camera's SHAKE_START event). */
+    shakeStarts: number;
+    /** Collect flights in the air. */
+    flights: number;
   };
   /** Screen (CSS px) rect of the scene square, or of Spot image A (scripts/thumbnails.mjs). */
   sceneRect: () => { x: number; y: number; w: number; h: number };

@@ -67,6 +67,14 @@ pitches and falls back to the first on the fourth find. Proposed order: soften f
 the last find its own beat, add hit stop and a camera kick to success, then collect to HUD and
 a rising combo.
 
+**Feel pass shipped in 0.1.3 (GDD v1.8 §3a, 2026-10-19):** all five changes are in, behind
+constants in `src/game/feel.ts`; the phone judgement is Hasan's. Three lessons from building it,
+now in `juice.md`: tie the win to the last landing, not to a timer from the tap (a fixed beat
+lost the race against the flight); when an object leaves the board, its tap circle has to go
+too (an invisible circle swallowed taps on the visible neighbour); compare sounds as played,
+file level plus gain (the heart sound was as loud as the success sound until the gain carried
+the file's +4 dB).
+
 **Directions on the table (reports/2026-10-19-ideas.md):** Find Me (your own avatar hidden in a
 crowd, with a "can you find me?" image), Odd One Daily (a result card for the daily chain),
 Find the Cat (one character that hides better every level). Plus the feel fixes: collect to

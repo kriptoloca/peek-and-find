@@ -1,7 +1,17 @@
+import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, statSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import manifest from '../../src/data/audio-manifest.json';
-import { MUSIC_KEY, SFX_NAMES, correctSfx, starSfx } from '../../src/game/audio-keys';
+import {
+  ARRIVE_SFX,
+  CORRECT_SFX,
+  FEEL_SFX,
+  MUSIC_KEY,
+  SFX_NAMES,
+  starSfx,
+} from '../../src/game/audio-keys';
+import { SFX_FILE_DB, type FeelSound } from '../../src/game/feel';
 import {
   MUSIC_NAME,
   SAMPLE_RATE,
@@ -19,16 +29,12 @@ describe('audio keys and manifest', () => {
     expect(SYNTH_NAMES).toEqual(manifest.sfx);
     expect(MUSIC_KEY).toBe(manifest.music);
     expect(MUSIC_NAME).toBe(manifest.music);
-    expect(SFX_NAMES).toHaveLength(15);
+    expect(SFX_NAMES).toHaveLength(13);
   });
 
   it('helper keys stay inside the list', () => {
-    expect([correctSfx(0), correctSfx(1), correctSfx(2), correctSfx(3)]).toEqual([
-      'tap_correct_1',
-      'tap_correct_2',
-      'tap_correct_3',
-      'tap_correct_1',
-    ]);
+    expect(SFX_NAMES).toContain(CORRECT_SFX);
+    expect(SFX_NAMES).toContain(ARRIVE_SFX);
     expect(starSfx(2)).toBe('star_2');
   });
 });
@@ -97,5 +103,52 @@ describe('committed audio', () => {
       }
     }
     expect(total).toBeLessThanOrEqual(1024 * 1024);
+  });
+});
+
+/** Same list as scripts/audio.mjs: a drop-in source replaces the placeholder. */
+const SOURCE_EXT = ['wav', 'ogg', 'mp3', 'flac', 'm4a', 'aac'];
+
+function hasDropIn(name: string): boolean {
+  return SOURCE_EXT.some((ext) => existsSync(new URL(`assets/audio/${name}.${ext}`, ROOT)));
+}
+
+/** Mean level (dBFS) of the shipped OGG with ffmpeg, or null when ffmpeg is missing. */
+function measureShipped(name: string): number | null {
+  const file = fileURLToPath(new URL(`public/audio/${name}.ogg`, ROOT));
+  const r = spawnSync('ffmpeg', [
+    '-hide_banner',
+    '-i',
+    file,
+    '-af',
+    'volumedetect',
+    '-f',
+    'null',
+    '-',
+  ]);
+  if (r.error) return null;
+  const m = /mean_volume: (-?[\d.]+) dB/.exec(r.stderr.toString());
+  return m ? Number(m[1]) : null;
+}
+
+function measureSynth(name: string): number {
+  const a = renderSfx(name);
+  let sum = 0;
+  for (const v of a) sum += v * v;
+  return 10 * Math.log10(sum / a.length);
+}
+
+describe('feel sound levels (GDD v1.8 §3a)', () => {
+  it('SFX_FILE_DB matches the shipped files, so the success-over-failure test means something', () => {
+    for (const sound of Object.keys(FEEL_SFX) as FeelSound[]) {
+      const name = FEEL_SFX[sound];
+      const shipped = measureShipped(name);
+      if (shipped === null && hasDropIn(name)) {
+        throw new Error(`${name} is a drop-in: install ffmpeg to measure it for SFX_FILE_DB`);
+      }
+      const measured = shipped ?? measureSynth(name);
+      const hint = `${name}: measured ${measured.toFixed(1)} dB, SFX_FILE_DB.${sound} = ${String(SFX_FILE_DB[sound])}; update src/game/feel.ts`;
+      expect(Math.abs(measured - SFX_FILE_DB[sound]), hint).toBeLessThanOrEqual(1);
+    }
   });
 });
