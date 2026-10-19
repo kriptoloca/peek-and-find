@@ -71,7 +71,7 @@ Keep generator and modes **pure** (no Phaser imports) so they are unit-testable 
 - Performance: object pooling for sprites, one atlas per theme, no per-frame allocations in update loops.
 
 ## Skills
-`docs/skills.md` maps the enabled Claude skills to project steps. Mandatory touchpoints: every epic ends with `code-review` and the adversarial audit (independent subagent, KRİTİK/YÜKSEK closed before the push); store text goes through `design:ux-copy`; thumbnails come from `npm run thumbnails`; the Playgama upload and QA tool run through the browser skills when Hasan's computer is linked. Analytics skills are never used (platform rule 1).
+`docs/skills.md` maps the enabled Claude skills to project steps. Mandatory touchpoints: every epic ends with `code-review` and the adversarial audit (independent subagent, KRİTİK/YÜKSEK closed before the push); store text goes through `design:ux-copy`; thumbnails come from `npm run thumbnails`; the Playgama upload and QA tool run through the browser skills when Hasan's computer is linked. Analytics skills are never used (platform rule 1). Every game design, polish or feel change, every new game idea and every competitor teardown goes through the project skill `pebblit-game-craft` (`.claude/skills/pebblit-game-craft/`: Face, Feel, Flow, Fair, Share; feel audit; success must outweigh failure).
 
 ## Definition of done (whole project)
 - Playgama QA tool: all checks pass.
