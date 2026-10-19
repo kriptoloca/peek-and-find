@@ -14,6 +14,6 @@
 - **Paid UA:** none
 - **Strengths:** programming, procedural generation with validated difficulty, test and release automation, fast iteration (a fix ships the same day)
 - **Weaknesses:** art (placeholder shapes until the art pack), marketing and community (no posts yet), no humor or identity in the current game
-- **Unfinished projects:** Peek & Find — 0.1.2 in the Playgama sandbox, real art and CC0 sounds pending
+- **Unfinished projects:** Peek & Find — 0.1.4 ready for Update Game (feel pass + shared mode rhythm), real art and CC0 sounds pending; next game being chosen (`reports/2026-10-19-ideas-next-game.md`)
 - **Preferences:** simplicity, fast release, no paid UA, reuse the existing engine and pipeline; platform rules of YouTube Playables (text-free, no off-platform links, 13+)
 - **Report language:** English in the repo (project convention); answers to Hasan in Turkish
