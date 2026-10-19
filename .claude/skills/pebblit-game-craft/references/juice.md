@@ -24,16 +24,21 @@ that touches gameplay.
    from memory: grep for tweens, camera shake, sound plays and vibration calls.
 2. **Fill the table**, one row per outcome:
 
-   | Action → outcome | Visual | Sound | Camera | Haptic | Duration | Strength 0–3 |
+   | Action → outcome | Visual | Sound (loudness, length) | Camera | Haptic | Duration | Intensity 0–3 |
    | --- | --- | --- | --- | --- | --- | --- |
 
-   Strength: 0 nothing, 1 a single cue, 2 two or three cues, 3 the full stack (hit stop +
-   camera + motion + sound + particles + haptic).
+   Intensity is how strongly it lands, not how many cues it has: weigh full-screen motion
+   (camera) above local motion, longer and louder above shorter and softer, and a haptic above
+   none. Two cues can outweigh four small ones. Compare the sounds by ear or by measuring the
+   files (peak and RMS, length); a failure sound louder than the success sound is an inversion
+   on its own.
 3. **Flag the problems:**
    - an **inversion**: any failure row stronger than the main success row;
    - **dead time**: after a success, the screen goes still while the player thinks;
    - **flat repetition**: the fifth success feels exactly like the first;
-   - a **lonely win**: the level ends with one big win but nothing on the way to it.
+   - a **lonely win**: the level ends with one big win but nothing on the way to it;
+   - a **masked success**: a success that fires in the same frame as a bigger event (the last
+     find and the level win together) is never felt on its own; give it its own beat first.
 4. **Propose changes** with starting values from section 2, each behind a named constant so
    it can be tuned without hunting through code.
 5. **Ship and test on a phone.** Hasan judges the feel on a device; record what changed and why
@@ -60,7 +65,10 @@ camera (90 ms) and vibrated longest (40-50-40 ms on Android), while the correct 
 
 - **Collect to HUD.** The found item flies along a short curve to its HUD icon (300–450 ms,
   ease-in), the icon bounces on arrival and its counter ticks down. The board empties while the
-  HUD fills: progress made visible, and a cascade from one tap.
+  HUD fills: progress made visible, and a cascade from one tap. This is the cascade for games
+  where one success is one unit: the flight, the arrival tick and the counter are the rhythm.
+- **Input during a cascade.** Keep input open while a cascade plays unless the next move
+  depends on its result; a cascade that blocks taps turns satisfaction into waiting.
 - **Board clear.** When the last item goes, a sweep, a beat of silence, then the win sound.
 - **Win sequence.** Stars appear one by one with rising sounds (Peek & Find already does this),
   then the next level starts without a menu in between.
@@ -72,7 +80,10 @@ camera (90 ms) and vibrated longest (40-50-40 ms on Android), while the correct 
 - Camera: `this.cameras.main.shake(durationMs, intensity)`; for a directional kick, tween the
   camera's scroll by a few pixels and back.
 - Hit stop: set `this.tweens.timeScale` and `this.time.timeScale` near zero for 40–60 ms, then
-  restore them with a wall-clock timer; the scene clock is what you are stopping.
+  restore them with a wall-clock timer; the scene clock is what you are stopping. Check what
+  else runs on that clock: delayed calls and gameplay timers slip by the stop, a score timer
+  that reads the clock may or may not count it, and a platform pause during the stop must not
+  restore the time scale early.
 - Pitch steps: Web Audio sounds accept `detune` in cents (100 cents = 1 semitone), or `rate`.
 - Haptics: guard `navigator.vibrate` and treat it as absent on iPhone Safari.
 - Every effect must freeze with the platform pause; tweens and the scene clock already do.

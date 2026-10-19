@@ -123,10 +123,14 @@ nothing to share depends on portal traffic alone, where like ratios were around 
 ### B. "It isn't fun" or "make it feel better": the feel audit
 
 Follow the procedure in `references/juice.md`: inventory every player action from the code,
-fill the feedback table, flag inversions (failure louder than success) and dead time, then
-propose changes with starting values behind named constants. Ship them, then let Hasan judge
-on a phone; numbers on paper are only a start. Record the decision in the project's decision
-log.
+fill the feedback table, flag inversions (failure stronger than success), masked successes and
+dead time, then propose changes with starting values behind named constants. If the project
+only builds what its GDD says, write the Feel spec into the GDD first. Ship, then let Hasan
+judge on a phone; numbers on paper are only a start. Record the decision in the project's
+decision log.
+
+Keep the scope to the question. A narrow feel question gets the Feel and Flow pillars and, at
+most, one closing line on Face or Share if they are the bigger lever.
 
 ### C. A game someone admires, a leaderboard, a competitor
 
@@ -144,6 +148,8 @@ the teardowns done so far (Bus Fever Party, the leaderboard top six, Peek & Find
 - Be honest about our own game. The useful finding on 2026-10-19 was uncomfortable: we had
   optimised for certification and correctness and never wrote "a face, a feel, a share" into
   the design.
+- Facts in `references/` about our code are dated snapshots. Re-check them in the code before
+  you quote them; the code may have changed since.
 
 ## Platform facts that shape the style
 

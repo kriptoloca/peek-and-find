@@ -59,6 +59,14 @@ hearts carried across levels (v1.7); a release pipeline that ships a fix the sam
   heart-costing wake tap only showed up in the real Playgama host on an iPhone. Test ad flows in
   a real host page.
 
+**Feel audit, 2026-10-19** (first run of this skill, checked in the code; re-check before
+acting): the wrong tap shakes the camera and vibrates longest; the last find and the level win
+fire in the same frame, so the final "found it" is masked by the win; found items stay on the
+board at 45 % opacity, so the board never empties; the correct-tap sound cycles through three
+pitches and falls back to the first on the fourth find. Proposed order: soften failure, give
+the last find its own beat, add hit stop and a camera kick to success, then collect to HUD and
+a rising combo.
+
 **Directions on the table (reports/2026-10-19-ideas.md):** Find Me (your own avatar hidden in a
 crowd, with a "can you find me?" image), Odd One Daily (a result card for the daily chain),
 Find the Cat (one character that hides better every level). Plus the feel fixes: collect to
