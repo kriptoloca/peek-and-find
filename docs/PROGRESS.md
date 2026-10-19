@@ -109,6 +109,7 @@ Gerekçeli kayıtlar docs/questions.md "adversarial audit" bölümlerinde. İkin
 - [x] Decided 2026-10-17: in-game home button back to the Title (GDD v1.3), shipped.
 
 ## Open design questions (decide after the phone test)
+- **Mode rhythm (2026-10-19, waiting for Hasan):** Spot frequency differs per player, not per platform (random per-save salt; docs/questions.md same date). Proposal: one shared fixed cycle (Spot at 11, 16, 21, …). Also needed: a screenshot of the game on the Android phone inside the Playgama page, to rule out the Spot layout gate (portrait aspect < 1.44 turns Spot into Find).
 - Density/overlap: generator keeps centers ≥ 80–150 px apart and occlusion ≤ 40%; real hidden-object "clutter" may need more overlap at high levels. Tap resolution (nearest center) already allows it; the spacing invariant would have to change to a hit-circle rule.
 - Mirror decoys (same frame flipped, 0.85×): keep, reduce weight, or drop.
 - Empty-background taps: currently free; penalise if players spam-tap.
