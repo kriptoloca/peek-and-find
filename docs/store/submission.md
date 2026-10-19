@@ -26,7 +26,7 @@ are the ones enforced here.
 1. `npm run zip` on a clean checkout of `main`; keep the printed SHA-256 (2026-10-18:
    `peek-and-find-0.1.0.zip`, 3.99 MB, `cadf90ac…2bb5`, built from 09d7b41; 2026-10-18 evening:
    `peek-and-find-0.1.1.zip` (host focus fix), SHA `a8583104…1a43` (full: `a85831042737265347f129a14cdc30ed3bc2b7527653b0fed135e5f0fe181a43`), 3.99 MB, built from 8389d46, through "Update Game": same game, numbers and saves kept; night: `peek-and-find-0.1.2.zip` (hearts carry
-   over, GDD v1.7), SHA `cd6f3620…7058` (full: `cd6f3620ff3e14fdd9902663691dc29789b6b474234fe156a2450ca898897058`), 3.99 MB, built from e6defb3; 2026-10-19: `peek-and-find-0.1.3.zip` (feel pass, GDD v1.8; includes 0.1.2), SHA `4e699aa3…7615` (full: `4e699aa335aacfc4534ce2d0bb59a686e0bd7b18d66449e93d74619a0aa47615`), 3.98 MB, built from 2c2cf22).
+   over, GDD v1.7), SHA `cd6f3620…7058` (full: `cd6f3620ff3e14fdd9902663691dc29789b6b474234fe156a2450ca898897058`), 3.99 MB, built from e6defb3; 2026-10-19: `peek-and-find-0.1.3.zip` (feel pass, GDD v1.8; includes 0.1.2), SHA `4e699aa3…7615` (full: `4e699aa335aacfc4534ce2d0bb59a686e0bd7b18d66449e93d74619a0aa47615`), 3.98 MB, built from 2c2cf22; 2026-10-19 later: `peek-and-find-0.1.4.zip` (one mode rhythm for every player, GDD v1.9; includes 0.1.3), SHA `e831359f…7885` (full: `e831359fb56f1eb76a9ef780ee0d42d89047da38255b82218ed7862e445f7885`), 3.98 MB, built from dba6866).
 2. developer.playgama.com → **Add Game** → fill the required fields from the "Facts for the
    console" list in `docs/store/listing.md` (title, engine, archive, description, how to play,
    devices, languages, distribution); orientation both; media from `docs/store/brand/` and
