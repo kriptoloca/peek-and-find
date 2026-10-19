@@ -288,3 +288,20 @@ Hasan enabled the Anthropic and partner skills on claude.ai and asked to use the
 - **Store text:** "How to play" in `docs/store/listing.md` now says hearts carry over; the Playgama form field needs the same text by hand.
 - **Tests:** `tests/hearts.test.ts`, `tests/rules.test.ts` (a round from two hearts, the clamp), `tests/storage.test.ts` (hearts in the save, pre-v1.7 saves, a stored zero reads as one), `tests/e2e/hearts.spec.ts` (carry-over and reload, the 20th-level return and the cap, the daily chain's own hearts, a loss then Continue, Home mid-scene). `player.spec` retries now expect one heart.
 - **Code review (`code-review`, 6 findings):** the two above applied; one floor for the save (a stored zero reads as one, like every scene start); the stale "reset every scene" comment and the re-export shim in rules.ts removed. Kept: `storage.ts` imports the cap from `src/game/hearts.ts` (pure, Phaser-free by contract) rather than duplicating the constant.
+
+## 2026-10-19 (feel pass — Hasan: "make it feel like Bus Fever's boarding shake"; `pebblit-game-craft` workflow B)
+
+- **Audit (from the code, 2026-10-19):**
+
+  | Outcome | Visual | Sound (file length, mean level) | Screen | Haptic | Intensity |
+  | --- | --- | --- | --- | --- | --- |
+  | Correct tap | 1.25× pop 110 ms, stays on the board at 45 %, ring 360 ms, 10 sparks; badge pop and count at once | `tap_correct_1/2/3` 0.16 s, −18 dB, gain 0.6; pitch cycles 1-2-3-1 | none | 12 ms | 1 |
+  | Wrong tap | wobble ±12 px × 4, heart bump 1.4× | `tap_wrong` 0.22 s, −15.3 dB + `heart_lose` 0.39 s, −13.8 dB (the loudest file) | shake 90 ms, 0.004 | 40-50-40 ms | 3 |
+  | Last find | the find and the win in the same frame | win sounds over the find | none | 15-40-30 ms | masked |
+  | Losing tap | as wrong + overlay | as wrong | as wrong | 90 ms | 3 |
+
+  Findings: inversion (failure 3, success 1), masked success (the last find; every Odd One Out scene is a one-find scene, so its only success was always masked), the board never empties, the pitch falls back on the fourth find.
+- **Decision (GDD v1.8 §3a):** the table there. Constants in `src/game/feel.ts` (pure, unit-tested; CLAUDE.md asks for named constants in `difficulty.ts`/`config.ts`: `feel.ts` is the feel counterpart of `difficulty.ts`, kept apart because it is presentation, not generation). Sound gains are relative to the SFX volume 0.6: correct 1.4 (0.84) vs wrong 0.5 (0.30), about +9 dB for the correct tap on top of a file that is 2.7 dB quieter, so the correct tap now lands about 6 dB louder than the wrong one. One correct sound file with a detune of +200 cents per step replaces the three files, so the pitch can rise past three finds.
+- **Hit stop** freezes tweens and the scene clock for 45 ms and restores them on a wall-clock timer; Phaser 3.90's `Clock.now` ignores the time scale, so the star timer (it reads `time.now`) loses nothing, and the tween/clock pause flags are separate from the time scale, so a restore during a platform pause does not resume anything.
+- **Not in this pass:** new sound files (the CC0 pack is still Hasan's step), the leaderboard, Find Me, a character. The feel pass moves Feel from 1 to about 4 on the skill's scale (estimate); Face stays 1.
+- **Hasan's check on the phone:** does the correct tap now feel heavier than the wrong one; is the hit stop felt or seen as a stutter (if a stutter: `HIT_STOP_MS` to 0); is the screen kick too much on the fourth find in a row.

@@ -18,12 +18,31 @@ A crowded, colorful scene. Find what the icon at the top asks for. Tap it. Next 
 ## 3. Core loop (Find mode)
 1. Scene pops in (0.3 s). Top bar shows target icon(s) with count badges (e.g. cat ×3).
 2. Player taps objects.
-   - Correct: object pops + sparkle + rising "ding", badge count decrements.
-   - Wrong: small shake, soft "nope", lose 1 heart (hearts carry over from scene to scene, §6).
-3. All targets found → confetti, stars by speed, auto-advance after 1.2 s (tap to skip).
+   - Correct: a short hit stop and a screen kick, the object flashes, leaves the board and flies into its prompt icon, the badge counts down when it lands; the sound rises with every find in a row (§3a).
+   - Wrong: the object wobbles, one soft "nope", lose 1 heart; no screen shake (hearts carry over from scene to scene, §6).
+3. All targets found → the last find lands first, then a beat later confetti, stars by speed, auto-advance after 1.2 s (tap to skip).
 4. Hearts = 0 → Fail overlay: **Continue** (rewarded ad → three hearts, same scene) or **Retry** (new seed, same level, one heart; §6).
 
 Stars: 3★ if solved under `t3`, 2★ under `t2`, else 1★. `t3/t2` scale with difficulty (see GENERATOR.md).
+
+## 3a. Feel spec (v1.8, `pebblit-game-craft`)
+Rule: the right move is the loudest moment; failure stays local and soft. Values are starting points behind named constants in `src/game/feel.ts`, tuned on Hasan's phone.
+
+| Action → outcome | Visual | Sound | Screen | Haptic (Android) |
+|---|---|---|---|---|
+| Correct tap, Find / Odd | hit stop 45 ms; the object flashes white, pops 1.2×, leaves the board and flies to its prompt icon in 380 ms (shrinking, ease-in); ring and sparks where it stood | `tap_correct_1` at gain 1.4, +2 semitones per find in a row (cap 3 steps) | shake 80 ms, intensity 0.0025, +25 % per step | 15 ms |
+| …arrival in the HUD | the icon bounces 1.25×, the badge counts down now | `sparkle` at gain 0.6, same pitch step | none | none |
+| Correct tap, Spot 5 | rings stay on both images (the comparison needs them); a green ring token flies from the tapped image to the Spot icon | as Find | as Find | 15 ms |
+| Wrong tap | the object wobbles ±8 px, 3 × 40 ms; the lost heart bumps 1.25× | `tap_wrong` at gain 0.5 | none | 8 ms |
+| Losing tap | as wrong, then the fail overlay | `tap_wrong` + `heart_lose` at gain 0.8 | none | 30 ms |
+| Last find | its full find cascade first; after a 450 ms beat: shake 120 ms at 0.004, `scene_complete` + `confetti`, confetti, stars | | | 20-40-40 ms |
+
+- **Combo step** = finds in a row in this scene since the last wrong tap, first find = step 0, cap 3. A wrong tap resets it quietly.
+- **Board empties**: found objects leave the board (Find, Odd); the shuffle twist slides only what is left. Spot 5 keeps its objects.
+- **The star timer stops at the last tap**, so the win beat costs no stars; taps during the beat are ignored and the pause menu stays closed, as over the win overlay.
+- **Input stays open** during flights; a second find while the first flies is fine.
+- **Pause and menu** freeze flights, the beat and the hit stop (tweens and the scene clock); a pending hit stop never resumes a paused game; camera effects are reset when the game freezes.
+- **Failure never outweighs success**: haptic and sound gains are unit-tested for it.
 
 ## 4. Modes (rotate automatically, player never chooses)
 | Mode | Prompt (icon-only) | Win | Rotation |
@@ -147,3 +166,6 @@ No accounts, no leaderboards, no multiplayer, no IAP, no level editor, no locali
 ## 20. Changes in v1.7 (2026-10-18, hearts carry over)
 - Hearts are no longer reset every scene (§3, §6): they carry over, one returns on entering every 20th level, never above three; a loss leaves one heart for the Retry, the rewarded Continue gives three; the daily chain keeps its own hearts. Hasan's brief: "don't renew the hearts every level; every 20 levels give one back, never above three; nothing if none were spent".
 - Brand in the game: the Title and the boot screen show the wordmark texture, the Title carries the studio mark (docs/store/brand).
+
+## 21. Changes in v1.8 (2026-10-19, feel pass)
+- §3 and the new §3a: the feel audit of `pebblit-game-craft` found the feedback inverted (the wrong tap had the only screen shake, the longest vibration and the two loudest sounds), the last find masked by the win in the same frame, found objects left on the board at 45 % opacity, and a correct-tap pitch that fell back on the fourth find. v1.8 moves the weight to success, gives the last find its own beat, empties the board into the HUD and makes the pitch rise. Audit and measurements in docs/questions.md (feel pass). Hasan's brief: Bus Fever's boarding shake, "make Peek & Find feel like that".

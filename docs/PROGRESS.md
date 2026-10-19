@@ -6,6 +6,29 @@ Single source of truth for "where did we leave off". Update at the end of every 
 Epic: 14 (pause menu, GDD v1.6) and 13 (late-game twists + second ramp, GDD v1.5) done in code; 9 done with placeholder art and sound; 10 and 11 done except the device/QA-tool items; 12 done except the uploads · Next: Hasan's phone pass of the twists, the real art/sound drop-in, then the uploads (Playgama console, QA tool) · 0.1.2 (hearts carry over + host focus fix) ready for Update Game · Last update: 2026-10-18 · Branch: main
 Repo: https://github.com/kriptoloca/peek-and-find
 
+## Session plan (2026-10-19, Epic 16: feel pass, GDD v1.8, release 0.1.3)
+Hasan chose "1": only the feel fix on Peek & Find, planned with `pebblit-game-craft` (workflow B),
+verified with Playwright. Spec in GDD §3a, audit and decisions in docs/questions.md (feel pass).
+- [ ] Docs first: GDD v1.8 §3/§3a/§21, questions.md audit and decision, this plan.
+- [ ] `src/game/feel.ts` (pure): timings, gains, combo step, detune, shake intensity; haptic
+      patterns with failure ≤ success; `audio.play(name, { gain, detune })`; `correctSfx` retired.
+- [ ] Failure soft: no screen shake, wobble ±8 px × 3, `tap_wrong` at gain 0.5, `heart_lose`
+      only on the losing tap, haptics 8 ms / 30 ms.
+- [ ] Success heavy: 45 ms hit stop (wall-clock restore, pause-safe), screen kick with the combo
+      step, `tap_correct_1` at gain 1.4 rising +2 semitones per step (cap 3).
+- [ ] Collect to HUD: the found object flies to its prompt icon (380 ms) and leaves the board;
+      the HUD counts down on arrival with `sparkle`; Spot 5 flies a ring token; a hint ring on
+      the found target goes with it; the shuffle slides only what is left.
+- [ ] Win beat: the last find lands first, the win sequence 450 ms later (scene clock, round
+      guard); taps ignored and the menu closed during the beat; camera effects reset on freeze.
+- [ ] Dev hooks (`onBoard`, `hudRemaining`, feel log, `overlay`) and `tests/e2e/feel.spec.ts`:
+      correct cascade and arrival, combo rise and reset, quiet failure without shake, the win
+      beat after the last arrival, a flight frozen by the menu, Spot keeps its objects.
+- [ ] Unit tests (feel, haptics, audio keys), full check + unit + e2e green.
+- [ ] `code-review` + adversarial audit, KRİTİK/YÜKSEK closed.
+- [ ] Release 0.1.3: ZIP + SHA, PROGRESS board/measured, skill teardown updated; Hasan: Update
+      Game, judge on the iPhone.
+
 ## Session plan (2026-10-18, Epic 13: late-game twists + second ramp)
 Hasan's phone pass: level 80 feels "medium"; asked for creative late-game pressure (objects
 changing places after a while) and a curve that hooks from level 1 to the end without
