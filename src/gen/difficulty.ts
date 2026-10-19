@@ -34,9 +34,36 @@ const BIG_TIME_MULT = 2;
 /** Daily chain levels (GDD §7): fixed so every player gets identical scenes. */
 export const DAILY_LEVELS = [10, 20, 30, 40, 50] as const;
 
-/** Mode introduction levels (GDD §4). */
+/**
+ * Mode unlock levels (GDD §4): a cycle slot before its mode's unlock level is played as Find.
+ * With the cycle below, the first Odd is level 6 and the first Spot level 11.
+ */
 export const ODD_FROM_LEVEL = 6;
 export const SPOT_FROM_LEVEL = 11;
+
+/**
+ * One mode rhythm for every normal level (GDD v1.9 §4): slot `(level − RHYTHM_ANCHOR_LEVEL) mod 10`
+ * of MODE_CYCLE. Every ten levels hold two Spots, two Odds and six Finds (the 60/20/20 shares),
+ * Spot and Odd never follow each other, and the normal chain's big scenes (every 25th level) fall
+ * on a Find. Ten, not five: themes rotate in 3-level blocks over five themes, a 15-level period,
+ * and a 5-level cycle lands every theme on the same slots forever (forest would never get Odd,
+ * space never Spot). This cycle gives every theme a Spot and an Odd in any 30 levels from level
+ * 40 (tests/mode-rhythm.test.ts); evenly spaced 5-level gaps are impossible without that lock-in,
+ * so the gaps alternate 3 and 7. The anchor sets the phase, kept apart from the unlock levels.
+ */
+export const MODE_CYCLE: readonly Mode[] = [
+  'spot',
+  'find',
+  'odd',
+  'find',
+  'find',
+  'odd',
+  'find',
+  'spot',
+  'find',
+  'find',
+];
+export const RHYTHM_ANCHOR_LEVEL = 11;
 
 export const THEME_COUNT = 5;
 export const THEME_ROTATE_EVERY = 3;
@@ -102,7 +129,10 @@ export interface ModeWeights {
   spot: number;
 }
 
-/** Mode weights by level (GENERATOR.md §2). Spot's share moves to Find when it cannot be hosted. */
+/**
+ * Mode weights by level (GENERATOR.md §2), for the daily chain's date-seeded pick. Spot's share
+ * moves to Find when it cannot be hosted.
+ */
 export function modeWeights(level: number, canHostSpot: boolean): ModeWeights {
   if (level < ODD_FROM_LEVEL) return { find: 1, odd: 0, spot: 0 };
   if (level < SPOT_FROM_LEVEL) return { find: 0.8, odd: 0.2, spot: 0 };
@@ -110,6 +140,23 @@ export function modeWeights(level: number, canHostSpot: boolean): ModeWeights {
   return { find: 0.6, odd: 0.2, spot: 0.2 };
 }
 
+/**
+ * Mode of a normal (non-daily) level (GDD v1.9 §4): the level decides, the same for every player
+ * (the salt only varies the scene); a slot whose mode is not unlocked yet, or a Spot slot the
+ * current layout cannot host, is Find. A Retry or a reload keeps the mode while the layout can
+ * still host what it had. Fractional levels are floored, levels below 1 count as 1.
+ */
+export function scheduledMode(level: number, canHostSpot: boolean): Mode {
+  const L = Number.isFinite(level) ? Math.max(1, Math.floor(level)) : 1;
+  const n = MODE_CYCLE.length;
+  const slot = (((L - RHYTHM_ANCHOR_LEVEL) % n) + n) % n;
+  const mode = MODE_CYCLE[slot] ?? 'find';
+  if (mode === 'odd' && L < ODD_FROM_LEVEL) return 'find';
+  if (mode === 'spot' && (L < SPOT_FROM_LEVEL || !canHostSpot)) return 'find';
+  return mode;
+}
+
+/** Daily chain only (GDD §7): a mode drawn with the §4 shares from the date-seeded `rng`. */
 export function pickMode(rng: Rng, level: number, canHostSpot: boolean): Mode {
   const w = modeWeights(level, canHostSpot);
   const i = rng.weighted([w.find, w.odd, w.spot]);

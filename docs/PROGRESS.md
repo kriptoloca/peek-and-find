@@ -3,8 +3,26 @@
 Single source of truth for "where did we leave off". Update at the end of every epic and whenever a decision changes the plan. Read this first at the start of every session.
 
 ## Status
-Epic: 16 (feel pass, GDD v1.8: success outweighs failure, collect to HUD, rising combo, win beat) done in code, release 0.1.3 ready for Update Game, **phone feel check pending (Hasan)**; 14 (pause menu, GDD v1.6) and 13 (late-game twists + second ramp, GDD v1.5) done in code; 9 done with placeholder art and sound; 10 and 11 done except the device/QA-tool items; 12 done except the uploads · Next: Hasan's phone pass of the twists, the real art/sound drop-in, then the uploads (Playgama console, QA tool) · 0.1.3 (feel pass; includes 0.1.2 hearts carry over + host focus fix) ready for Update Game · Last update: 2026-10-19 · Branch: main
+Epic: 17 (one mode rhythm for every player, GDD v1.9) and 16 (feel pass, GDD v1.8) done in code, release 0.1.4 ready for Update Game, **phone feel check pending (Hasan)**; 14 (pause menu, GDD v1.6) and 13 (late-game twists + second ramp, GDD v1.5) done in code; 9 done with placeholder art and sound; 10 and 11 done except the device/QA-tool items; 12 done except the uploads · Next: Hasan's phone pass of the twists, the real art/sound drop-in, then the uploads (Playgama console, QA tool) · 0.1.4 (shared mode rhythm; includes 0.1.3 feel pass and 0.1.2 hearts + host focus fix) ready for Update Game · Last update: 2026-10-19 · Branch: main
 Repo: https://github.com/kriptoloca/peek-and-find
+
+## Session plan (2026-10-19, Epic 17: one mode rhythm for everyone, GDD v1.9, release 0.1.4)
+Hasan: "iOS seems to get more Spot 5 than Android" → per-save dice, not the platform
+(docs/questions.md same date); he approved the fixed rhythm: "eksiksiz, hatasız ve doğru".
+- [x] Docs first: GDD v1.9 §4/§7/§8/§22, GENERATOR.md §2, questions.md decision, this plan.
+- [x] `scheduledMode(level, canHostSpot)` (pure, `src/gen/difficulty.ts`, named 10-level cycle,
+      no salt); GameScene calls it; `dailyMode` keeps the date-seeded draw for the daily chain
+      and gates only Spot.
+- [x] Unit tests: every level 1–300 against a hand-written rule, 2/2/6 in every 10 levels from 11,
+      gaps 3–7, Spot never next to Odd, big scenes on Find, every theme meets Spot and Odd,
+      layout gate; `dailyMode` draw, mix and gate.
+- [x] E2E: two salts see the same modes at levels 5–25 in different layouts; 1:1 plays Spot
+      levels as Find; full suite green.
+- [x] `code-review` (no correctness bugs; 12 cleanups applied) + adversarial audit: 0 KRİTİK,
+      1 YÜKSEK (the 5-level draft locked themes to modes: forest never Odd, space never Spot →
+      10-level cycle from an exhaustive search), 1 ORTA (daily gate re-weighted the draw →
+      `dailyMode`), 3 DÜŞÜK; re-audit: closed, 3/7 gaps proven best, 4 DÜŞÜK docs items fixed.
+- [x] Release 0.1.4: ZIP + SHA, PROGRESS board/measured; Hasan: Update Game.
 
 ## Session plan (2026-10-19, Epic 16: feel pass, GDD v1.8, release 0.1.3)
 Hasan chose "1": only the feel fix on Peek & Find, planned with `pebblit-game-craft` (workflow B),
@@ -81,6 +99,7 @@ frustrating. Decisions in docs/questions.md (same date).
 | 14 | In-game pause menu (GDD v1.6 §9): pause button freezes the scene, Resume / Sound / Music / Home; star timer leaves frozen time out (also fixes the platform-pause star loss) | done (code) | 200 unit + 59 e2e (`menu.spec`); **phone check pending (Hasan)** |
 | 15 | Hearts carry over (GDD v1.7 §6): one back on entering every 20th level, never above three; hearts are written on every change, a loss leaves one for the Retry, Continue gives three; the daily chain keeps its own | done (code) | `src/game/hearts.ts`, save field `hearts` (old saves read as three, no version bump), `?hearts=N` dev param; `tests/hearts.test.ts`, `tests/e2e/hearts.spec.ts`; store "How to play" updated (Playgama field by hand, Hasan) |
 | 16 | Feel pass (GDD v1.8 §3a, `pebblit-game-craft` workflow B): failure local and soft (no screen shake, ±8 px wobble, quiet sounds, short haptics), success heavy (45 ms hit stop, screen kick and pitch rising with the combo), found objects fly into their HUD icon and the count drops on arrival, the win starts a beat after the last landing; sounds compared as played (file level + gain) | done (code) | `src/game/feel.ts`, `tests/feel.test.ts`, `tests/e2e/feel.spec.ts` (10), `?feelslow=K`; audit 0/1/2/13 all closed; release 0.1.3 (`release/peek-and-find-0.1.3.zip`, SHA `4e699aa3…7615`, built from 2c2cf22); **phone feel check pending (Hasan)** |
+| 17 | One mode rhythm for every player (GDD v1.9 §4): the mode of a level no longer comes from the per-save salt (Hasan saw Spot 5 earlier on one phone than on another); a 10-level cycle from level 11 (Spot, Find, Odd, Find, Find, Odd, Find, Spot, Find, Find), first Odd 6, first Spot 11, 20/20/60 in every 10 levels, gaps 3–7, every theme meets Spot and Odd; the daily chain keeps its date draw (`dailyMode`, gate turns only Spot into Find) | done (code) | `scheduledMode` in `src/gen/difficulty.ts`, `tests/mode-rhythm.test.ts`, `tests/e2e/modes.spec.ts` (4); audit 0/1/1/3 + re-audit 4 DÜŞÜK, all closed; release 0.1.4 |
 | 12 | Store assets, submission ZIP | done (code) | `npm run zip` → deterministic `release/peek-and-find-0.1.0.zip` (3.27 MB, index.html at the root, no /test/, limits checked, SHA-256 printed); `docs/store/`: listing, thumbnail brief, video script, submission notes; `tests/store.test.ts` bans young-audience wording; **uploads and the thumbnails need the Playgama account and the art pack (Hasan)** |
 
 ## Denetim özeti (2026-10-17, düşman denetçi, HEAD dcfa024 → bu commit)
@@ -91,6 +110,7 @@ frustrating. Decisions in docs/questions.md (same date).
 | E2E (oyuncu gözünden) | 2 | 5 | 10 | 7 | KRİTİK 2/2, YÜKSEK 5/5 düzeltildi; ORTA 8 düzeltildi, 2 kayıt; DÜŞÜK 5 düzeltildi, 2 kayıt |
 
 | His geçişi (2026-10-19, code-review + düşman denetçi) | 0 | 1 | 2 | 13 | Hepsi düzeltildi (questions.md "feel pass") |
+| Mod ritmi (2026-10-19, code-review + düşman denetçi + ikinci tur) | 0 | 1 | 1 | 7 | Hepsi düzeltildi ya da gerekçeyle kaydedildi (questions.md "Spot 5 puzzles") |
 
 Gerekçeli kayıtlar docs/questions.md "adversarial audit" bölümlerinde. İkinci koşu (3259086 üzerinde): sistem denetimi ilk tur bulgularını 14 kapandı / 5 kısmen / 1 açık / 5 kayıt olarak hükme bağladı ve 1 ORTA + 11 DÜŞÜK yeni bulgu verdi; hepsi bu commit'te düzeltildi ya da kaydedildi (questions.md "second round"). E2E ikinci turu ilk tur bulgularını 13 kapandı / 6 kısmen / 3 açık / 2 kayıt olarak hükme bağladı ve 2 YÜKSEK (Spot piksel metriği) + 4 ORTA + 6 DÜŞÜK yeni bulgu verdi; YÜKSEK ve ORTA'ların hepsi bu commit'te düzeltildi, DÜŞÜK'ler düzeltildi ya da kaydedildi (questions.md "E2E re-audit").
 
@@ -101,15 +121,15 @@ Gerekçeli kayıtlar docs/questions.md "adversarial audit" bölümlerinde. İkin
 - [ ] Art pack: 2–3 candidate links, **SVG sources required** (ASSETS.md). Flat, cute but not childish, no nursery palette. Input contract and drop-in workflow: `assets/README.md`.
 - [ ] Sounds: download Kenney "Interface Sounds" / "Digital Audio" (CC0) or pick freesound CC0 clips, drop them as `assets/audio/<name>.wav|ogg` (names in `src/data/audio-manifest.json`), run `npm run audio`. Until then the synthesized placeholders play.
 - [x] Playgama developer account opened and YouTube channel created (2026-10-18).
-- [ ] **Update Game on the Playgama console with `release/peek-and-find-0.1.3.zip`** (feel pass; it includes 0.1.2: hearts carry over + host focus fix; SHA in `docs/store/submission.md`; if 0.1.2's "How to play" text from `docs/store/listing.md` is not in the form yet, paste it too): same game id, dashboard numbers, likes and sandbox targets; the sandbox republish needs no moderation. Then on the phone: after an interstitial the next scene must appear without a tap, and if the dim does stay, the first tap must not cost a heart.
-- [ ] **Feel check on the iPhone (0.1.3)**, three lines back: (1) does a correct tap now feel heavier than a wrong one; (2) is the short freeze on a find felt as a "thunk" or seen as a stutter (stutter → `HIT_STOP_MS` to 0 in `src/game/feel.ts`); (3) is the screen kick too much on the fourth find in a row. Test link after the deploy: `https://kriptoloca.github.io/peek-and-find/test/?level=12`; for a slowed look at the flight: `https://kriptoloca.github.io/peek-and-find/test/?level=12&feelslow=4`.
+- [ ] **Update Game on the Playgama console with `release/peek-and-find-0.1.4.zip`** (shared mode rhythm, GDD v1.9; it includes 0.1.3, the feel pass, and 0.1.2: hearts carry over + host focus fix; SHA in `docs/store/submission.md`; if 0.1.2's "How to play" text from `docs/store/listing.md` is not in the form yet, paste it too): same game id, dashboard numbers, likes and sandbox targets; the sandbox republish needs no moderation. Then on the phone: after an interstitial the next scene must appear without a tap, and if the dim does stay, the first tap must not cost a heart.
+- [ ] **Feel check on the iPhone (0.1.3, shipped in 0.1.4 too)**, three lines back: (1) does a correct tap now feel heavier than a wrong one; (2) is the short freeze on a find felt as a "thunk" or seen as a stutter (stutter → `HIT_STOP_MS` to 0 in `src/game/feel.ts`); (3) is the screen kick too much on the fourth find in a row. Test link after the deploy: `https://kriptoloca.github.io/peek-and-find/test/?level=12`; for a slowed look at the flight: `https://kriptoloca.github.io/peek-and-find/test/?level=12&feelslow=4`.
 - [ ] Playgama Sandbox (live 2026-10-18; targets 100 plays and 5:00 average play time; `docs/store/launch-plan.md` "Playgama Sandbox"): test the sandbox link on phone and desktop, QA tool run 2026-10-18 clean (certification checklist row 10; Continue still to exercise), post about the game and start the free share-bonus run from "Get More Players" (no paid traffic), then share the link.
 - [x] Add Game on developer.playgama.com done 2026-10-18 (`docs/store/launch-plan.md` step 1: fields in `docs/store/listing.md`, ZIP `peek-and-find-0.1.0.zip` SHA `cadf90ac…2bb5`, media from `docs/store/brand/` and `npm run screenshots`), then forward Playgama's feedback. YouTube Playables interest form in parallel. Then `npm run zip` and the upload steps in `docs/store/submission.md`; listing text in `docs/store/listing.md`; icon and profile photo ready in `docs/store/brand/` (2026-10-18); thumbnails per `docs/store/thumbnail-brief.md` once the art pack is in.
 - [ ] Phone test of the Bridge build (links in README.md → Test links; `https://kriptoloca.github.io/peek-and-find/test/?fakeads=1&adfast=1`). First report (2026-10-17): no sound heard on iPhone Safari; the ringer switch silences Web Audio there, now worked around (`src/platform/ios-unmute.ts`). Third report (2026-10-17, production link, level 10): still no music, no vibration (iPhone: expected, no API). Diagnostics screenshot received (2026-10-17 19:13): the chain works on iOS 26 (ogg decoded, context running, music playing, bus RMS 0.02); the loop was ≈ −30 dBFS, raised by ≈ 8 dB. **Retest 2026-10-17 evening: sound and music audible on the iPhone, home button works.** Audio diagnostics screenshot 2026-10-18 12:12 (iPhone, in play): ogg+m4a+webAudio true, context running, locked false, music playing, bus level 0.047, dropped 0, missing none, iOS unmute element playing (3 kicks); SFX chain heard (heart_lose, tap_correct, scene_complete, confetti, stars). Audio on iPhone is closed. Still open on the phone: `?fakeads=1&adfast=1` flow, rotation, Android haptics, L80 profile. `?fakeads=1&adfast=1` on iPhone — interstitial after 3 scenes, hint bulb, Continue on the fail screen, rotation during an ad.
 - [x] Decided 2026-10-17: in-game home button back to the Title (GDD v1.3), shipped.
 
 ## Open design questions (decide after the phone test)
-- **Mode rhythm (2026-10-19, waiting for Hasan):** Spot frequency differs per player, not per platform (random per-save salt; docs/questions.md same date). Proposal: one shared fixed cycle (Spot at 11, 16, 21, …). Also needed: a screenshot of the game on the Android phone inside the Playgama page, to rule out the Spot layout gate (portrait aspect < 1.44 turns Spot into Find).
+- **Spot layout gate on Android (2026-10-19):** still wanted, a screenshot of the game on the Android phone inside the Playgama page, to rule out the Spot layout gate (portrait aspect < 1.44 plays Spot slots as Find). The mode rhythm itself is decided (GDD v1.9).
 - Density/overlap: generator keeps centers ≥ 80–150 px apart and occlusion ≤ 40%; real hidden-object "clutter" may need more overlap at high levels. Tap resolution (nearest center) already allows it; the spacing invariant would have to change to a hit-circle rule.
 - Mirror decoys (same frame flipped, 0.85×): keep, reduce weight, or drop.
 - Empty-background taps: currently free; penalise if players spam-tap.
@@ -122,7 +142,7 @@ See `docs/questions.md` (every deviation from the spec with its reason).
 ## Measured
 | Metric | Value |
 |---|---|
-| Tests | 209 unit + 69 e2e locally, +1 on the live site (+ `npm run tour`, 17 screenshot flows, not a gate) |
+| Tests | 219 unit + 73 e2e locally, +1 on the live site (+ `npm run tour`, 17 screenshot flows, not a gate) |
 | Bundle (dist/) | 5.33 MB shipped (61 files); initial load before GameReady 3.15 MB (OGG) / 3.17 MB (M4A): bundle 1.23 + Bridge 0.29 + kitchen and beach atlases 1.05 (beach unlocks at level 4, so it preloads at boot) + UI 0.03 + backgrounds + audio 0.16 (`docs/size-report.md`) |
 | Atlases | 2048×2048 per theme, 112 frames at 208 px; UI 1024×512 |
 | Level 80 generation | ≈ 0.4 ms; with the shuffle twist (two extra layouts) still well under 50 ms per scene |

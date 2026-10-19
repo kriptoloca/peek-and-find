@@ -53,7 +53,8 @@ emitted).
 
 `npm run screenshots` (test build served on 4173): five portrait 1080×1920 and five landscape
 1920×1080 PNGs in `docs/store/screenshots/` (git-ignored): Title, Find level 9, Odd One Out
-level 12, Spot 5 level 15, Find level 40 with the shuffle marker. Rerun after the real art pack.
+level 13, Spot 5 level 18 (levels where the v1.9 rhythm plays those modes; before 0.1.4 the shots
+used 12 and 15), Find level 40 with the shuffle marker. Rerun after the real art pack.
 
 ## Brand files (2026-10-18)
 

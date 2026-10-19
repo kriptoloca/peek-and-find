@@ -2,8 +2,8 @@ import Phaser from 'phaser';
 import { THEMES, backgroundKey, themeForLevel } from '../../data/themes';
 import { THEME_ROTATE_EVERY, themeToPreload } from '../../gen/difficulty';
 import { installDebug, uninstallDebug, type DebugPoint } from '../../dev/debug';
-import { Rng, hashSeed, sceneSeed } from '../../gen/rng';
-import { pickMode } from '../../gen/difficulty';
+import { sceneSeed } from '../../gen/rng';
+import { scheduledMode } from '../../gen/difficulty';
 import { generateScene } from '../../gen/scene-gen';
 import {
   MEMORY_PEEK_MS,
@@ -51,8 +51,7 @@ import {
 import { TITLE_FRAME, frameColorFor, hexOf } from '../frame-color';
 import { Hud } from '../hud';
 import { computeLayout, type Layout, type Rect } from '../layout';
-import { DAILY_CHAIN_LENGTH, completeDaily, dailyScene, todayKey } from '../daily';
-import { modeForLevel } from '../progression';
+import { DAILY_CHAIN_LENGTH, completeDaily, dailyMode, dailyScene, todayKey } from '../daily';
 import {
   advanceLayout,
   applyTap,
@@ -590,8 +589,7 @@ export class GameScene extends Phaser.Scene {
       // GDD §7: fixed levels, date seed, no player salt; a Retry replays the same scene.
       const d = dailyScene(this.dailyKey, this.dailyIndex);
       level = d.level;
-      const modeRng = new Rng(hashSeed(`daily-mode:${this.dailyKey}:${String(this.dailyIndex)}`));
-      mode = pickMode(modeRng, level, canHostSpot);
+      mode = dailyMode(this.dailyKey, this.dailyIndex, canHostSpot);
       seed = d.seed;
     } else {
       level = progress.level;
@@ -601,9 +599,7 @@ export class GameScene extends Phaser.Scene {
         console.warn('peek: ?mode=spot refused, this aspect cannot host Spot; picking a mode');
       }
       mode =
-        forced && (forced !== 'spot' || canHostSpot)
-          ? forced
-          : modeForLevel(level, progress.seedSalt, canHostSpot);
+        forced && (forced !== 'spot' || canHostSpot) ? forced : scheduledMode(level, canHostSpot);
       seed = sceneSeed(mode, level, progress.attempt, progress.seedSalt);
     }
     this.theme = themeForLevel(level);

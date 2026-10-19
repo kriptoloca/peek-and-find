@@ -5,7 +5,7 @@
 //
 //   npm run build:test && npx vite preview --port 4173
 //   node scripts/screenshots.mjs [--url http://127.0.0.1:4173/test/] [--salt 7]
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, readdirSync, rmSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { chromium } from '@playwright/test';
 
@@ -18,13 +18,17 @@ const URL = opt('url', 'http://127.0.0.1:4173/test/');
 const SALT = opt('salt', '7');
 const OUT = resolve('docs/store/screenshots');
 mkdirSync(OUT, { recursive: true });
+// Generated, git-ignored output: start empty so shots of an older level list never sit next to
+// the current ones (v1.9 moved Odd to level 13 and Spot to 18).
+for (const f of readdirSync(OUT)) if (f.endsWith('.png')) rmSync(resolve(OUT, f));
 
 /** What each shot shows: the first screen, then one scene per mode at a readable density. */
 const SHOTS = [
   { name: 'title', query: 'reset=1', wait: 'title' },
   { name: 'find-l9', query: 'level=9&mode=find&reset=1', wait: 'playing' },
-  { name: 'odd-l12', query: 'level=12&mode=odd&reset=1', wait: 'playing' },
-  { name: 'spot-l15', query: 'level=15&mode=spot&reset=1', wait: 'playing' },
+  // Levels where the rhythm (GDD v1.9 §4) really plays these modes.
+  { name: 'odd-l13', query: 'level=13&mode=odd&reset=1', wait: 'playing' },
+  { name: 'spot-l18', query: 'level=18&mode=spot&reset=1', wait: 'playing' },
   { name: 'find-l40-shuffle', query: 'level=40&mode=find&twist=shuffle&reset=1', wait: 'playing' },
 ];
 const VIEWS = [

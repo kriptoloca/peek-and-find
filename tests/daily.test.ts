@@ -4,6 +4,7 @@ import {
   DAILY_CHAIN_LENGTH,
   addDays,
   completeDaily,
+  dailyMode,
   dailyScene,
   dailyStatus,
   todayKey,
@@ -76,12 +77,54 @@ describe('daily chain', () => {
   it('two players (any salt) generate identical daily scenes in every mode', () => {
     for (let i = 0; i < DAILY_CHAIN_LENGTH; i++) {
       const { level, seed } = dailyScene('20261016', i);
-      const mode = pickMode(new Rng(hashSeed(`daily-mode:20261016:${String(i)}`)), level, true);
+      const mode = dailyMode('20261016', i, true);
       const theme = themeForLevel(level);
       const a = generateScene({ seed, level, mode, theme });
       const b = generateScene({ seed, level, mode, theme });
       expect(a).toEqual(b);
       expect(THEMES).toContain(theme);
     }
+  });
+});
+
+describe('dailyMode (GDD §7)', () => {
+  const DATES = Array.from({ length: 365 }, (_, d) => addDays('20260101', d));
+
+  it('is the date-seeded draw with the §4 shares, the same for every player', () => {
+    for (const day of DATES.slice(0, 30)) {
+      for (let i = 0; i < DAILY_CHAIN_LENGTH; i++) {
+        const { level } = dailyScene(day, i);
+        const drawn = pickMode(new Rng(hashSeed(`daily-mode:${day}:${String(i)}`)), level, true);
+        expect(dailyMode(day, i, true)).toBe(drawn);
+      }
+    }
+  });
+
+  it('mixes the modes over a year (the fixed rhythm would make every daily level Find)', () => {
+    const counts = { find: 0, odd: 0, spot: 0 };
+    for (const day of DATES) {
+      for (let i = 0; i < DAILY_CHAIN_LENGTH; i++) counts[dailyMode(day, i, true)] += 1;
+    }
+    const n = DATES.length * DAILY_CHAIN_LENGTH;
+    expect(counts.find / n).toBeGreaterThan(0.5);
+    expect(counts.odd / n).toBeGreaterThan(0.12);
+    expect(counts.spot / n).toBeGreaterThan(0.08);
+  });
+
+  it('a layout that cannot host Spot changes only the Spot scenes, into Find', () => {
+    let changed = 0;
+    for (const day of DATES) {
+      for (let i = 0; i < DAILY_CHAIN_LENGTH; i++) {
+        const hosted = dailyMode(day, i, true);
+        const notHosted = dailyMode(day, i, false);
+        if (hosted === 'spot') {
+          expect(notHosted).toBe('find');
+          changed += 1;
+        } else {
+          expect(notHosted, `${day} #${String(i)}`).toBe(hosted);
+        }
+      }
+    }
+    expect(changed).toBeGreaterThan(0);
   });
 });

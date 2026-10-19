@@ -1,5 +1,6 @@
-import { DAILY_LEVELS } from '../gen/difficulty';
-import { dailySeed, utcDateKey } from '../gen/rng';
+import { DAILY_LEVELS, pickMode } from '../gen/difficulty';
+import { Rng, dailySeed, hashSeed, utcDateKey } from '../gen/rng';
+import type { Mode } from '../gen/types';
 import type { SaveData } from '../platform/storage';
 
 /** Number of scenes in the daily chain (GDD §7). */
@@ -64,4 +65,15 @@ export function completeDaily(
 export function dailyScene(today: string, i: number): { level: number; seed: number } {
   if (i < 0 || i >= DAILY_CHAIN_LENGTH) throw new Error(`daily index ${String(i)} out of range`);
   return { level: DAILY_LEVELS[i] as number, seed: dailySeed(today, i) };
+}
+
+/**
+ * Mode of daily scene `i` (GDD §7): drawn from the date seed with the §4 shares, so every player
+ * gets the same chain that day (no salt). A layout that cannot host Spot plays a Spot scene as
+ * Find and changes nothing else: the draw is made as if Spot were hostable.
+ */
+export function dailyMode(today: string, i: number, canHostSpot: boolean): Mode {
+  const { level } = dailyScene(today, i);
+  const mode = pickMode(new Rng(hashSeed(`daily-mode:${today}:${String(i)}`)), level, true);
+  return mode === 'spot' && !canHostSpot ? 'find' : mode;
 }

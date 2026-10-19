@@ -47,12 +47,12 @@ Rule: the right move is the loudest moment; failure stays local and soft. Values
 ## 4. Modes (rotate automatically, player never chooses)
 | Mode | Prompt (icon-only) | Win | Rotation |
 |---|---|---|---|
-| **Find** | target icon + ×N | tap all N targets | 60% of scenes |
-| **Odd One Out** | "≠" icon | tap the single different item among near-identical ones; every cell sits at a seeded ±3° angle (v1.4) so the grid never reads as wallpaper, and the angle is never the tell | 20% |
-| **Spot 5** | "5 ⟷" icon, two images stacked (portrait) or side by side (landscape) | tap all 5 differences on either image | 20% |
+| **Find** | target icon + ×N | tap all N targets | 6 of every 10 levels (60 %) |
+| **Odd One Out** | "≠" icon | tap the single different item among near-identical ones; every cell sits at a seeded ±3° angle (v1.4) so the grid never reads as wallpaper, and the angle is never the tell | 2 of every 10 (20 %): levels 6, 13, 16, 23, 26, … |
+| **Spot 5** | "5 ⟷" icon, two images stacked (portrait) or side by side (landscape) | tap all 5 differences on either image | 2 of every 10 (20 %): levels 11, 18, 21, 28, 31, … |
 
-First 5 levels are Find only. Odd One Out appears at level 6, Spot 5 at level 11.
-Spot 5 is only scheduled when the current layout can show both images at ≥ 0.8 design scale (true for 9:16 and 16:9, false for 1:1). When it cannot, its 20% goes to Find (Find 80 / Odd 20). The decision is made per scene from the current layout.
+**One fixed rhythm for every player (v1.9).** The mode of a level depends on the level alone: a ten-level cycle anchored at level 11, **Spot, Find, Odd, Find, Find, Odd, Find, Spot, Find, Find**, where a slot whose mode is not unlocked yet is Find (Odd unlocks at level 6, Spot at level 11). So levels 1–5 are Find, level 6 is the first Odd One Out, level 11 the first Spot 5, and from there every ten levels hold two Spots, two Odds and six Finds; the next Spot or Odd is always 3 to 7 levels away, Spot and Odd never follow each other, and the big scenes of the normal chain (every 25th level) always fall on a Find. Ten, not five: the themes rotate in 3-level blocks over five themes (a 15-level period), and an even 5-level cycle would land every theme on the same slots forever (forest would never get Odd One Out, space never Spot 5); with this cycle every theme meets both modes in any 30 levels from level 40 (when all five are unlocked) and within 30 levels of its own unlock. The trade-off: no cycle that covers every theme can split the shares evenly over five themes, so from level 40 the kitchen blocks get about twice the Spot and Odd share of the others (about a third each against about a sixth). A Retry or a reload keeps the mode (unless the layout in between can no longer host Spot, below); the scene itself still differs per player (the salt, §8).
+Spot 5 is only scheduled when the current layout can show both images at ≥ 0.8 design scale (true for 9:16 and 16:9, false for 1:1). When it cannot, that level is Find (Find 80 / Odd 20). The decision is made per scene from the current layout.
 
 ## 5. Difficulty (level N → params, all in GENERATOR.md)
 - Object count: 12 → 60 (level 80) → 66 (level 150)
@@ -83,7 +83,7 @@ Late-game modifiers that change how a scene is played without changing what coun
 - Daily difficulty is fixed per chain position, not the player's level: scenes use levels **10, 20, 30, 40, 50**. This is what makes the chain identical for every player.
 - Daily scenes have no player salt (see GENERATOR.md §1).
 - Completing the chain = daily badge + streak +1. Missing a day resets streak.
-- Daily uses the normal mode rotation for its level (Odd from level 6, Spot from level 11, subject to the layout rule in §4).
+- Daily draws each scene's mode from the date seed with the §4 shares (Find 60 / Odd 20 / Spot 20, Odd from level 6, Spot from level 11), so every player gets the same chain that day; the fixed rhythm of §4 would make all five daily levels (10, 20, …, 50) Find. A layout that cannot host Spot plays that day's Spot scenes as Find and changes nothing else (v1.9; before, the gate re-weighted the draw and also turned some Odd scenes into Find and some Spot scenes into Odd).
 - Title screen shows "DAILY" button with a check mark when done and the streak number.
 
 ## 8. Progression & saves (Bridge storage, dev fallback to localStorage)
@@ -91,7 +91,7 @@ Late-game modifiers that change how a scene is played without changing what coun
 { version: 1, level, totalStars, bestStreak, streak, lastDailyDate, dailyDone,
   sound: bool, music: bool, scenesPlayed, seedSalt }
 ```
-`seedSalt` is a random 32-bit value created on first run and never changed; it salts non-daily scene seeds so that two players at the same level see different scenes and a reload does not repeat them.
+`seedSalt` is a random 32-bit value created on first run and never changed; it salts non-daily scene seeds so that two players at the same level see different scenes and a reload does not repeat them. It never picks the mode (v1.9: the mode follows the level, §4).
 Save after every scene. Never block gameplay on save errors. `version` enables migrations.
 
 ## 9. Screens
@@ -169,3 +169,6 @@ No accounts, no leaderboards, no multiplayer, no IAP, no level editor, no locali
 
 ## 21. Changes in v1.8 (2026-10-19, feel pass)
 - §3 and the new §3a: the feel audit of `pebblit-game-craft` found the feedback inverted (the wrong tap had the only screen shake, the longest vibration and the two loudest sounds), the last find masked by the win in the same frame, found objects left on the board at 45 % opacity, and a correct-tap pitch that fell back on the fourth find. v1.8 moves the weight to success, gives the last find its own beat, empties the board into the HUD and makes the pitch rise. Audit and measurements in docs/questions.md (feel pass). Hasan's brief: Bus Fever's boarding shake, "make Peek & Find feel like that".
+
+## 22. Changes in v1.9 (2026-10-19, one mode rhythm for everyone)
+- §4: the mode of a level was drawn from the player's salt with the 60/20/20 weights, so every save (every device) had its own sequence: the first Spot 5 came anywhere from level 11 to past 20 (11 % of players after 20), and levels 11–40 held 0 to 16 Spots. Hasan read it as "iOS gets more Spot 5 than Android" (two devices, two saves). v1.9 replaces the dice with one fixed ten-level cycle from level 11 (Spot, Find, Odd, Find, Find, Odd, Find, Spot, Find, Find), the same shares for everyone, and keeps the per-player salt for the scenes. The first draft used five levels (Spot, Find, Odd, Find, Find); the audit found it locked themes and modes together (15-level theme period), so it was replaced before release. The daily chain keeps its date-seeded modes, and its layout gate now only turns Spot into Find (§7). Evidence and decision in docs/questions.md (same date).
