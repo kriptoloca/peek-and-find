@@ -55,11 +55,12 @@ export default tseslint.config(
     },
   },
   {
-    files: ['scripts/**/*.mjs', '*.config.js'],
+    // Node tooling: build scripts, configs, and the agent driver of the run-peek-and-find skill.
+    files: ['scripts/**/*.mjs', '*.config.js', '.claude/skills/**/*.mjs'],
     ...tseslint.configs.disableTypeChecked,
   },
   {
-    files: ['scripts/**/*.mjs', '*.config.js'],
+    files: ['scripts/**/*.mjs', '*.config.js', '.claude/skills/**/*.mjs'],
     languageOptions: { globals: { ...globals.node } },
   },
   prettier,
