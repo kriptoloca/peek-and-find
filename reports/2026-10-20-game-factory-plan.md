@@ -35,7 +35,9 @@ and say so. Nothing is built yet.
    works for three games per organisation, ever; organic sandbox traffic is thin. So the factory
    needs (a) a far better launch-to-play conversion than Peek & Find's 18 %, (b) play time above
    5:00, (c) a daily social clip to bring free players, and (d) the three share bonuses spent only
-   on games whose first plays already prove they hold players.
+   on games whose first plays already prove they hold players. Every agent works to the ten Hold
+   rules of the new `pebblit-retention` skill: 5:00 is the floor, 10:00 the goal, and no game ships
+   with an estimated session under 7:00.
 4. **Capacity follows evidence.** Every day Hasan picks between new ideas and improving the best
    live game; once a game holds players, more days go to it (§7). New games are exploration;
    winners are where the money is.
@@ -68,8 +70,12 @@ Playgama facts come from the MCP README, our dashboard or search summaries, as m
   traffic. Kit standard (§9): the first level starts on the first tap, teaches by doing, and the
   game is interactive within 3 seconds on a throttled mid-range phone profile.
 - **Play time is the second.** 5:00 opens review; 10:00 opens the best partners and Playables.
-  Kit standard: generated levels with a ramp to level 100 or endless, breathers, a rewarded
-  continue, a daily seeded level with a streak, saved progress.
+  The `pebblit-retention` skill (written 2026-10-20 from the portal guidance in its
+  `references/evidence.md`) turns this into ten Hold rules, each with a check: playing on the
+  first tap; short levels with the next one instantly; a sawtooth ramp with breathers; something
+  new every few minutes; a goal beyond the level from the first minute; rescue at the fail point;
+  content that never runs out; ads that never cut a session; stability over 15 minutes; a reason
+  to come back.
 - **Ads are designed, not sprinkled.** Interstitials only between levels after ≥ 3 levels and
   ≥ 120 s, never in the first minute; rewarded only as optional help (continue, hint, booster);
   every game Playables-ready from day one, so a selection needs no rework.
@@ -228,8 +234,8 @@ the scout, analyst and deployer may move to a lighter model if quality holds (§
   another's goal or session shape), transplant (a top pattern on our strengths: generated levels
   with a solver, pixel boards, hidden objects), wildcard (the smallest possible idea).
 - **Scores:** the 35-point rubric of `game-trend-skills:evaluating-game-ideas`; Face and Feel from
-  `pebblit-game-craft` (both ≥ 3); originality; **first-10-seconds clarity without text**; **depth**
-  (can generated levels hold a player for 10 minutes?); buildable as a demo in one session;
+  `pebblit-game-craft` (both ≥ 3); originality; **first-10-seconds clarity without text**; **Hold**
+  from `pebblit-retention` (≥ 4 required); buildable as a demo in one session;
   testable by a solver or bot; Playables fit (portrait, text-free, 13+, preferred genres).
 - **Originality rule:** against our catalog, the same core mechanic (verb and board structure) is
   never a new game, only an update of that game; against other games, at least two of verb, board
@@ -241,14 +247,16 @@ the scout, analyst and deployer may move to a lighter model if quality holds (§
   that teaches by doing, the Feel spec of the key moment (success louder than failure), the
   generator and its check, art direction (code-drawn shapes or CC0 packs vendored in the kit;
   one accent colour; readable at 128 px; no AI-look raster art), the character or joke, the cover
-  idea, and the one-line test (a muted 3-second clip shows a face, a cascade after one tap and
-  something worth sending).
+  idea, the one-line test (a muted 3-second clip shows a face, a cascade after one tap and
+  something worth sending), and the **Hold plan** of `pebblit-retention`: the minute map of the
+  first 10 minutes, the difficulty and novelty schedule of levels 1–50, the meta, rescue, the
+  never-run-out mode, ad pacing and a session estimate ≥ 7:00.
 
 ### 5.2 Coder
 - **Demo mode (night):** the core loop on the template, the generator and its validator, five
   levels, the key success moment with sound, play on the first tap.
-- **Finish mode (after the pick):** the kit standards (§9) in full: generated ramp to level 100
-  or endless with breathers, the complete Feel spec, synthesised sounds, saves, pause and mute,
+- **Finish mode (after the pick):** builds the brief's Hold plan with the kit's Hold modules, and
+  the kit standards (§9) in full: generated ramp to level 100 or endless with breathers, the complete Feel spec, synthesised sounds, saves, pause and mute,
   daily seeded level and streak, rewarded and interstitial hooks behind the ad gate, Playgama
   telemetry (progression, performance sample, uncaught errors), the debug contract, covers from
   the game's own art, `listing.json`, `licenses.json`, the reproducible ZIP; `npm run gates` green.
@@ -271,10 +279,12 @@ the scout, analyst and deployer may move to a lighter model if quality holds (§
   (`get_archive_qa_tool_link`, through the deployer), the Playables checks; then 10 minutes as two
   personas (a casual adult and an impatient teenager, 13+) with objective numbers from the event
   log (time to first input and first success, successes per minute, longest stretch without
-  one, failure versus success feedback strength, frame-time p95), the anchored rubric, bugs with
-  severity, repro steps and screenshots. Verdict: APPROVE (no KRİTİK or YÜKSEK bug; clarity, Fair
-  and polish ≥ 4; Feel, Flow and Face ≥ 3; both personas reach 10 minutes and would keep
-  playing), FIX with a ranked list, or REJECT.
+  one, failure versus success feedback strength, frame-time p95), the anchored rubric, the
+  minute-map audit of `pebblit-retention` (the checks of all ten Hold rules, a 15-minute soak
+  run, the session estimate), bugs with severity, repro steps and screenshots. Verdict: APPROVE
+  (no KRİTİK or YÜKSEK bug; clarity, Fair and polish ≥ 4; Feel, Flow and Face ≥ 3; minute-map
+  PASS with an estimate ≥ 7:00; both personas reach 10 minutes and would keep playing), FIX with
+  fixes ranked by the minutes each adds, or REJECT.
 - **Screenshots and sessions:** the harness starts and stops the local game server; decisions use
   540×960 screenshots and evidence never exceeds 2000 px on the long edge, because a request with
   more than 20 images applies a stricter size limit to all of them (vision docs); each round runs
@@ -314,7 +324,9 @@ the scout, analyst and deployer may move to a lighter model if quality holds (§
   retention and revenue live only in the dashboard; he replies with it in the Monday run);
   `list_moderation_comments` for submitted games.
 - **Writes:** the funnel table per game (launches, plays, conversion, average play time, level
-  drop-off, likes, sessions per day, errors); `metrics/<slug>.md` with
+  drop-off, likes, sessions per day, errors); the leak per game by workflow D of
+  `pebblit-retention` (the biggest level-to-level drop first) and the session-model calibration;
+  `metrics/<slug>.md` with
   `game-trend-skills:tracking-game-metrics`; `lessons.md`; the gamer calibration table; a health
   line (nights run 7/7, failed stages, usage warnings).
 - **Proposes, for Hasan's clicks:** moderation submissions (games at 100 plays and 5:00, at most
@@ -375,11 +387,11 @@ or clips only.
 
 | Gate | When | Passes when |
 | --- | --- | --- |
-| G0 Offers | after the PM | three schema-valid briefs with different verbs; originality and name rules; Face and Feel ≥ 3; clarity and depth outlook ≥ 3; testable |
+| G0 Offers | after the PM | three schema-valid briefs with different verbs; originality and name rules; Face and Feel ≥ 3; Hold ≥ 4 with a minute map and a session estimate ≥ 7:00; testable |
 | G1 Demo | after each demo | loads; no console errors or external requests; the bot finishes five levels; interactive ≤ 3 s under 4× CPU throttling; clip recorded |
 | G2 Pick | morning | Hasan's reply |
-| G3 Build | after each finish round | `npm run gates` green: check, unit, e2e, build, initial load ≤ 5 MB (hard 8 MB), dist audit, ZIP, covers, telemetry events present, `licenses.json` valid, generator yields ≥ 100 valid levels with a rising difficulty metric (or a checked endless ramp), Playables checks |
-| G4 Gamer | after each audit | APPROVE (§5.3) within three fix rounds |
+| G3 Build | after each finish round | `npm run gates` green: check, unit, e2e, build, initial load ≤ 5 MB (hard 8 MB), dist audit, ZIP, covers, telemetry events present, `licenses.json` valid, generator yields ≥ 100 valid levels with a rising difficulty metric (or a checked endless ramp), content horizon ≥ 60 minutes, friction between levels ≤ 1.5 s, ad schedule simulation (none in minute 1, none after a loss), Playables checks |
+| G4 Gamer | after each audit | APPROVE (§5.3) within three fix rounds, including the minute-map PASS |
 | G5 Store | before upload | `listing.json` valid (no age cues, no brands, lengths, category by mechanic); three covers at exact sizes; cover readable at 128 px |
 | G6 Playgama | deploy | checklist met; archive `PASSED`; QA Tool run clean; `PUBLISHED` |
 | G7 Market | weekly | the analyst's funnel table and proposals; Hasan's clicks |
@@ -394,8 +406,12 @@ Extracted from Munch Pixels and Peek & Find into `kit/` and `template/`:
   external calls.
 - **Conversion:** no title screen before the first level; the first level teaches by doing;
   interactive within 3 s on a throttled mid-range profile; initial load ≤ 5 MB.
-- **Play time:** generated levels with a solver-checked ramp, breathers, rewarded continue, daily
-  seeded level with a streak, saved progress.
+- **Play time (the Hold modules of `pebblit-retention`):** level flow with auto-advance and a
+  one-tap retry; a sawtooth ramp scheduler with breathers and teaching loops; a novelty scheduler
+  (a new element every 5–10 levels, a chapter every 10–20); a light meta bar toward the next
+  unlock; a rewarded continue; generated levels behind the hand-tuned first 20–30; a daily seeded
+  level with a forgiving streak and an endless mode with a personal best; session milestone
+  telemetry at 1, 3, 5 and 10 minutes; progress saved after every level.
 - **Ads:** interstitial only between levels after ≥ 3 levels and ≥ 120 s, never in the first
   minute; rewarded only as optional help; the game is fully playable when ads fail.
 - **Telemetry:** the events `get_game_telemetry_guide` asks for, plus uncaught errors.
@@ -460,8 +476,9 @@ PLAN.md                  this plan, kept current
 
 New skills, written with `skill-creator` and tested with its evals: `factory-idea-synth`,
 `factory-brief`, `pebblit-kit`, `gamer-audit`, `playgama-deploy`, `store-copy`, `factory-scout`,
-`portfolio-analyst`. Reused: `pebblit-game-craft`, `game-trend-skills:*`, `design:ux-copy`,
-`code-review`.
+`portfolio-analyst`. Reused: `pebblit-game-craft`, `pebblit-retention` (written and validated on
+2026-10-20; the PM, coder, gamer and analyst all apply it), `game-trend-skills:*`,
+`design:ux-copy`, `code-review`.
 
 ---
 
@@ -506,6 +523,7 @@ New skills, written with `skill-creator` and tested with its evals: `factory-ide
 | Risk | Mitigation |
 | --- | --- |
 | Games never reach 100 plays without paid traffic | conversion and play-time standards; the social channel; share bonus for proven games; capacity shifts to improving the best game; day-30 and day-60 reviews |
+| Games average under 5:00 | the Hold rules in every brief, build and audit; no game ships with an estimate under 7:00; the analyst's leak loop fixes the biggest drop first, one release at a time |
 | The Playgama connector does not work from claude.ai | phase 0 tests it first; Plan B runs only the deploy step on the PC |
 | Usage limits, or Munch Pixels work suffers | night schedule; pilot measures; two demos, lighter models, usage credits or Plan B, in that order |
 | Scheduled tasks are a research preview and change | the logic lives in the repo and runs the same in a local session |
