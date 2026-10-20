@@ -131,8 +131,9 @@
 
 ## 3. Social trends → gamification
 
-A short pass only; the full scan belongs to `scouting-social-trends`. Search found little
-dated October 2026 material.
+A short pass; the full scan is `reports/2026-10-20-social-trends.md` (same day). Its best bet is
+the "steal" verb with our own raccoon (5/5 gates), and its fastest win is a glass-candy crunch
+in Munch Pixels' Epic 4.
 
 | Trend | Source | Gamifiable? | Verb + payoff | Shelf life |
 | --- | --- | --- | --- | --- |
@@ -216,7 +217,8 @@ Full terms and the payout question: `reports/2026-10-20-launch-pebblit.md`.
       "trending" top rows, because the build machine can't open them (Hasan, 5 min).
 - [ ] Allow the chart hosts in the environment's network settings so the next scan can open
       primary sources (Hasan).
-- [ ] A full `scouting-social-trends` pass before the first daily clips.
+- [x] A full `scouting-social-trends` pass before the first daily clips
+      (`reports/2026-10-20-social-trends.md`).
 
 ## 10. Previous watchlist → answers
 
