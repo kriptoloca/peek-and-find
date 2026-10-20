@@ -1,4 +1,4 @@
-# Pebblit Game Factory — plan v3 (2026-10-20)
+# Pebblit Game Factory — plan v4 (2026-10-20)
 
 **Hasan's request** (2026-10-20, translated): a system of agents that plans games from the best 10
 games of a top list (the closest and the most creative ideas), has a coder agent build them, has
@@ -8,528 +8,500 @@ until it approves, and has a deploy bot fill in the Playgama developer-account f
 
 **Decided by Hasan on 2026-10-20:** no paid boost for any game; one game a day; every night the
 project manager presents three demos, Hasan picks one in the morning, and the pick is deployed the
-same day; every open decision as recommended (§17). His last brief: design the process to be
-flawless and to earn as much as possible, audit that it is smart, leave nothing unforeseen.
+same day; every open decision as recommended. Later the same day: design the process to be
+flawless and to earn as much as possible, audit that it is smart, leave nothing unforeseen; every
+agent works for play time above 5 minutes; top games are decoded by playing them.
 
-History: v1 (commit a1dfcb4) assumed three games a day on Hasan's PC; v2 (d611045, e3af580) moved
-to the cloud with three demos a night; v3 adds how the factory earns money and the gate that
-decides it, the growth engine without paid traffic, the kit standards for conversion and play
-time, factory-level reviews, and the findings of an independent audit (§18). Lines marked "fact"
-were checked on 2026-10-20 against the named source; the rest are design decisions or estimates
-and say so. Nothing is built yet.
+History: v1 (a1dfcb4) three games a day on Hasan's PC; v2 (d611045, e3af580) cloud, three demos a
+night; v3 (277fcf4 … 8c8d80b) revenue funnel, growth engine, kit standards, the two house skills
+`pebblit-retention` and `pebblit-game-dna`; **v4 closes the 24 findings of an independent
+adversarial audit (§18)**: three KRİTİK (no free supply of first plays, no memory between runs,
+irreversible Playgama actions guarded only by hooks) and nine YÜKSEK. Lines marked "fact" were
+checked on 2026-10-20 against the named source; the rest are design decisions or estimates and say
+so. Nothing is built yet.
 
 ---
 
 ## 0. Verdict
 
-1. **Buildable without the PC.** Claude Code cloud scheduled tasks run in Anthropic's cloud while
-   the PC is off, draw down the subscription, may publish private pages without asking, and any
-   run can be continued from the Claude app (fact, §3). A night run builds three demos; Hasan
-   answers "B" in the morning; the same session finishes, audits and deploys B.
-2. **Money comes from a few games that hold players, never from the count.** The path to revenue
-   is: sandbox → **100 plays with a 5:00 average play time** (unlocks submitting for review) →
-   manual moderation → catalog and partner distribution → ads once the game clears a session
-   threshold → YouTube Playables for the best performers (facts, §1). Every design choice below
-   serves that path.
-3. **Without paid traffic, the binding constraint is reaching 100 plays.** The free share bonus
-   works for three games per organisation, ever; organic sandbox traffic is thin. So the factory
-   needs (a) a far better launch-to-play conversion than Peek & Find's 18 %, (b) play time above
-   5:00, (c) a daily social clip to bring free players, and (d) the three share bonuses spent only
-   on games whose first plays already prove they hold players. Every agent works to the ten Hold
-   rules of the new `pebblit-retention` skill: 5:00 is the floor, 10:00 the goal, and no game ships
-   with an estimated session under 7:00.
-4. **Capacity follows evidence.** Every day Hasan picks between new ideas and improving the best
-   live game; once a game holds players, more days go to it (§7). New games are exploration;
-   winners are where the money is.
-5. **Taste has two gates and a floor.** The AI gamer is the floor (bugs, confusion, dead time,
-   weak feedback); Hasan's daily pick is the taste gate; the numbers decide hits, and the
-   factory itself is reviewed on day 14, 30, 60 and 90 with a stop-loss (§14).
-6. **No separate bill on the subscription; the limit is usage**, shared with our Munch Pixels work
-   (facts, §3). The pilot week measures it.
+1. **Buildable on Claude Code cloud scheduled tasks, with four runtime rules the audit made
+   explicit:** the factory's memory lives on a `factory-state` branch, never on `main`; the day
+   phase is its own autonomous task, fired after Hasan's pick, because a session he continues
+   by hand may stop and ask for permission; Playgama's irreversible tools are blocked in the
+   account's connector settings and in the permission rules, with hooks only as a backstop
+   (the hooks docs say hooks are not a hard gate); uploads run on a Custom network that allows
+   Playgama's upload hosts.
+2. **Money comes from a few games that hold players.** Sandbox → 100 plays with a 5:00 average
+   (unlocks the review) → manual moderation → catalog and partner distribution → YouTube Playables
+   for the best performers. Ads already run in the sandbox through Bridge (Peek & Find: 0.91 ad
+   shows per play on day 2).
+3. **The binding constraint is a game's first 100 plays, and their free supply is unmeasured.**
+   Phase 0 measures it before anything is built. Strategy whatever the number: the daily games are
+   exploration; **one game of the week** gets every promotion lever we have (§7), so at least one
+   game a week gets a real reading.
+4. **Minutes are designed, not hoped for.** Every agent works to the ten Hold rules of
+   `pebblit-retention`: 5:00 is the floor, 10:00 the goal, no game ships with an estimated session
+   under 7:00, and approval rests on numbers the bot measures, not on the model's taste.
+5. **The factory itself can fail cheaply.** Reviews on day 14, 30, 60 and 90 with thresholds that
+   can actually fail, including a revenue floor (§14).
+6. **Before phase 1, Hasan decides or does six things** (§17): send one e-mail to Playgama about
+   the cadence; buy GitHub Pro; agree that an improvement release counts as the day's game; split
+   the three lifetime share bonuses across our games; set the day-90 revenue floor; pick a payout
+   method that works in Türkiye and ask an accountant one question.
 
 ---
 
-## 1. How the factory earns money (facts, then the design)
+## 1. How the factory earns money
 
-**The funnel** (sources in brackets; Playgama pages did not open from the cloud machine, so
-Playgama facts come from the MCP README, our dashboard or search summaries, as marked):
+**The funnel** (Playgama pages do not open from the cloud machine; facts come from the MCP README,
+our dashboard or search summaries, as marked):
 
 | Step | Gate | Source |
 | --- | --- | --- |
 | Sandbox | public link, no moderation; first players from the Playgama network | MCP README |
-| Submit for review | 100 plays and 5:00 average play time | our sandbox dashboard 2026-10-18; an older Playgama post says the same |
+| Ads in the sandbox | rewarded and interstitial already serve through Bridge: Peek & Find showed 0.91 ad shows per play and 0.07 USD a day on day 2 | our metrics, 2026-10-20 |
+| Submit for review | 100 plays and 5:00 average play time | our sandbox dashboard, 2026-10-18; an older Playgama post says the same |
 | Catalog and partner sites | manual moderation (usually 3–5 business days); some partner platforms ask for ≥ 5 or ≥ 10 minutes average play time | Playgama wiki via search |
-| Ads | switch on once the game clears a session threshold, access by request; a recent Playgama post names ≥ 100 daily sessions and clear moderation | MCP README; Playgama blog via search |
-| Developer share | 70–90 % to the developer, tiered (70 % up to 1,000 USD monthly net, 80 % to 3,000, 90 % above); payouts from 100 USD by PayPal, Wise, crypto or bank | Playgama developer page and comparisons via search (marketing; the terms did not open) |
-| YouTube Playables | Playgama picks its best performers with YouTube; developer keeps 75 %; HTML5, initial load < 30 MB, portrait, Bridge, no external calls, original (no reworks of famous games); puzzle, simulation, racing, action or arcade with a hypercasual feel | Playgama Playables pages via search |
-| Other portals | Playgama is non-exclusive; CrazyGames is non-exclusive; Poki is web-exclusive by default | Playgama blog and comparisons via search |
+| More ad demand | the README's "session threshold, access by request" sentence is about Playgama Ad, a separate SDK; what changes for a Bridge game in the catalog is asked in the Playgama e-mail (§17) | MCP README; audit F13 |
+| Developer share | 70–90 % to the developer, tiered (70 % up to 1,000 USD monthly net, 80 % to 3,000, 90 % above); payouts from 100 USD | Playgama developer page and comparisons via search (marketing; the terms did not open) |
+| YouTube Playables | Playgama picks its best performers with YouTube; developer keeps 75 %; initial load < 30 MB, portrait, Bridge, no external calls, original | Playgama Playables pages via search |
+| Other portals | Playgama is non-exclusive; CrazyGames is non-exclusive and gives an accepted game a Basic Launch of ≥ 7 days and up to 500 plays; Poki is web-exclusive by default | Playgama blog, CrazyGames docs, comparisons via search |
 
 **What follows for the design:**
-- **Conversion is the first multiplier.** Peek & Find turned 18 % of launches into plays; a
-  devlog of four Playgama games shows about 9 %. Every point of conversion multiplies all free
-  traffic. Kit standard (§9): the first level starts on the first tap, teaches by doing, and the
-  game is interactive within 3 seconds on a throttled mid-range phone profile.
-- **Play time is the second.** 5:00 opens review; 10:00 opens the best partners and Playables.
-  The `pebblit-retention` skill (written 2026-10-20 from the portal guidance in its
-  `references/evidence.md`) turns this into ten Hold rules, each with a check: playing on the
-  first tap; short levels with the next one instantly; a sawtooth ramp with breathers; something
-  new every few minutes; a goal beyond the level from the first minute; rescue at the fail point;
-  content that never runs out; ads that never cut a session; stability over 15 minutes; a reason
-  to come back.
-- **Ads are designed, not sprinkled.** Interstitials only between levels after ≥ 3 levels and
-  ≥ 120 s, never in the first minute; rewarded only as optional help (continue, hint, booster);
-  every game Playables-ready from day one, so a selection needs no rework.
-- **In-app purchases** can earn more on web portals (Playgama developer page), but YouTube
-  Playables forbids them; factory games ship without them, and a catalog winner may add them on
-  web portals only (Hasan's call, §7).
+- **Conversion is the first multiplier** (every point of it multiplies all free traffic): the
+  first level starts on the first tap and teaches by doing; bytes before the first input ≤ 1.5 MB;
+  interactive within 3 s under CPU and network throttling (numbers in §9).
+- **Play time is the second:** the ten Hold rules (§9), 5:00 floor, 10:00 goal.
+- **Promotion is concentrated:** the game of the week (§7).
+- **Ads are designed:** interstitials only between levels after ≥ 3 levels and ≥ 120 s, never in
+  the first minute, never after a loss; rewarded only as optional help. The Playables build keeps
+  this; the web build's cadence is A/B-tested on one game before it changes (audit F12).
+- **In-app purchases** stay out of factory games (YouTube Playables forbids them); a catalog
+  winner may add them on web portals only, behind the Playables build flag (Hasan's call).
 
 ---
 
-## 2. A day in the factory (Europe/Istanbul; Turkey has no daylight-saving change)
+## 2. A day and a week (Europe/Istanbul; Turkey has no daylight-saving change)
 
 | When | Who | What |
 | --- | --- | --- |
-| 02:07 | night run (cloud scheduled task) | the PM writes three demo briefs (or two and an improvement of the best live game); coder subagents build the demos; the gamer gives each a quick pass; a private report page is published; all work is pushed; Hasan is notified |
-| morning, by 12:00 | Hasan, 5–10 min | opens the run in the Claude app, plays the demos on his phone (a real-device check every day), replies A, B or C, with one sentence of why if he likes |
-| after the reply | the same session | finish → build gates → gamer full audit, up to three fix rounds → store pack → Playgama sandbox → final report with the link, the share text and the vertical clip |
-| evening | Hasan, 2–3 min | posts the clip on the Pebblit social accounts (§7) and opens the sandbox link |
-| no reply by 12:00 | — | no deploy that day; the demos go to the shelf |
-| Monday 09:07 | analyst run | reads the week's telemetry, asks Hasan in the run for a dashboard screenshot, proposes moderation submissions, share-bonus games, ad-access requests and updates |
-| Monday 01:07 | scout run | refreshes the top lists and rank history, plays new entries into DNA cards, writes the week's patterns and the catalog title snapshot; asks Hasan in the run for the Playables screenshots |
+| 02:07 | night task (scheduled) | preflight and guardrail canary (§11); the PM writes three demo briefs (or two and an improvement of the best live game); coder subagents build the demos one after another; the gamer gives each a quick pass; the report page is published; state is pushed to `factory-state`; Hasan is notified |
+| morning, by 12:00 | Hasan, 5–10 min | opens the night run in the Claude app, plays the demos on his phone, replies A, B or C (one sentence of why is welcome) |
+| right after the reply | night session, 1 min | writes `days/<date>/pick.json`, pushes, fires the **day task** with the pick (`fire_trigger`) and stops |
+| after the pick | day task (autonomous) | finish → build gates → bot audit and ≤ 2 fix rounds (3 only for a KRİTİK bug) → store pack → upload → sandbox → final report; the report artifact asks Hasan for one tap |
+| evening | Hasan, 5–10 min | a 2-minute check of the finished build on the QA Tool link (not the live link); posts the clip if it is the game of the week or he likes it |
+| no reply by 12:00 | — | no deploy that day; the demos go to the shelf; a reply after 12:00 deploys the next morning |
+| 08:30 | GitHub Actions (dead-man's switch) | if `days/<today>/state.json` is missing on `factory-state`, opens an issue, which notifies Hasan's phone through the GitHub app |
+| Monday 01:07 | scout task | lists, rank history, DNA cards for new entries, patterns; writes `research/<week>/DONE`; asks Hasan in the run for Playables screenshots |
+| Monday 02:07 | night task | waits up to 30 minutes for the scout's `DONE`, then proceeds with last week's research |
+| Monday 09:07 | analyst task | the weekly read (§5.6), the game of the week, proposals; asks Hasan in the run for one console screenshot |
 
-Runs start a few minutes past the hour because runs on the full hour can start late (fact). The
-morning notification is a push from the session, verified in phase 3; if it does not reach the
-phone, Hasan opens the task at a fixed time.
+Runs start a few minutes past the hour because runs on the full hour can start late (fact).
 
 ---
 
 ## 3. Facts about the runtime and the platform (checked 2026-10-20)
 
-**Claude Code cloud scheduled tasks**, formerly routines (code.claude.com/docs/en/routines;
-research preview, so behaviour and limits may change):
-- Full Claude Code sessions on Anthropic-managed cloud infrastructure, also when the computer is
-  off; each run clones the repository fresh; available on Pro, Max, Team and Enterprise; need a
-  claude.ai login, not an API key; created at claude.ai/code/routines or with `/schedule`.
-- Autonomous, with no permission prompts; every tool of the included connectors is usable, writes
-  included. A run started by the schedule or Run now may publish a new private artifact without
-  asking; in other cases Claude asks first.
-- They draw down subscription usage like interactive sessions; over the limit, runs are rejected
-  until the window resets unless usage credits are on (then billed at API rates). 100 scheduled
-  runs an hour per account; minimum interval one hour.
-- Connectors are the claude.ai integrations of the account (or servers in a committed
-  `.mcp.json`); servers added locally with `claude mcp add` are invisible to them.
-- A cloud environment sets network access (Trusted: package registries and common development
-  domains; Custom; Full), environment variables and a cached setup script; connector traffic
-  needs no allow-listing.
-- Any run opens as a full session that can be continued; work goes to `claude/` branches unless
-  the prompt names a branch. If the GitHub connection lapses, runs are skipped for up to 72 hours
-  and then the task turns off.
+**Cloud scheduled tasks**, formerly routines (code.claude.com/docs/en/routines; research preview):
+full Claude Code sessions in Anthropic's cloud, also with the PC off; each run clones the default
+branch fresh and pushes to a `claude/` branch unless the prompt names another; runs started by the
+schedule or Run now are autonomous with no permission prompts and may publish a new private
+artifact without asking, while runs started by an API trigger or `fire_trigger` ask before
+publishing; connectors are the account's claude.ai integrations, all included by default and each
+usable with writes; network access is set by the cloud environment (Trusted, Custom, Full);
+subscription usage is drawn like interactive sessions and runs over the limit are rejected unless
+usage credits are on; 100 scheduled runs an hour; minimum interval one hour; a lapsed GitHub
+connection skips runs for up to 72 hours, then the task turns off; any run can be continued as a
+session.
 
-**Local alternatives:** Desktop scheduled tasks run only while the app is open and the PC awake;
-`/loop` needs an open session (desktop-scheduled-tasks and scheduled-tasks pages).
+**Permissions in a continued cloud session** (cloud documentation, 2026-10-20): the modes are
+Accept edits, Plan and Auto; bypass is not offered and `defaultMode` bypass or dontAsk in settings
+is ignored; file edits never ask; Auto runs most other tool calls without asking; `permissions.allow`
+rules committed in `.claude/settings.json` stop prompts for named commands, and only a session with
+one repository reads that file.
 
-**Billing and limits** (legal-and-compliance, authentication, agent-sdk/overview pages; support
-article "Using Claude Code with your Pro or Max plan"; claude.com/pricing): Pro and Max limits
-assume ordinary, individual use and give no number for it; subscription sign-in is for ordinary
-use of Claude Code and Anthropic's apps, and products built on the Agent SDK use API keys; Pro and
-Max have a rolling five-hour limit and a weekly limit shared across Claude and Claude Code;
-`claude setup-token` makes a one-year token for scripts that can only make model requests; a
-`claude -p` or Agent SDK run does not wait for a limit to reset.
+**Hooks** (hooks docs): not a hard gate; a timed-out PreToolUse hook does not block; for hard rules
+the docs point to the permission system. **Connector tools** can be allowed or blocked one by one
+at claude.ai/customize/connectors.
 
-**Playgama Developer Console MCP** (README v1.8.0, github.com/Playgama/developer-cabinet-mcp):
-OAuth 2.1 at `https://developer.playgama.com/api/mcp`, revocable at developer.playgama.com/mcp;
-create the game, fill the form (`FORM_INCOMPLETE` names missing fields), upload the build and the
-three covers (exactly 800×800, 1080×1920, 1920×1080, all required), QA Tool links, publish the
-sandbox, read the share post, telemetry, submission state and moderation comments; every write
-tool is marked destructive; human-only: submit to moderation, delete, roll back, payouts,
-screenshots and videos; paid traffic only in the console; the share bonus works once per game for
-up to three games per organisation ever; a catalog game takes an update without moderation after
-the developer's explicit yes; limits: zip ≤ 300 MB, cover ≤ 10 MB, 15 sandbox publications per
-rolling hour per game, one publication at a time, Bridge ≥ 2.2.0.
+**Billing and limits:** Pro and Max limits assume ordinary, individual use and give no number;
+products built on the Agent SDK use API keys; Pro and Max have a rolling five-hour limit and a
+weekly limit shared across Claude and Claude Code; a `claude -p` or SDK run does not wait for a
+reset.
 
-**Playgama content rules** (wiki "Content Requirements" via search summaries): copies of catalog
-games and duplicates of the same developer's games are refused (a sequel is new only with
-redesigned graphics and mechanics); low-quality games made wholly with generative AI may be
-rejected; repeated non-compliance can restrict the account.
+**Playgama MCP** (README v1.8.0): OAuth 2.1, revocable at developer.playgama.com/mcp; create the
+game, fill the form (`FORM_INCOMPLETE` names missing fields), upload the archive and the three
+covers (exact 800×800, 1080×1920, 1920×1080) by PUT to returned upload URLs, QA Tool links, publish
+the sandbox, read the share post, telemetry, submission state and moderation comments; archive
+states include `PASSED`, `PROBLEM`, `NOT_CHECKED`, `BRIDGE_VERSION_OUTDATED`, `BRIDGE_VERSION_UNKNOWN`
+and processing `FAILED`; every write tool is marked destructive; human-only: submit to moderation,
+delete (games, archives, covers, leaderboards), roll back, payouts, screenshots and videos; the
+share bonus works once per game for up to three games per organisation, ever; a catalog game takes
+an update without moderation after the developer's explicit yes; 15 sandbox publications per hour
+per game, one at a time; Bridge ≥ 2.2.0.
 
-**Data points:** Peek & Find on day 2: 550 launches, 101 plays, 3:31 average, 11 likes and 2
-dislikes, from a 25 USD boost plus organic and friends' traffic (`metrics/peek-and-find.md`). A
-devlog of four games on Playgama: 1,897 sessions, 179 plays, 0.43 USD, with nearly all sessions
-from Playgama's free boosts (smokeyai on itch.io, via search). How much traffic a sandbox game gets
-with no bonus at all is unknown; the pilot measures it.
+**Content rules** (Playgama wiki via search): copies and duplicates of the same developer's games
+are refused (a sequel is new only with redesigned graphics and mechanics); low-quality games made
+wholly with generative AI may be rejected; repeated non-compliance can restrict the account.
+
+**Data points:** Peek & Find day 2: 550 launches, 101 plays (18 %), 3:31 average, from a 25 USD boost
+plus organic and friends' traffic. A devlog of four Playgama games: 1,897 sessions, 179 plays,
+0.43 USD, nearly all sessions from Playgama's free boosts (search summary). Playgama's AI showcase:
+500+ AI-built games and 25,000 gameplays in five days, about 50 per game on average (search
+summary). Free traffic per new game without promotion: **unknown, measured in phase 0**.
 
 ---
 
 ## 4. Architecture
 
 ```
- Monday 01:07  SCOUT run (web, no connectors) ──► research/<week>/top10.json, catalog-titles.json
- Monday 09:07  ANALYST run (Playgama read tools) ─► metrics/, funnel table, proposals ─► Hasan
- daily  02:07  NIGHT run ─┬─ PM ──► offers A · B · C (C may be "improve live game X")
-                          ├─ CODER × 3 (demo mode) ──► demos/<date>-{a,b,c}
-                          ├─ GAMER × 3 (quick pass) ──► clips, scores, issues
-                          └─ report page (private artifact) + push + notify ──► waits
- Hasan replies "B" in the run's session
-                          ┌─ CODER (finish mode) ⇄ GAMER (full audit, ≤ 3 fix rounds)
-                          ├─ store pack (listing.json, covers, clip, licenses)
-                          └─ DEPLOYER (Playgama connector) ──► sandbox link ──► final report
+ Mon 01:07  SCOUT task (Custom web, no connectors) ──► research/ on factory-state
+ Mon 09:07  ANALYST task (Playgama read tools) ─────► metrics/, game of the week, proposals
+ daily 02:07 NIGHT task ─┬ preflight + canary
+                         ├ PM ──► offers A · B · C
+                         ├ CODER (demo) × 3 ─► demos/   GAMER (quick) × 3 ─► scores, clips
+                         └ report page ─► Hasan replies "B" ─► pick.json ─► fire DAY task
+ DAY task (autonomous) ──┬ preflight + canary + Playgama docs saved for the coder
+                         ├ CODER (finish) ⇄ GAMER (bot audit), ≤ 2 fix rounds
+                         ├ store pack (listing, covers, clip MP4, media pack, licences)
+                         └ DEPLOYER ─► upload ─► sandbox ─► final report
 ```
 
-- **Runtime:** three cloud scheduled tasks on Hasan's claude.ai account on the private repository
-  `kriptoloca/pebblit-factory`. The night task: Trusted network (package registries only) and the
-  Playgama connector. The scout: a Custom network with the top-list domains, no connectors. The
-  analyst: the Playgama connector, read tools only.
-- **Thin orchestrator:** the main session follows `factory/NIGHT.md` and `factory/DAY.md` and
-  starts subagents limited in `.claude/agents/*.md`; agents talk only through schema-checked
-  files. Phase 2 decides whether the orchestration stays a prompt or becomes a Claude Code
-  workflow script with fixed phases, whichever is more reliable in the dry run.
-- **State in the repository:** every stage commits and pushes `days/<date>/state.json` and its
-  outputs, because a container is reclaimed after inactivity and a continued session may start
-  in a new one; any stage can be resumed from the last push.
-- **No build outputs in git:** release ZIPs are reproducible from the commit (fixed timestamps,
-  as in Munch Pixels) and identified by SHA-256 in `catalog.json`; clips live in the report
-  artifacts; only covers and source are committed. This keeps a year of daily games small.
-- **Monorepo, one install:** `kit/`, `template/` and every game share one `node_modules`,
-  installed by the environment's cached setup script; demos add no dependencies.
-- **Guardrails as code** (`.claude/settings.json`, loaded by cloud sessions from the repository):
-  PreToolUse hooks block the forbidden Playgama tools (§5.4) and destructive commands; only the
-  deployer's tool list holds Playgama tools; every subagent has a `maxTurns` cap; the environment
-  caps subagent depth and concurrency.
-- **Protected paths:** factory agents can never edit `.claude/**`, `.mcp.json` or `factory/**`
-  (deny rules plus a hook), and the orchestrator refuses to push a commit that touches them,
-  because a new run loads the repository's hooks and MCP servers without asking. Only an
-  interactive session with Hasan changes them.
-- **Factory self-tests in CI:** schemas, the hook block list (a test calls each forbidden tool
-  name and expects a block), the state machine, the report generator, `npm run gates` on the
-  template.
-- **Plan B, only if a phase-0 or phase-3 check fails:** the same repository on the PC, as a
-  Desktop scheduled task or headless `claude -p` with a small runner; used when the Playgama
-  connector cannot be added on claude.ai (then only the deploy step runs on the PC) or when Hasan
-  chooses metered billing with an API key. Notes: the Playgama sign-in happens once in an
-  interactive session (`claude -p` cannot run OAuth); `--bare` never reads OAuth credentials, so
-  the deployer uses `--strict-mcp-config`; an `ANTHROPIC_API_KEY` in the environment always wins
-  in `-p` runs; the command sandbox needs WSL2 on Windows; a Desktop task needs "Keep computer
-  awake".
-
-### State per day
-
-`BRIEFED → DEMOS_BUILT → DEMOS_CHECKED → OFFERED → PICKED | SKIPPED → FINISHING → BUILT (G3) →
-AUDIT_n ⇄ FIX_n → APPROVED (G4) → PACKED (G5) → UPLOADED → SANDBOX_LIVE (G6) → REPORTED`, with
-`PARKED` when a gate fails three times or a run hits the usage limit. A parked game never reaches
-Playgama; the report says why, and its demo goes back to the shelf.
+- **Tasks:** night, day (no schedule; fired with the pick), scout and analyst, each with its own
+  cloud environment: night and day on a Custom network (package registries plus the Playgama
+  upload, QA Tool and sandbox hosts captured in phase 0), scout on a Custom network with the list
+  sites (no connectors), analyst on Trusted. Each environment sets `FACTORY_ROLE`.
+- **Connectors per task, set explicitly:** night none (it only fires the day task), day Playgama,
+  analyst Playgama (read tools only in its permissions), scout none. A preflight at the start of
+  every run lists the tool names and aborts on any unexpected `mcp__` server.
+- **Branches and memory** (audit F02): runs start from `main`, which holds `kit/`, `template/`,
+  `factory/` and `.claude/` and changes only through pull requests Hasan merges; branch protection
+  ("require a pull request", "do not allow bypassing") needs GitHub Pro on a private repository.
+  Every run output lives on the `factory-state` branch, checked out as a worktree; only the
+  orchestrator commits, and before each push it fetches, rebases and retries. Runs never push to
+  `main`; CI on `factory-state` fails if `.claude/`, `.mcp.json` or `factory/` appear there; coders
+  do not use `isolation: worktree` (it branches from `main`).
+- **Thin orchestrator:** follows `factory/NIGHT.md`, `DAY.md`, `SCOUT.md`, `ANALYST.md` and starts
+  subagents whose `tools` lists are explicit in every agent file; agents talk only through
+  schema-checked files. Phase 2 picks a prompt or a Claude Code workflow script, whichever is more
+  reliable in the dry run.
+- **State machine per day:** `BRIEFED → DEMOS_BUILT → DEMOS_CHECKED → OFFERED → PICKED | SKIPPED →
+  FINISHING → BUILT (G3) → AUDIT_n ⇄ FIX_n → APPROVED (G4) → PACKED (G5) → UPLOADED → SANDBOX_LIVE
+  (G6) → REPORTED`, plus `BLOCKED_LIMIT` (a usage limit stopped the stage; the next run finishes it
+  first) and `PARKED` (a gate failed after the allowed rounds or a deploy failed after retries; the
+  runner-up demo is offered the next morning).
+- **No build outputs in git:** ZIPs are reproducible from the commit and identified by SHA-256;
+  covers are regenerated by the covers script; clips live in report artifacts and in the phone
+  download; `catalog.json` keeps every game's last `PASSED` archive id for recovery.
+- **Kit versioning:** `kit/` is a versioned workspace package; each game pins its kit version and
+  upgrades on purpose, so a kit change never silently changes old games.
+- **CI on GitHub Pro minutes:** on pull requests to `main` and nightly on `factory-state`, with path
+  filters; the dead-man's switch is a one-minute scheduled job.
+- **Plan B (only if a phase-0 or phase-3 check fails):** the same repository on the PC, as a
+  Desktop scheduled task or headless `claude -p`; the Playgama sign-in happens once in an
+  interactive session; `--bare` never reads OAuth credentials, so the deployer uses
+  `--strict-mcp-config`; an `ANTHROPIC_API_KEY` in the environment always wins in `-p` runs; the
+  command sandbox needs WSL2 on Windows. Rehearsed once in phase 3 so it is not paper.
 
 ---
 
 ## 5. The agents
 
-Every agent is a subagent with only the tools it needs, writes schema-valid files and never sees
-another agent's reasoning. The most capable Claude model runs every role in the pilot; afterwards
-the scout, analyst and deployer may move to a lighter model if quality holds (§17).
+Every agent is a subagent with an explicit `tools` list, a `maxTurns` cap, schema-valid outputs and
+no view of another agent's reasoning. Models: the most capable model for the PM, the finish coder
+and the bot-audit analysis; demo coders and quick-pass gamers move to a lighter model if the phase-2
+dry run shows the demos hold quality (audit F09).
 
 ### 5.1 PM (every night)
-- **Reads:** the latest research, the catalog, `lessons.md`, the funnel table from the analyst,
-  the shelf, Hasan's past picks with his reasons.
-- **Generates ≥ 12 candidates** from the DNA cards and the week's patterns with the operators of
-  `pebblit-game-dna`: mutation (closest: a top game's pleasure genes with a new face, theme, art
-  and at least one new rule or board), crossover (creative: one game's verb with another's goal or
-  constraint), transplant (a top gene on our strengths: generated levels with a solver, pixel
-  boards, hidden objects), wildcard (the smallest possible idea), and a seasonal or social overlay
-  for timing. Every candidate records its lineage: parent cards, genes kept, genes changed and why
-  the change should hold players. Uses `game-trend-skills:brainstorming-game-ideas` for the
-  candidate set.
-- **Scores:** the 35-point rubric of `game-trend-skills:evaluating-game-ideas`; Face and Feel from
-  `pebblit-game-craft` (both ≥ 3); originality; **first-10-seconds clarity without text**; **Hold**
-  from `pebblit-retention` (≥ 4 required); buildable as a demo in one session;
-  testable by a solver or bot; Playables fit (portrait, text-free, 13+, preferred genres).
-- **Originality gate** (`pebblit-game-dna`): against our catalog, the same verb and board
-  structure is never a new game, only an update of that game; against every external DNA card the
-  weighted originality distance is at least 6 of 12 (verb 3, board 3, goal or constraint 2, face 2,
-  theme 1, art 1), with the reason written for each gene that differs; no level layout, UI,
-  character or name is taken; the name is checked against the scout's catalog title snapshot and
-  avoids trademarks.
-- **Offers three:** A closest, B creative, C our strength; C becomes "improve live game X" under
-  the capacity rule (§7). A high-scoring shelf demo may return once instead of a new build.
-- **Writes a one-page demo brief per offer:** hypothesis, exact rules and numbers, the first level
-  that teaches by doing, the Feel spec of the key moment (success louder than failure), the
-  generator and its check, art direction (code-drawn shapes or CC0 packs vendored in the kit;
-  one accent colour; readable at 128 px; no AI-look raster art), the character or joke, the cover
-  idea, the one-line test (a muted 3-second clip shows a face, a cascade after one tap and
-  something worth sending), and the **Hold plan** of `pebblit-retention`: the minute map of the
-  first 10 minutes, the difficulty and novelty schedule of levels 1–50, the meta, rescue, the
-  never-run-out mode, ad pacing and a session estimate ≥ 7:00.
+- **Reads** the latest research only through `factory/sanitize` (enums and capped short strings,
+  no free text from web pages; audit F18), the catalog, the mechanic map, `lessons.md`, the funnel
+  table, the shelf, Hasan's past picks with reasons.
+- **Generates ≥ 12 candidates** with the operators of `pebblit-game-dna` (mutation, crossover,
+  transplant, wildcard, seasonal or social overlay, and Playgama's monthly showcase theme when there
+  is one), each with its lineage; uses `game-trend-skills:brainstorming-game-ideas`.
+- **Scores:** the 35-point rubric of `game-trend-skills:evaluating-game-ideas`; Face and Feel
+  (`pebblit-game-craft`, ≥ 3); Hold (`pebblit-retention`, ≥ 4); first-10-seconds clarity; buildable
+  as a demo in one session; testable by a solver or a scripted bot.
+- **Originality gate, as code** (`factory/check-originality`, audit F10): weighted distance ≥ 6 of
+  12 against every external DNA card; the same verb and board as one of ours is an update, never a
+  new game; names checked against the catalog title snapshot. The **mechanic map**
+  (`research/mechanic-map.json`: verbs × boards × goals, each cell feasible, testable, used) counts
+  the weeks of new ideas left; under 8 weeks, new games become sequels with redesigned graphics and
+  mechanics (Playgama's own test of "new") or the day becomes an improvement day.
+- **Offers three:** A closest, B creative, C our strength, or C = "improve game X" under the
+  capacity rule (§7); a high-scoring shelf demo may come back once.
+- **Writes a one-page brief per offer:** rules and numbers, the teaching first level, the Feel spec
+  of the key moment, the generator and its check, art direction from the rotating **art kit**
+  (palette family, shape language, character kit; recorded as genes so 30 games do not look alike;
+  each CC0 pack used in at most 5 games), the character or joke, the cover idea, the one-line
+  test, and the **Hold plan** with its minute map and a session estimate ≥ 7:00.
 
 ### 5.2 Coder
 - **Demo mode (night):** the core loop on the template, the generator and its validator, five
-  levels, the key success moment with sound, play on the first tap.
-- **Finish mode (after the pick):** builds the brief's Hold plan with the kit's Hold modules, and
-  the kit standards (§9) in full: generated ramp to level 100 or endless with breathers, the complete Feel spec, synthesised sounds, saves, pause and mute,
-  daily seeded level and streak, rewarded and interstitial hooks behind the ad gate, Playgama
-  telemetry (progression, performance sample, uncaught errors), the debug contract, covers from
-  the game's own art, `listing.json`, `licenses.json`, the reproducible ZIP; `npm run gates` green.
-- **Improve mode (C = improve live game X):** works from the analyst's funnel numbers (first 30
-  seconds, drop-off level, play time) on a branch of that game; the update keeps the game's id.
-- **Rules:** the template's CLAUDE.md (YouTube Playables platform rules, no magic numbers, a bug fix
-  starts with a red test); `code-review` on its own diff; no new dependencies.
-- **Tools:** file edits and shell in its own folder, npm, Playwright for its own tests; no
-  Playgama tools; no edits to protected paths.
+  levels, the key success moment with sound, play on the first tap; demos are built one after
+  another (the container has 4 vCPUs) and stay small.
+- **Finish mode (day):** the Hold plan with the kit's Hold modules; the kit standards (§9) in full;
+  Playgama telemetry from the guide the deployer saved to `days/<date>/playgama-docs/` (with the
+  checklist and the Bridge docs; audit F17); the store pack: `listing.json`, covers, `licenses.json`,
+  a frame-stepped clip, and for a first submission the moderation media pack (screenshots and a
+  short video for the console); `npm run gates` green.
+- **Improve mode (C = improve game X):** from the analyst's leak (biggest level-to-level drop, then
+  the first minute, then novelty); the update keeps the game's id.
+- **Rules:** the template's CLAUDE.md; a bug fix starts with a red test; `code-review` on its own
+  diff; no new dependencies; no edits to protected paths; no Playgama tools.
 
-### 5.3 Gamer-auditor
-- **Quick pass (each demo, night):** smoke (loads, no console errors, no external requests, the
-  bot finishes five levels); load and first-input timing under 4× CPU throttling; a 3-minute
-  first-time play through small screenshots and taps; a 15-second muted clip; scores for
-  first-10-seconds clarity, Feel, Flow, Face, depth outlook and the one-line test; top three
-  issues.
-- **Full audit (after the finish):** load time, initial size, console, network, the three aspect
-  ratios, pause, mute and resume with the dev simulator, completability through the solver or
-  bot, frame-time sampling under throttling, the Playgama QA Tool on the uploaded archive
-  (`get_archive_qa_tool_link`, through the deployer), the Playables checks; then 10 minutes as two
-  personas (a casual adult and an impatient teenager, 13+) with objective numbers from the event
-  log (time to first input and first success, successes per minute, longest stretch without
-  one, failure versus success feedback strength, frame-time p95), the anchored rubric, the
-  minute-map audit of `pebblit-retention` (the checks of all ten Hold rules, a 15-minute soak
-  run, the session estimate), bugs with severity, repro steps and screenshots. Verdict: APPROVE
-  (no KRİTİK or YÜKSEK bug; clarity, Fair and polish ≥ 4; Feel, Flow and Face ≥ 3; minute-map
-  PASS with an estimate ≥ 7:00; both personas reach 10 minutes and would keep playing), FIX with
-  fixes ranked by the minutes each adds, or REJECT.
-- **Screenshots and sessions:** the harness starts and stops the local game server; decisions use
-  540×960 screenshots and evidence never exceeds 2000 px on the long edge, because a request with
-  more than 20 images applies a stricter size limit to all of them (vision docs); each round runs
-  in a fresh subagent.
-- **Honest limits:** it cannot feel 60 fps juice in the hand or test iOS Safari; it reads feel
-  from timings, the event log and frames. Hasan's daily phone play covers the real device. If
-  Playwright's WebKit is available in the cloud image, a WebKit smoke run is added.
-- **Calibration before the pilot:** it plays Peek & Find, Munch Pixels and a build with five planted
-  bugs (≥ 4 found, two runs agree). Weekly, its scores are compared with Hasan's picks and the
-  funnel numbers; anchors move when they disagree three weeks in a row.
-- **Tools:** browser and its own `playtests/` folder; no code edits, no Playgama write tools.
+### 5.3 Gamer-auditor (bot first, model second; audit F15)
+- **Quick pass (each demo):** smoke (loads, no console errors, no external requests, the bot
+  finishes five levels); bytes before first input and time to first input, measured one build at a
+  time under 4× CPU and network throttling; scores for clarity, Feel, Flow, Face and Hold outlook
+  from a capped set of screenshots (≤ 40 per subagent); a frame-stepped 15-second clip.
+- **Bot audit (finish), the gate:** a scripted bot plays through the debug contract with the game
+  loop paused between actions, so nothing real-time is missed; it measures time to first input,
+  first win (≤ 20 s), wins per minute, the longest stretch without a win, success-versus-failure
+  feedback strength from the event log, fail rates per level with a human-like error model,
+  friction between levels, the ad schedule, frame-time p95 and a 15-minute soak; it fills the
+  minute map of `pebblit-retention` from a frame-stepped run and runs the session model. APPROVE
+  needs every check in §9 and a session estimate ≥ 7:00.
+- **Persona note (not a gate):** 3 minutes as a first-time player, written as notes for Hasan and
+  the coder.
+- **Calibration:** planted bugs and planted feel inversions (failure louder than success) in known
+  builds, plus games with known outcomes; two runs must agree; recalibrated whenever the model
+  changes.
+- **Honest limits:** no WebKit in the cloud image (only Chromium is preinstalled), so every report
+  says "iOS untested" unless the WebKit CDN can be allow-listed; Hasan's evening 2-minute check is
+  the real-device test.
 
 ### 5.4 Deployer
-- **Sequence:** reads `get_game_checklist` and `get_launch_steps` first and again after each step:
-  `create_application` (or the existing game for an update) → `get_game_categories` (category by
-  core mechanic, as the tool advises) → `update_application_form` from `listing.json` (if
-  `FORM_INCOMPLETE` names fields, the coder fills them) → archive upload, confirm, poll until
-  `PASSED` (a `PROBLEM` message goes to the coder word for word) → three covers → archive QA Tool
-  link for the gamer → `get_sandbox_state` → `publish_sandbox` → poll `get_publications` until
-  `PUBLISHED` → URL into `catalog/` → `get_sandbox_share` text for Hasan.
-- **Never** (hooks block these in every factory run): `start_sandbox_traffic` (the share bonus is
-  Hasan's choice for three games ever, made in an interactive session) and
-  `send_playgama_catalog_update` (it reaches every catalog player without moderation and needs the
-  developer's explicit yes per update). Submitting, deleting and rolling back are not on the
-  server. It publishes only a game whose gates are all green, and reads only our own files.
+- **Order:** creates the application only after all local gates pass and reuses an existing draft
+  on retry (drafts can only be deleted by a human); `get_game_checklist`, then `create_application`,
+  then `get_launch_steps` for that game and again after each step; category via
+  `get_game_categories`; form from `listing.json`; archive upload by PUT, confirm, poll; covers;
+  QA Tool link; sandbox publish; poll until `PUBLISHED`; URL and archive id into `catalog.json`;
+  `get_sandbox_share` text for Hasan.
+- **Archive states:** `PASSED` continues; `PROBLEM` and `NOT_CHECKED` go to the coder and to the
+  report word for word; `BRIDGE_VERSION_OUTDATED` or `UNKNOWN` means a kit Bridge update; processing
+  `FAILED` means a corrected ZIP. Outages: retries at +30 minutes and +2 hours, then `PARKED`.
+- **Writes only to today's game:** a hook and the permissions reject any Playgama write whose
+  application id is not the one in `state.json`, and always reject Peek & Find's and Munch Pixels'
+  ids.
+- **Never:** `start_sandbox_traffic`, `send_playgama_catalog_update`, `replace_in_app_products`,
+  leaderboard writes, `apply_referral_code`: blocked in the account's connector settings, denied in
+  `permissions.deny` by their exact runtime names, and blocked by a hook as a backstop (§11).
 
-### 5.5 Scout (weekly): decoding the top games with `pebblit-game-dna`
-- **Lists:** Playgama catalog (popular, trending, new) and its leaderboard; YouTube Playables
-  (top and trending rows); CrazyGames and Poki top lists as a second opinion. Every week the scout
-  records the top 10 of each with rank, plays, likes and the date in `research/rank-history.json`,
-  so rising games (new entries, jumps of three or more places) stand out.
-- **Seeing and playing (allowed sources only):** for each new entry or new version, a fresh
-  subagent opens the game in a 540×960 portrait viewport, watches the first 10 seconds untouched,
-  plays 5–8 minutes through screenshots and taps, times everything, keeps about twelve key frames
-  (first input, first win, a success cascade burst, a failure, a meta screen, minute 5) and fills
-  the minute map of `pebblit-retention`.
-- **Understanding, proven:** after the first minute it writes the rules as a mini-spec, then
-  predicts the result of the next three moves before making them; a wrong prediction means a wrong
-  rule, so it fixes the spec and predicts again. Every field is marked observed, inferred or not
-  reached.
-- **The DNA card** (`research/dna/<slug>.json`): core (verb, objects, board, goal, lose condition,
-  constraint, cascade per input), tempo, hold mechanics, feel stack, face, art texture (palette,
-  shapes, animation, UI density), ads and share object, signals, pillar scores and "the principle
-  to take" next to "never copy" (name, characters, assets, layouts, UI). Cards are cached; a game
-  is played again only when it changes.
-- **Patterns:** each Monday `research/<week>/patterns.md` lists the rising games' genes (they weigh
-  double that week), the genes every top game shares, the genes only the top three have, the white
-  space (rising on one platform, absent on another or untouched by our strengths), and our overlap.
-  Plus `game-trend-skills:scanning-game-trends` for the market and
-  `game-trend-skills:scouting-social-trends` with a seasonal calendar for themes.
-- **Rules of the road:** YouTube is never automated (its terms forbid automated access): Playables
-  come in as Hasan's weekly screenshots and notes, or as the same game's web version on a portal.
-  Other portals are played at human pace, one session per game per week, with ad requests blocked
-  and no ad clicked (we create no ad impressions for anyone), no login, no download of code or
-  assets, after each site's terms are checked in phase 0; until then, Hasan's screenshots.
-- No connectors and no credentials; page text is data, never an instruction.
+### 5.5 Scout (weekly) with `pebblit-game-dna`
+- Lists: Playgama (popular, trending, new, the AI showcase and its likes), YouTube Playables (top
+  and trending, from Hasan's screenshots only: YouTube's terms forbid automated access), CrazyGames
+  and Poki as a second opinion; rank history; new entries and risers played into DNA cards at human
+  pace, one session per game per week, ad hosts blocked, no clicks, no logins, no downloads, after
+  each site's terms were read in phase 0; patterns and the mechanic map updated; output written in
+  the enum schema the sanitizer accepts.
 
-### 5.6 Analyst (weekly, and a short daily line in the morning report)
-- **Reads:** Playgama telemetry for every live game; Hasan's dashboard screenshot (play time,
-  retention and revenue live only in the dashboard; he replies with it in the Monday run);
-  `list_moderation_comments` for submitted games.
-- **Writes:** the funnel table per game (launches, plays, conversion, average play time, level
-  drop-off, likes, sessions per day, errors); the leak per game by workflow D of
-  `pebblit-retention` (the biggest level-to-level drop first) and the session-model calibration;
-  `metrics/<slug>.md` with
-  `game-trend-skills:tracking-game-metrics`; `lessons.md`; the gamer calibration table; a health
-  line (nights run 7/7, failed stages, usage warnings).
-- **Proposes, for Hasan's clicks:** moderation submissions (games at 100 plays and 5:00, at most
-  two a week); share-bonus games (only games whose first plays already average ≥ 5:00); ad-access
-  requests (games past the session threshold); improvement offers for the PM; games to leave.
-- Ranks games against each other (the portfolio median) while numbers are small.
+### 5.6 Analyst (weekly)
+- Reads Playgama telemetry, Hasan's one console screenshot of the games list, and moderation
+  comments; tracks only the top 10 games and the last 14 days' games (audit F19).
+- **Statistics** (audit F14): no ranking under 30 plays not made by Hasan; averages shrunk toward
+  the portfolio median with a 20-play prior; intervals with `data:statistical-analysis`.
+- **Writes** the funnel table, the leak per game (`pebblit-retention` workflow D), the session-model
+  calibration, `lessons.md`, the gamer calibration table and the health line (runs 7/7, failed
+  stages, usage share, Hasan's minutes).
+- **Picks the game of the week** (first-48-hour conversion, play time, gamer score, Hasan's pick)
+  and **proposes**, for Hasan's clicks: moderation submissions (≥ 100 plays and ≥ 5:00), the
+  share bonus within the budget, a CrazyGames submission, cover tests, improvement offers, games to
+  retire (no updates, no attention after 30 days without a signal).
 
 ---
 
 ## 6. The morning report
 
-One private artifact page per day:
-- three cards (A, B, C): name, one-sentence pitch, the character or joke, the closest existing game
-  and what differs, risk profile, the gamer's scores and top issues, a 15-second clip, "Play" to
-  open the demo full screen;
-- a funnel strip for the live games (yesterday's game first), the health line, and Hasan's to-dos;
-- at the bottom: "Reply in this session with A, B or C".
-
-The night run publishes it without asking; the final report after the pick may ask Hasan for one
-tap (fact, §3). To verify in phase 1: a Phaser demo runs inside an artifact in the Claude app on
-Hasan's phone. Fallbacks: a public `pebblit-demos` repository on GitHub Pages (unlisted links),
-or clips only.
+One private artifact page per night: three cards (name, pitch, character or joke, closest existing
+game and what differs, risk, scores, top issues, clip, "Play"); the funnel strip; the health line
+with "guardrails verified" from the canary; Hasan's one-tap to-dos; "reply A, B or C". The night
+run publishes it without asking. To verify in phase 1: a multi-file Phaser demo runs with sound and
+touch inside an artifact in the Claude app. Fallback: clips only (no second repository, so the
+repository's permission rules always load; audit F06).
 
 ---
 
 ## 7. Growth engine without paid traffic
 
-- **A Pebblit social channel (YouTube Shorts and TikTok, Reels optional):** every game ships a
-  vertical 15–30 second clip built for short-form (the satisfying cascade in the first second, a
-  loop, the share-worthy end) per `game-trend-skills:launching-on-zero-budget`; Hasan posts it in
-  the evening with the ready caption. Posting stays manual until the channel works; scheduling
-  tools can automate it later (Hasan's call). One clip a day is the cadence short-form channels
-  reward, and it is also the public post the share bonus needs.
-- **Share bonus (three games, ever):** only for a game whose first organic plays average ≥ 5:00
-  and whose gamer scores are top of the portfolio; Hasan posts, gives the post link in an
-  interactive session, and the agent starts the campaign there.
-- **Referral bonus:** Hasan's invitation link brings 3 USD of traffic per developer who joins and
-  publishes; shared where it fits, never spammed.
-- **Catalog:** at 100 plays and 5:00, the analyst proposes the submission; Hasan clicks it (at most
-  two a week, never two games with the same core mechanic); moderation comments feed the next
-  improvement offer.
-- **Ads:** when a catalog game passes the session threshold, Hasan requests ad access in the
-  console.
-- **Capacity rule (explore → exploit):** in the first two weeks all offers are new games. After
-  that, when a live game leads the portfolio on conversion and play time but is below 100 plays,
-  offer C is "improve its first 30 seconds or depth"; once a game is in the catalog with daily
-  sessions, at least two days a week offer its updates (level packs, themes, feel, covers) until
-  its growth flattens. Hasan still picks every day.
-- **Winners go wide:** a catalog game that holds players gets, in order: Playables readiness
-  confirmed and a note to Playgama; Playgama's publishing programme (it says it looks for web games
-  with strong retention); CrazyGames (non-exclusive) after reading its terms, with Bridge already
-  in place; web-only in-app purchases if Hasan wants them. Never Poki without a deal (web-exclusive
-  by default). Each portal is Hasan's account and his submission.
+**The game of the week** gets every lever, in this order of expected value (audit F12):
+1. **Playgama's AI showcase (playgama.ai):** ranked by likes, with monthly themes per a search
+   summary (to confirm); the PM can fit the week's theme.
+2. **CrazyGames Basic Launch:** a free evaluation of ≥ 7 days and up to 500 plays for an accepted
+   game, non-exclusive; Bridge supports CrazyGames; Hasan submits from his account after the terms
+   are read in phase 0.
+3. **Share bonus** within the organisation's budget (§17 D14).
+4. **Cover test:** two cover sets swapped after 7 days, launches compared.
+5. **In-game share card** on web builds (hidden on YouTube by the Playables build flag).
+6. **Social:** a public hub page listing all Pebblit games with the game of the week on top, served
+   by GitHub Pages from the factory repository (possible on GitHub Pro); the Shorts and TikTok
+   profiles link to it, because links in Shorts descriptions are not clickable and a TikTok bio
+   link needs 1,000 followers on a personal account (search summary; to confirm); daily clips stay,
+   but community posts and the profile link point at the game of the week.
+
+**Clips:** rendered frame by frame (pause the loop, step, screenshot) and encoded to an H.264 MP4 at
+1080×1920 if the cloud image's ffmpeg can (checked in phase 1), delivered to Hasan's phone as a
+file; never a jerky real-time WebM.
+
+**Listings:** keyword titles; the text translated into the largest audience languages if the form
+accepts them.
+
+**Capacity rule:** the first two weeks are all new games; then, when a game leads on conversion and
+play time below 100 plays, offer C is "improve it"; a catalog game with daily sessions gets update
+offers at least two days a week until its growth flattens. Hasan still picks every day, and an
+improvement release counts as the day's game (§17 D11).
+
+**Catalog releases (audit F08):** an improvement of a catalog game is uploaded and checked by the
+day task, which writes `release.md` (what players will notice, the previous archive id for
+rollback, risks, `get_submission_state` with review type AUTO). Hasan then opens an interactive
+session outside the factory repository, switches `send_playgama_catalog_update` on in the connector
+settings, says "yes, update X with archive Y", and switches it off again. First submissions go
+through the console with the media pack and a 5-minute checklist.
+
+**Winners go wide:** Playables readiness confirmed and a note to Playgama; Playgama's publishing
+programme (it says it looks for web games with strong retention); CrazyGames; web-only in-app
+purchases if Hasan wants them; never Poki without a deal.
 
 ---
 
-## 8. Gates (a red gate never ships)
+## 8. Gates (each one a script with a pass or fail; numbers from §9)
 
-| Gate | When | Passes when |
+| Gate | When | Script and pass rule |
 | --- | --- | --- |
-| G0 Offers | after the PM | three schema-valid briefs with different verbs; originality and name rules; Face and Feel ≥ 3; Hold ≥ 4 with a minute map and a session estimate ≥ 7:00; testable |
-| G1 Demo | after each demo | loads; no console errors or external requests; the bot finishes five levels; interactive ≤ 3 s under 4× CPU throttling; clip recorded |
-| G2 Pick | morning | Hasan's reply |
-| G3 Build | after each finish round | `npm run gates` green: check, unit, e2e, build, initial load ≤ 5 MB (hard 8 MB), dist audit, ZIP, covers, telemetry events present, `licenses.json` valid, generator yields ≥ 100 valid levels with a rising difficulty metric (or a checked endless ramp), content horizon ≥ 60 minutes, friction between levels ≤ 1.5 s, ad schedule simulation (none in minute 1, none after a loss), Playables checks |
-| G4 Gamer | after each audit | APPROVE (§5.3) within three fix rounds, including the minute-map PASS |
-| G5 Store | before upload | `listing.json` valid (no age cues, no brands, lengths, category by mechanic); three covers at exact sizes; cover readable at 128 px |
-| G6 Playgama | deploy | checklist met; archive `PASSED`; QA Tool run clean; `PUBLISHED` |
-| G7 Market | weekly | the analyst's funnel table and proposals; Hasan's clicks |
+| G0 Offers | after the PM | `check-offers`: three schema-valid briefs with different verbs; `check-originality`; Face and Feel ≥ 3; Hold ≥ 4 with a minute map and an estimate ≥ 7:00; testable |
+| G1 Demo | after each demo | `check-demo`: loads; no console errors or external requests; the bot finishes five levels; bytes before first input and time to first input within §9 |
+| G2 Pick | morning | `pick.json` written from Hasan's reply |
+| G3 Build | each finish round | `npm run gates`: check, unit, e2e, build, sizes, dist audit, ZIP, covers, telemetry events against the saved guide, `licenses.json`, generator range and ramp, content horizon, friction, ad schedule, Playables build flag |
+| G4 Audit | each audit | the bot audit of §5.3: every §9 check and an estimate ≥ 7:00, within 2 fix rounds (3 for a KRİTİK bug) |
+| G5 Store | before upload | `check-store`: `listing.json` valid (no age cues, brand list, lengths, category by mechanic); covers at exact sizes; cover readable at 128 px (a fresh subagent shown the 128 px cover names the subject and the joke of the brief) |
+| G6 Playgama | deploy | checklist met; archive `PASSED`; `PUBLISHED`; QA Tool run clean (moves to Hasan's evening check if the QA Tool needs a console login) |
+| G7 Market | weekly | the analyst's table with minimum samples; Hasan's clicks |
 
 ---
 
-## 9. Kit standards (every game inherits them)
+## 9. Numbers table and kit standards
 
-Extracted from Munch Pixels and Peek & Find into `kit/` and `template/`:
-- Platform: Bridge wrapper, storage with late-save merge, ad gate, resume grace, pause and mute,
-  layout for 9:16, 1:1 and 16:9 (portrait required), audio synthesis, resume-safe timelines, no
-  external calls.
-- **Conversion:** no title screen before the first level; the first level teaches by doing;
-  interactive within 3 s on a throttled mid-range profile; initial load ≤ 5 MB.
-- **Play time (the Hold modules of `pebblit-retention`):** level flow with auto-advance and a
-  one-tap retry; a sawtooth ramp scheduler with breathers and teaching loops; a novelty scheduler
-  (a new element every 5–10 levels, a chapter every 10–20); a light meta bar toward the next
-  unlock; a rewarded continue; generated levels behind the hand-tuned first 20–30; a daily seeded
-  level with a forgiving streak and an endless mode with a personal best; session milestone
-  telemetry at 1, 3, 5 and 10 minutes; progress saved after every level.
-- **Ads:** interstitial only between levels after ≥ 3 levels and ≥ 120 s, never in the first
-  minute; rewarded only as optional help; the game is fully playable when ads fail.
-- **Telemetry:** the events `get_game_telemetry_guide` asks for, plus uncaught errors.
-- **Art and sound:** code-drawn characters and CC0 packs vendored once with their licences; colour
-  pairs checked for contrast (as Munch Pixels' ΔE test); synthesised sounds.
-- **Tooling:** debug contract in dev builds only (`state()`, `point(name)`, `solution()` or
-  `autoplay()`, `pause(bool)`, `events()`, `mismatches()`); covers generator; clip recorder;
-  reproducible ZIP with SHA-256; `npm run gates`; `listing.json` schema test that bans age cues and
-  brand names.
+One table; every section cites it.
+
+| Number | Value |
+| --- | --- |
+| Bytes before the first input | ≤ 1.5 MB |
+| Initial download | ≤ 5 MB target, ≤ 8 MB hard (Playables allows 30 MB) |
+| Time to first input | ≤ 3 s under 4× CPU and a 9 Mbps, 150 ms network profile, one build at a time |
+| First win | ≤ 20 s |
+| Friction between levels | ≤ 1.5 s; retry ≤ 1 s |
+| Fail rate (bot, human-like errors) | levels 1–10 ≤ 10 %; no level > 50 %; a breather after every hard level |
+| Novelty | something new at least every 2 minutes to minute 10 |
+| Next goal | never more than 3 levels away |
+| Content horizon | ≥ 60 minutes of non-repeating play |
+| Interstitials | none in minute 1, none after a loss, ≥ 3 levels and ≥ 120 s apart, ≤ 4 in 10 minutes |
+| Soak | 15 minutes: frame-time p95 within budget, heap flat |
+| Session estimate | ≥ 7:00 (`pebblit-retention` session model) |
+| Originality distance | ≥ 6 of 12 |
+| Analyst samples | ≥ 30 plays not by Hasan before any ranking; 20-play shrinkage prior |
+| Screenshots per gamer subagent | ≤ 40, each ≤ 2000 px on the long edge |
+
+**Kit** (`kit/`, versioned; extracted from Munch Pixels and Peek & Find): Bridge wrapper, storage
+with late-save merge, ad gate (platform-aware), resume grace, pause and mute, layout for 9:16, 1:1
+and 16:9 with portrait required, audio synthesis, the Hold modules (auto-advance, one-tap retry,
+sawtooth ramp scheduler, novelty scheduler, meta bar, rewarded continue, generated levels behind
+the tuned first 20–30, daily level with a forgiving streak, endless mode, session-milestone
+telemetry), the share card (web builds), the **Playables build flag** (text-free, no links, no share
+button, no in-app purchases; web builds may show minimal text), the debug contract in dev builds,
+covers generator, frame-stepped clip renderer, reproducible ZIP, `npm run gates`. In factory games
+GameReady fires when level 1 is interactive, because there is no title screen before it (the
+template's CLAUDE.md says so; our two current games keep their own rule).
 
 ---
 
 ## 10. Usage and cost
 
-- **Bill:** on the subscription, scheduled tasks add no bill unless usage credits are on. The
-  factory and our Munch Pixels work share the five-hour and weekly limits; the night run uses a
-  five-hour window while Hasan sleeps, so the weekly limit is the one to watch (Hasan glances at
-  claude.ai/settings/usage on Mondays; the report shows the run health).
-- **Terms:** Pro and Max limits assume ordinary, individual use without a number; the factory stays
-  on Anthropic's own scheduled-task feature at one game a day; if usage grows beyond one person's
-  work, an API key is the clean route.
-- **Load estimate** (API-price equivalent, only to size the plan): three demos with quick passes ≈
-  15–30 USD a night, one finish with audit and fixes ≈ 15–30 USD, the weekly runs ≈ 5 USD; about
-  30–60 USD of usage a day. The pilot measures the real share.
-- **If the limits do not carry it,** in this order (Hasan's call): two demos a night; a lighter
-  model for the scout, analyst, deployer and demo builds; usage credits; Plan B with an API key.
-- **A run that hits a limit stops;** its state is pushed, so it resumes after the reset and the
-  report says what was lost.
+- **No separate bill** on the subscription unless usage credits are on; the factory shares the
+  five-hour and weekly limits with Hasan's other work (Munch Pixels, the GeriAl app).
+- **Budget:** the factory may use at most half of the weekly meter. The phase-2 dry run records the
+  meters per stage (the usage page before and after each stage) and sets the pilot's shape from
+  it; Hasan's plan tier is read in phase 0.
+- **Where the cost is:** three demo coders and three quick passes a night, and the audits. Cuts, in
+  order: smaller demos (three still, as Hasan asked); a lighter model for demo coders and quick
+  passes if quality holds; bot audits instead of long persona play; two fix rounds; screenshot caps.
+- **Usage credits and an API key are not on the ladder** while revenue does not cover them.
+- **A stage stopped by a limit** writes `BLOCKED_LIMIT`; the next run finishes it before starting
+  anything new; a rejected scheduled run is not re-fired, so the report shows the gap.
+- **Terms:** Anthropic's own scheduled-task feature is the sanctioned route for unattended runs on
+  a subscription; the risk is throttling, not a breach; all of Hasan's Claude work sits on one
+  account, which the budget protects.
 
 ---
 
-## 11. Security
+## 11. Security and safety
 
-- No access to Hasan's PC; nothing on his machine is touched.
-- Credentials: the Playgama connector (OAuth held by claude.ai, revocable at
-  developer.playgama.com/mcp) and the Claude GitHub app's access to `pebblit-factory`. No API key,
-  no payment credential, no social-account credential in the factory.
-- Scheduled runs act without prompts, so the limits are code: hooks, tool lists, protected paths,
-  CI self-tests; the night run has no general web access; the scout has no connectors.
-- Kill switch: the on/off toggle of each task at claude.ai/code/routines, or revoking the Playgama
-  agent. Vacation: switch the night task off; nothing is lost.
-- Playgama's human-only actions stay human; no browser clicks around them.
+- **Three layers for irreversible Playgama actions** (audit F03): (1) the account's connector
+  settings block `start_sandbox_traffic`, `send_playgama_catalog_update`, `replace_in_app_products`,
+  leaderboard writes and `apply_referral_code`; one is switched on only for a deliberate
+  interactive session outside the factory repository, with the factory tasks paused, then switched
+  off; (2) `permissions.deny` in `.claude/settings.json` names the same tools by their exact runtime
+  names (captured in phase 0); (3) a PreToolUse hook matches them by pattern, exits with code 2 and
+  blocks on failure, plus the hook that rejects writes to any game but today's.
+- **Canary at the start of every run:** call `list_leaderboards`, which is deny-listed on purpose,
+  and abort unless it is refused; the report then says "guardrails verified".
+- **Blast radius** (audit F06): explicit connectors per task; a tool-list preflight; deny
+  `mcp__claude-code-remote__*` except `fire_trigger` in the night task (a hook checks the day task's
+  trigger id); explicit `tools` in every agent file; `FACTORY_ROLE` per environment, and the hooks
+  deny every Playgama write unless the role is `day`; single-repository sessions only.
+- **Protected paths:** `main` is protected on GitHub (no direct pushes, no bypass, admins
+  included); runs work on `factory-state`, whose CI rejects `.claude/`, `.mcp.json` and `factory/`.
+  Edit deny rules cannot stop a Bash write, which is why the branch rules carry the weight.
+- **Prompt injection:** the scout has no connectors; research reaches the PM only through the
+  sanitizer; page text is data.
+- **Privacy:** the account's model-training privacy setting is checked in phase 0, since
+  unreleased code and ideas pass through every run; no personal data in telemetry or saves; a
+  privacy note if a portal form asks for one (GDPR, KVKK).
+- **Kill switch:** each task's toggle at claude.ai/code/routines, or revoking the Playgama agent;
+  after a pause, one Run now smoke test before the schedule goes back on.
 
 ---
 
-## 12. Repository layout (`kriptoloca/pebblit-factory`, private)
+## 12. Repository layout and skills
 
 ```
-kit/                     shared engine and standards (§9), CC0 packs with licences
-template/                game skeleton + template CLAUDE.md + tests
-demos/<date>-{a,b,c}/    the night's demos (shelf: 14 days)
-games/<slug>/            one folder per game for its whole life (updates included)
-days/<date>/             state.json, briefs, gamer reports, report page source
-research/dna/<slug>.json DNA cards with key frames (cached across weeks)
-research/<week>/         top lists, patterns.md, catalog-titles.json; rank-history.json at the root
-catalog/catalog.json     every game: genes, status, Playgama id, sandbox URL, ZIP SHA-256, gate results
-metrics/                 funnel tables, per-game logs, weekly reports
-factory/                 NIGHT.md, DAY.md, SCOUT.md, ANALYST.md, schemas, report template (protected)
-.claude/                 agents, skills, settings.json with hooks (protected)
-lessons.md               what worked, Hasan's picks and reasons
-PLAN.md                  this plan, kept current
+main (protected; pull requests only)
+  kit/                    versioned engine package (§9)
+  template/               game skeleton, template CLAUDE.md, tests
+  factory/                NIGHT.md, DAY.md, SCOUT.md, ANALYST.md, schemas, sanitize, check-* scripts
+  .claude/                agents (explicit tools), skills, settings.json (allow, deny, hooks)
+  .github/workflows/      CI (pull requests; nightly on factory-state), dead-man's switch, Pages hub
+  PLAN.md
+factory-state (run output; only the orchestrator commits)
+  days/<date>/            state.json, pick.json, briefs, audits, playgama-docs/, report source
+  demos/<date>-{a,b,c}/   demos (shelf: 14 days)
+  games/<slug>/           one folder per game for its whole life
+  research/               dna/, <week>/, rank-history.json, mechanic-map.json
+  catalog/catalog.json    genes, status, Playgama id, URLs, archive ids, ZIP SHA-256, gate results
+  metrics/                funnel tables, weekly reports
+  lessons.md
 ```
 
-### Skills by stage
+Skills by stage (Hasan's enabled skills reviewed on 2026-10-20; house skills live in the repository;
+whether plugin skills load in scheduled runs is checked in phase 0, and if not, the needed ones are
+vendored):
 
-Every skill Hasan has enabled was reviewed on 2026-10-20 (his plugins sync into cloud sessions;
-phase 3 confirms a scheduled run sees them too). House skills live in the repository, so they load
-in every run whatever the account has.
+| Stage | Skills |
+| --- | --- |
+| Scout | `pebblit-game-dna`, `game-trend-skills:scanning-game-trends`, `game-trend-skills:scouting-social-trends`, `pebblit-game-craft`, `anthropic-skills:deep-research` |
+| PM | `pebblit-game-dna`, `game-trend-skills:brainstorming-game-ideas`, `evaluating-game-ideas`, `writing-game-agent-briefs`, `pebblit-game-craft`, `pebblit-retention`, `design:ux-copy` |
+| Coder | `pebblit-retention`, `pebblit-game-craft`, `code-review`, `engineering:debug`, `engineering:testing-strategy`, `product-tracking-skills:product-tracking-instrument-new-feature`, `anthropic-skills:algorithmic-art` |
+| Gamer | `pebblit-retention`, `pebblit-game-craft`, `design:design-critique`, `design:accessibility-review`, `product-tracking-skills:product-tracking-audit-current-tracking` |
+| Deployer | `engineering:deploy-checklist`, Playgama's live checklist and launch steps |
+| Analyst | `game-trend-skills:tracking-game-metrics`, `pebblit-retention`, `data:statistical-analysis`, `data:validate-data`, `data:create-viz`, `data:build-dashboard`, `design:research-synthesis` |
+| Growth | `game-trend-skills:launching-on-zero-budget`, `small-business:social-content-engine`, `marketing:content-creation`, `brand-voice:*`, `marketing:performance-report`; `postiz` later |
+| Build and operate | `skill-creator`, `session-start-hook`, `update-config`, `security-review`, `engineering:architecture`, `operations:runbook`, `operations:risk-assessment`, `workflow-authoring` |
+| Once | `legal:review-contract` on Playgama's, CrazyGames' and Poki's terms |
 
-| Stage | Skills | What each does there |
-| --- | --- | --- |
-| Scout | `pebblit-game-dna` (house), `game-trend-skills:scanning-game-trends`, `game-trend-skills:scouting-social-trends`, `pebblit-game-craft` (teardown template), `anthropic-skills:deep-research` | decode top games into DNA cards; the monthly market scan; social and seasonal themes; deep dives on a riser |
-| PM | `pebblit-game-dna` (operators, originality gate), `game-trend-skills:brainstorming-game-ideas`, `game-trend-skills:evaluating-game-ideas`, `game-trend-skills:writing-game-agent-briefs`, `pebblit-game-craft` (Face, Feel), `pebblit-retention` (Hold plan), `design:ux-copy` (store copy draft) | candidates, scores, one-page briefs with the Hold plan |
-| Coder | `pebblit-retention` (Hold modules), `pebblit-game-craft` (Feel spec), `code-review`, `engineering:debug` (fix rounds), `engineering:testing-strategy`, `product-tracking-skills:product-tracking-instrument-new-feature` (telemetry events), `anthropic-skills:algorithmic-art` (procedural backgrounds and cover art, bundled, no CDN) | the build, its tests and its events |
-| Gamer | `pebblit-retention` (minute-map audit), `pebblit-game-craft` (rubric, feel audit), `design:design-critique` (screens and covers), `design:accessibility-review` (contrast, colour-blind pairs, touch targets), `product-tracking-skills:product-tracking-audit-current-tracking` (events fire) | the verdict |
-| Deployer | `engineering:deploy-checklist`, the Playgama MCP's own `get_launch_steps` and checklist | a clean upload |
-| Analyst | `game-trend-skills:tracking-game-metrics`, `pebblit-retention` (leak finder), `data:statistical-analysis` (small samples, intervals), `data:validate-data` (telemetry sanity), `data:create-viz` and `data:build-dashboard` (the weekly portfolio page), `design:research-synthesis` (Hasan's pick reasons, moderation comments) | the weekly read and proposals |
-| Growth | `game-trend-skills:launching-on-zero-budget`, `small-business:social-content-engine`, `marketing:content-creation`, `brand-voice:guideline-generation` once, then `brand-voice:brand-voice-enforcement`, `marketing:performance-report` monthly; later `postiz` to schedule posts if Hasan connects a Postiz account | the daily clip and caption, the channel |
-| Build and operate the factory | `skill-creator`, `session-start-hook` (cloud setup), `update-config` (hooks and permissions), `security-review` (guardrails), `engineering:architecture`, `operations:runbook` (Hasan's runbook), `operations:risk-assessment` (monthly), `workflow-authoring` if the night run becomes a workflow script | phases 1–2 and upkeep |
-| Once, before money flows | `legal:review-contract` on Playgama's developer agreement and each portal's terms (Hasan pastes them) | exclusivity, revenue share, automated access, AI content |
-
-Not used, with the reason: the Canva, Adobe and Figma skills need connectors that do not connect
-from this cloud environment today; Unity and Unreal skills do not fit a Phaser stack; the sales,
-finance, legal-ops, customer-support, retro-game, CAD, Redis, Base44 and similar plugins have no
-step in this process.
-
-New skills still to write with `skill-creator` and its evals (phase 2): `factory-brief`,
-`pebblit-kit`, `gamer-audit`, `playgama-deploy`, `store-copy`, `portfolio-analyst`. Already
-written and validated on 2026-10-20: `pebblit-retention` and `pebblit-game-dna`.
+Also available: `run-peek-and-find` (a tested Playwright driver for a Phaser canvas game; the
+template's driver starts from it). Not used: Canva, Adobe and Figma (their connectors do not
+connect from the cloud today), Unity and Unreal (another stack), and the sales, finance and other
+plugins with no step here. New skills to write in phase 2 with `skill-creator` and evals:
+`factory-brief`, `pebblit-kit`, `gamer-audit`, `playgama-deploy`, `store-copy`, `portfolio-analyst`.
 
 ---
 
@@ -537,37 +509,48 @@ written and validated on 2026-10-20: `pebblit-retention` and `pebblit-game-dna`.
 
 | Phase | Who | Contents | Done when |
 | --- | --- | --- | --- |
-| 0. Accounts | Hasan, ≈ 40 min | create the private repo; add the Playgama MCP as a custom connector at claude.ai/customize/connectors; give the Claude GitHub app access to the repo; check payout method and tax details in the Playgama console; open Pebblit accounts on YouTube and TikTok; open Playgama's, CrazyGames' and Poki's terms pages and paste them in the session so `legal:review-contract` can read the automated-access, exclusivity and AI-content clauses; upload the house skills (`.skill` files) to claude.ai | a cloud session lists the Playgama tools; the scouting rules per site are written down |
-| 1. Kit and template | Claude (cloud), ≈ 2 days | §9 kit, template, demo, finish and improve scaffolds, gates, report page, clip recorder, CI self-tests | a demo runs inside an artifact on Hasan's phone; gates and self-tests green in CI |
-| 2. Agents and gamer | Claude (cloud), ≈ 2–3 days | subagents, skills, prompts, hooks, gamer harness, calibration | dry run: three demos, report, finish, deploy stubbed; the gamer finds ≥ 4 of 5 planted bugs and two runs agree |
-| 3. First real day | together, one day | create the three scheduled tasks; Run now; Hasan picks; real deploy; first clip posted | one game live in the sandbox with all fields and covers, QA Tool clean, notification reached the phone |
-| 4. Pilot | factory, 7 days | the schedule on | a deployed game on ≥ 5 of 7 days with no code edited by hand; Hasan's time ≤ 15 min a day; usage within the plan; no Playgama refusals |
-| 5. Steady state | factory | weekly scout and analyst; the capacity rule; reviews (§14) | — |
+| 0a. Questions | Hasan, ≈ 30 min | the decisions of §17; the Playgama e-mail; GitHub Pro; payout method; accountant question | answers written in PLAN.md |
+| 0b. Accounts and probes | Hasan + Claude, ≈ 2 h | private repo with `main` protected; Playgama connector added and its destructive tools blocked; GitHub app access; social accounts; the house skills uploaded; terms of Playgama, CrazyGames and Poki read with `legal:review-contract`; the account's privacy setting checked; **probes:** Peek & Find launches by source for days 3–7; a canary draft game (reused for every test; drafts are human-deletable only) published with no promotion and counted at 24 and 72 hours; share bonuses left (`get_sandbox_traffic`); the connector's runtime tool names; a blocked tool refused in a Run now run; `permissions.deny` and hooks loading in a scheduled run; per-task connectors honoured; a push to `main` refused; upload hosts reached with a small PUT from a Run now run; the QA Tool opening without a console login; plugin skills visible in a scheduled run; the usage meters | every probe has a recorded result, and the pilot rule of §14 is set from the free-traffic numbers |
+| 1. Kit and template | Claude, ≈ 2–3 days | §9 kit, template, scaffolds, `check-*` scripts, report page, clip renderer, hub page, CI | a demo runs inside an artifact on Hasan's phone with sound and touch; an MP4 clip saves to the phone; CI green |
+| 2. Agents and bot audit | Claude, ≈ 3 days | agents, skills, prompts, sanitizer, permissions and hooks, bot audit, calibration | dry run: three demos, report, a fired day task, deploy to the canary; usage per stage recorded; planted bugs and feel inversions found; two runs agree |
+| 3. First real day | together | create the four tasks with explicit connectors; Run now; Hasan picks; real deploy; Plan B rehearsed once | one game live with all fields, covers and a clean QA Tool run; the day task ran ≥ 3 hours with zero prompts; the notification and the dead-man's switch both reached the phone |
+| 4. Pilot | factory, 7 days | the schedule on | a deployed game on ≥ 5 of 7 days with no code edited by hand; Hasan ≤ 30 minutes a day; usage ≤ half the weekly meter; no Playgama refusal |
+| 5. Steady state | factory | weekly scout and analyst, game of the week, reviews (§14) | — |
 
 ---
 
-## 14. Reviews and stop-loss for the factory itself (starting thresholds; Hasan decides)
+## 14. Reviews, stop-loss and unit economics
 
-| Day | Check | If it fails |
+**Pilot rule (from phase 0b):** if a new game gets under 100 launches in 72 hours without promotion,
+daily games are exploration only and every promotion lever goes to the game of the week; at day 14
+Hasan decides whether one new game a day still makes sense or whether some days become improvement
+days by default.
+
+| Day | Passes when | If not |
 | --- | --- | --- |
-| 14 | ≥ 10 deploys; usage within limits; gamer calibrated; organic plays per game measured | fix the pipeline before more games |
-| 30 | at least one game averages ≥ 5:00 over its plays; share bonus spent on the best one or two | shift the idea mix to what held players; three days a week improve the top two games |
-| 60 | at least one game submitted and accepted into the catalog | new games drop to three a week; the best game gets a deep build (Munch Pixels-style) |
-| 90 | ad revenue started on at least one game | pause the factory and re-plan with Hasan (fewer, deeper games; other portals; a paid traffic test only if he wants it) |
+| 14 | ≥ 10 deploys; usage ≤ half the weekly meter; calibration done; free traffic per game measured | fix the pipeline before more games |
+| 30 | one factory game has ≥ 100 plays not by Hasan and a ≥ 5:00 average | shift the idea mix to what held players; three improvement days a week for the top two games |
+| 60 | one factory game accepted into the catalog | new games drop to three a week; the best game gets a deep build |
+| 90 | factory revenue ≥ the floor Hasan sets (default 3.3 USD a day, about one 100 USD payout a month) | pause the factory and re-plan with Hasan |
+
+Every review lists the revenue, the factory's share of the weekly usage and Hasan's minutes, so the
+decision weighs what the factory earns against what it costs.
 
 ---
 
-## 15. Hasan's steps
+## 15. Hasan's steps (realistic, audit F19)
 
-- **Once (phase 0):** the repo, the Playgama connector, GitHub access, payout and tax details in the
-  console, the Pebblit social accounts.
-- **Daily (≈ 10–15 min):** morning: play the demos, reply A, B or C; evening: post the clip.
-- **Weekly (≈ 20–30 min):** send the scout screenshots of the YouTube Playables top and trending
-  rows with a line on the two or three he played; reply to the analyst with the dashboard
-  screenshot; submit proposed
-  games to moderation; request ad access when proposed; decide share-bonus games; glance at the
-  usage page.
-- **At reviews (day 14, 30, 60, 90):** the stop-loss decisions in §14.
+- **Once:** phase 0a and 0b.
+- **Daily (≈ 20–30 min):** morning: play the demos, reply A, B or C; evening: a 2-minute check of
+  the finished build on the QA Tool link and, when it is the game of the week, the clip and the
+  post; one-tap items on the morning page.
+- **Weekly (≈ 1–1.5 h):** Playables screenshots for the scout; one console screenshot for the
+  analyst; moderation submissions with the media pack; the CrazyGames submission and the cover test
+  of the game of the week; share-bonus decisions; a glance at the usage page; for the promoted
+  game, a name check on Google Play, the App Store and TÜRKPATENT/EUIPO/USPTO.
+- **At reviews:** the decisions of §14.
+- **Never:** testing on the live sandbox link (his plays would distort the numbers); use the QA
+  Tool or artifact builds.
 
 ---
 
@@ -575,50 +558,88 @@ written and validated on 2026-10-20: `pebblit-retention` and `pebblit-game-dna`.
 
 | Risk | Mitigation |
 | --- | --- |
-| Games never reach 100 plays without paid traffic | conversion and play-time standards; the social channel; share bonus for proven games; capacity shifts to improving the best game; day-30 and day-60 reviews |
-| Games average under 5:00 | the Hold rules in every brief, build and audit; no game ships with an estimate under 7:00; the analyst's leak loop fixes the biggest drop first, one release at a time |
-| The Playgama connector does not work from claude.ai | phase 0 tests it first; Plan B runs only the deploy step on the PC |
-| Usage limits, or Munch Pixels work suffers | night schedule; pilot measures; two demos, lighter models, usage credits or Plan B, in that order |
-| Scheduled tasks are a research preview and change | the logic lives in the repo and runs the same in a local session |
-| Demos do not run inside an artifact | a public Pages repo with unlisted links, or clips only |
-| Duplicates, low-quality refusals, account warnings | originality and name rules; updates instead of look-alikes; at most two submissions a week; no AI-look art |
-| A factory agent changes `.claude/` or adds `.mcp.json`, and the next run trusts it | protected paths: deny rules, a hook, a push check and a CI test |
-| Prompt injection from scraped pages | the scout is a separate run with no connectors and writes schema-checked data |
-| Scouting breaks a site's terms or creates ad impressions | YouTube never automated; other sites only after their terms are checked; human pace, one session per game per week, ad requests blocked, no clicks, no logins, no downloads |
-| The DNA card misreads a game's rules | the prediction check; observed, inferred and not-reached labels; assisted cards weigh less |
-| A live game breaks on a device we do not test | Hasan's daily phone play; error telemetry; the next morning's improvement offer; sandbox republish |
-| GitHub connection lapses and runs stop silently | the health line in every report; the Monday check |
-| The AI gamer approves boring games | Hasan's pick; weekly calibration against the funnel |
-| Hasan's taste and the market disagree | the analyst compares his picks with the numbers monthly and says so |
-| Asset or name trouble (licences, trademarks) | CC0 and OFL only with `licenses.json`; name check against the catalog snapshot; no brands |
-| Playgama MCP or rules change | `get_launch_steps` and the checklist are read live on every deploy; errors stop the deploy |
-| Revenue stays near zero | the stop-loss reviews end the experiment cheaply and say what to change |
+| No free supply of first plays | phase-0 measurement; game of the week; CrazyGames Basic Launch; showcase likes; reviews that can fail |
+| Games average under 5:00 | Hold rules in every brief, build and bot audit; estimate ≥ 7:00; leak loop |
+| The factory forgets between runs | `factory-state` branch, rebase-and-retry pushes, `BLOCKED_LIMIT` resume |
+| Irreversible Playgama action by a confused or injected run | account-level blocks, deny rules, hook backstop, id-scoped writes, canary |
+| The day phase stalls on prompts | an autonomous day task fired with the pick; phase-3 zero-prompt check |
+| Uploads blocked by the network | Custom network with captured hosts; phase-0 PUT probe |
+| Organisation risk from many sandbox games | Playgama's written answer before phase 1; at most two submissions a week; originality as code |
+| Mechanic space runs out | mechanic map, sequels with redesigned graphics and mechanics, improvement days |
+| Social clips bring no clicks | hub page, game-of-the-week links, MP4 clips |
+| Usage limits hit Hasan's other work | half-meter budget, cost cuts where the cost is, no credits or API key on the ladder |
+| Noise drives decisions | minimum samples, shrinkage, no plays by Hasan on live links |
+| A live game breaks on iOS | Hasan's 2-minute check before promotion; error telemetry; republish the last `PASSED` archive |
+| A run never starts and nobody notices | the dead-man's switch at 08:30 |
+| GitHub minutes run out | Pro minutes, path filters, nightly instead of every push |
+| Payout or tax trouble | a method that works in Türkiye; an accountant before the first payout |
+| Scheduled tasks or Playgama MCP change | logic in the repository; live checklists; Plan B rehearsed |
+| Revenue stays near zero | the day-90 floor pauses the factory |
 
 ---
 
 ## 17. Decisions
 
-All accepted by Hasan on 2026-10-20 as recommended:
-- **D1 Top lists:** Playgama catalog or leaderboard + YouTube Playables trending, refreshed weekly.
-- **D2 Runtime and billing:** cloud scheduled tasks on the subscription, usage credits off; Plan B
-  only if a phase-0 or phase-3 check fails.
-- **D3 No reply by 12:00:** no deploy that day; the demos go to the shelf.
-- **D4 Moderation:** Hasan submits the analyst's proposals, at most two a week.
-- **D5 Share bonus:** only for games whose first plays already average ≥ 5:00.
-- **D6 Repository:** private `kriptoloca/pebblit-factory`.
-- **D7 Models:** the most capable model everywhere in the pilot; then a lighter model for the
-  scout, analyst and deployer if quality holds.
+Accepted on 2026-10-20: D1 top lists (Playgama + YouTube Playables, weekly); D2 cloud tasks on the
+subscription; D3 no reply by 12:00 means no deploy that day; D4 at most two moderation submissions
+a week; D5 share bonus only for proven games; D6 private repository; D7 models (now: the most
+capable model where judgement matters, lighter for demos if the dry run allows); D8 social
+accounts; D9 winners go wide; D10 paid traffic stays off.
 
-Added in v3, applied unless Hasan objects:
-- **D8 Social channel:** Pebblit accounts on YouTube Shorts and TikTok; Hasan posts the daily clip.
-- **D9 Winners go wide:** Playgama first; then Playables readiness, Playgama's publishing
-  programme and CrazyGames; never Poki without a deal.
-- **D10 Paid traffic stays off.** At the day-30 review the analyst reports whether one proven game
-  is stuck below 100 plays; whether to make an exception stays Hasan's decision.
+**Needed before phase 1** (my recommendation in brackets):
+- **D11** An improvement release of a live game counts as the day's game. [yes]
+- **D12** GitHub Pro for the account (about 4 USD a month, to confirm): protected `main`, Pages for
+  the hub from the private repository, more CI minutes. [yes]
+- **D13** Hasan sends one e-mail to Playgama's developer support (I draft it): is one AI-built
+  sandbox game a day acceptable; do unsubmitted sandbox games or refusals affect the organisation;
+  what changes for Bridge ads in the catalog; do the owner's own plays count. [yes, before phase 1]
+- **D14** The three lifetime share bonuses: Peek & Find 1, Munch Pixels 1, factory 1, after
+  `get_sandbox_traffic` shows how many are left. [as written]
+- **D15** The day-90 revenue floor. [3.3 USD a day]
+- **D16** Payout and tax: Wise or a bank transfer (PayPal does not operate in Türkiye, to
+  confirm); one question to an accountant (mali müşavir) about registration and whether the GVK
+  20/B regime covers web games. [before the first payout]
 
 ---
 
-## 18. Independent audit
+## 18. Independent audit (2026-10-20) and how each finding was closed
 
-(Filled in after the adversarial audit of this version: findings by severity and how each was
-closed.)
+An independent subagent audited v3 against the Playgama MCP README, the Claude Code docs fetched
+the same day, our data and the house skills. 24 findings; every KRİTİK and YÜKSEK is closed in this
+version; the three claims that changed the design most were re-checked against the docs before
+acting (hooks are not a hard gate; cloud-session permission modes; per-tool connector settings).
+
+| ID | Severity | Finding | Closed in |
+| --- | --- | --- | --- |
+| F01 | KRİTİK | no free supply of first plays; the capacity rule could never get evidence | §0.3, §7 game of the week, §13 phase-0 traffic probes, §14 pilot rule and new thresholds, D11 |
+| F02 | KRİTİK | no memory between runs; runs push to `claude/` branches; `main` unprotected | §4 branches, §11 protected paths, D12 |
+| F03 | KRİTİK | irreversible Playgama actions guarded only by hooks | §5.4, §11 three layers and canary |
+| F04 | YÜKSEK | a continued session is not autonomous | §2, §4: day task fired with the pick; §13 zero-prompt check |
+| F05 | YÜKSEK | uploads need Playgama hosts on the network | §4 Custom networks; §13 PUT probe; G6 QA Tool fallback |
+| F06 | YÜKSEK | default connectors, remote tools, inherited tools, multi-repo sessions | §4, §6, §11 |
+| F07 | YÜKSEK | one organisation carries everything; share bonuses shared | D13, D14 |
+| F08 | YÜKSEK | no path for catalog updates | §7 catalog releases, media pack in §5.2 |
+| F09 | YÜKSEK | usage in Hasan's working hours; ladder breaks his rules | §10 |
+| F10 | YÜKSEK | originality runs out | §5.1 mechanic map, art kit, originality as code; §9 build flag |
+| F11 | YÜKSEK | social has no click-through | §7 hub page, MP4 clips |
+| F12 | YÜKSEK | free levers missing or ranked low | §7 order, listings, ad cadence test |
+| F13 | ORTA | the ads row contradicted our data | §1 funnel |
+| F14 | ORTA | decisions on noise; a stop-loss that cannot fire | §5.6, §9, §14, §15 |
+| F15 | ORTA | the AI gamer cannot judge fun; persona play impractical | §5.3 bot audit |
+| F16 | ORTA | devices and performance not tested where it matters | §5.3, §9, §15 |
+| F17 | ORTA | the coder cannot read the Playgama docs; deployer gaps | §5.2, §5.4 |
+| F18 | ORTA | injected text, YouTube terms, ad impressions | §5.1 sanitizer, §5.5 |
+| F19 | ORTA | Hasan's time underestimated | §5.6 caps, §15 |
+| F20 | ORTA | failure handling gaps | §2 dead-man's switch, §4 states, §5.4 retries |
+| F21 | ORTA | CI minutes, repo size, shared kit | §4 kit versioning, CI, no build outputs |
+| F22 | ORTA | contradictions and unimplementable gates | §8 scripts, §9 one numbers table, GameReady rule, this section |
+| F23 | DÜŞÜK | payout and tax for a Turkish resident | D16 |
+| F24 | DÜŞÜK | names and look-alike assets | §5.1 art kit and pack cap, §15 name check |
+
+Also from the audit's "missing pieces": unit economics (§14), retirement rule (§5.6), clean-up of
+shelf demos and drafts (§4, §13), change control for prompts (they live on protected `main`), a
+model-change watch (§5.3 calibration), privacy (§11), a second outlet (CrazyGames, §7).
+
+Still open, by design, until phase 0 answers them: free traffic per game, Playgama's answer on
+cadence, the share bonuses left, the connector's tool names, the QA Tool login, ffmpeg's H.264
+support, and whether plugin skills load in scheduled runs.
