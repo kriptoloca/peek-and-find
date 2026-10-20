@@ -596,9 +596,11 @@ accounts; D9 winners go wide; D10 paid traffic stays off.
 - **D14** The three lifetime share bonuses: Peek & Find 1, Munch Pixels 1, factory 1, after
   `get_sandbox_traffic` shows how many are left. [as written]
 - **D15** The day-90 revenue floor. [3.3 USD a day]
-- **D16** Payout and tax: Wise or a bank transfer (PayPal does not operate in Türkiye, to
-  confirm); one question to an accountant (mali müşavir) about registration and whether the GVK
-  20/B regime covers web games. [before the first payout]
+- **D16** Payout and tax: the method Playgama confirms for Türkiye, a bank transfer to a USD
+  account or crypto (PayPal has no service in Türkiye, confirmed 2026-10-20; Wise withdrew lira
+  receiving details for Türkiye addresses in 2023; `reports/2026-10-20-launch-pebblit.md`); one
+  question to an accountant (mali müşavir) about registration and whether the GVK 20/B regime
+  covers web games. [before the first payout]
 
 ---
 
