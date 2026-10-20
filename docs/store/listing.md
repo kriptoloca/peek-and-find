@@ -3,7 +3,7 @@
 Rules: no wording that targets a young audience (CLAUDE.md rule 8 lists the banned words);
 general audience 13+; no brand names; `tests/store.test.ts` checks the wording and the structure
 of this file. Title duplicate check (GDD §1): re-check the YouTube
-Playables catalog and Google Play right before submission; fallbacks "Find 3!", "Hidden Hunt".
+Playables catalog and Google Play right before submission; fallbacks "Find 3", "Hidden Hunt".
 
 ## Title
 
@@ -39,7 +39,7 @@ Pause with the button at the bottom left (sound, music, home). Lost all hearts? 
 
 ## Facts for the console
 
-- Studio: Pebblit. Game: Peek & Find. Category: Puzzle / Casual.
+- Studio: Pebblit Games. Game: Peek & Find. Category: Puzzle / Casual.
 - Audience: general, 13+. Not directed at a young audience (no reading required, no cartoon violence, no nursery look; GDD §11).
 - Orientation: portrait first, landscape and square supported.
 - Monetisation: interstitial after at least 3 scenes and 120 s, rewarded ads only for Hint and Continue; no purchases.

@@ -92,7 +92,7 @@ does not chase it.
   2. *Shy Ghosts: "Every ghost wants to be alone."* Open on the lights-on cascade, cut back to
      the empty house; a ghost placed in sight of another shivers and hides its face; the last
      placement lights the house.
-  3. *"Only 1 % of random players beat this level."* Munch Pixels level 70 (random-player win
+  3. *"About 1 % of random players beat this level."* Munch Pixels level 70 (random-player win
      rate ≈ 1 %, `levels.json` metrics, 2026-10-19) played to a win; text: "Can you?". The
      number is true for random play, not for people, so the text says "random players".
 - **Creative bank:** every clip is kept with its views and follows; the best one becomes the
@@ -136,10 +136,10 @@ Ads per play by format come from the Playgama dashboard (Peek & Find: 0.91, 2026
 >
 > Hi Playgama team,
 >
-> I'm Hasan from Pebblit Games (developer account since 18 Oct 2026; Peek & Find is in the
-> sandbox). Before we release more games, could you help with a few questions?
+> We're Pebblit Games (developer account since 18 Oct 2026; Peek & Find is in the sandbox).
+> Before we release more games, could you help with a few questions?
 >
-> 1. Payouts: I live in Türkiye, where PayPal does not operate. Which payout methods work for a
+> 1. Payouts: we are based in Türkiye, where PayPal does not operate. Which payout methods work for a
 >    developer resident in Türkiye: a bank transfer to a USD account at a Turkish bank, Wise or
 >    crypto? Are there fees beyond the 100 USD minimum?
 > 2. Revenue share: does the 70/80/90 % tier also apply to plays on playgama.com, or is there a
@@ -151,13 +151,13 @@ Ads per play by format come from the Playgama dashboard (Peek & Find: 0.91, 2026
 >    way?
 > 5. Volume: we build small games with AI help and may put up to one game a day into the
 >    sandbox. Is that acceptable, and do unsubmitted sandbox games or a refused submission
->    affect our organisation?
+>    affect our organization?
 > 6. Do the account owner's own plays count toward the 100 sandbox plays?
 > 7. Our games use Bridge ads (interstitial and rewarded). Does anything change for them once a
 >    game is in the catalog?
 >
 > Thank you,
-> Hasan, Pebblit Games
+> Pebblit Games
 
 ## Sources (search summaries, 2026-10-20, pages not opened)
 

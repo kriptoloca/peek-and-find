@@ -1,6 +1,6 @@
 # Peek & Find — Game Design Document v1.1
 
-Studio: Pebblit (@pebblitgames) · Working title: **Peek & Find** (no duplicate found on app stores as of 2026-10-16; nearest is "Seek & Find" by Felicity Games. Re-check YouTube Playables catalog and Google Play before submission; fallbacks: "Find 3!", "Hidden Hunt")
+Studio: Pebblit Games (@pebblitgames) · Working title: **Peek & Find** (no duplicate found on app stores as of 2026-10-16; nearest is "Seek & Find" by Felicity Games. Re-check YouTube Playables catalog and Google Play before submission; fallbacks: "Find 3", "Hidden Hunt")
 Platform: YouTube Playables (via Playgama Bridge), then CrazyGames + GameDistribution with the same build.
 Language: text-free gameplay. ≤10 UI strings, English by default, i18n-ready.
 

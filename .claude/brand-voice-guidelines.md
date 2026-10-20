@@ -1,9 +1,10 @@
-# Pebblit Brand Voice Guidelines
+# Pebblit Games Brand Voice Guidelines
 
 ## Generation Metadata
 - Created: 2026-10-20
-- Version: 1.1 (quality check fixes, same day; version 1 is in git history)
-- Replaces: version 1
+- Version: 1.2 (the owner's answers to the seven open questions; earlier versions are in git history)
+- Updated: 2026-10-20
+- Replaces: version 1.1
 - Sources: the Peek & Find store listing, its copy review and the store test, the brand philosophy, README and critique, the 15-second video script, the GDD's progression terms, the launch plans, the social-trends report, the Shy Ghosts brief and evaluation, the house skill `pebblit-game-craft`, the rules of the game-trend skills, the project rules in both game repositories' `CLAUDE.md`, the decision log and the creator profile (Appendix)
 - Documents processed: 18 (15 Appendix rows; some rows group related files)
 - Conversations analyzed: 0 (no call recordings or transcripts exist)
@@ -14,7 +15,7 @@
 
 ## Executive Summary
 
-Pebblit is a one-person studio (with Claude Code as the build agent) that makes small, text-free
+Pebblit Games is a one-person studio (with Claude Code as the build agent) that makes small, text-free
 puzzle games for web game portals and YouTube Playables. The games are played with one finger and
 no reading, so words appear in only a few places: store pages, the occasional line on a short
 video, community posts, and e-mails to platforms and publishers. Every word in those places has
@@ -26,7 +27,7 @@ It states what you do in the game in a few words, names the facts a browsing pla
 lets the characters carry the humour: ghosts too shy to be seen, munchers that eat a picture
 pixel by pixel. It never hypes, never talks down, and never aims at a young audience.
 
-Underneath the warmth sits honesty. Pebblit's method treats every number as something that needs
+Underneath the warmth sits honesty. The studio's method treats every number as something that needs
 a source and a date, and its games are generated and checked so every level can be solved. The
 voice carries the same promise: no inflated claims, no fake urgency, no player counts we cannot
 show. Content should feel like a well-made puzzle box handed over with one sentence about how it
@@ -64,7 +65,7 @@ opens.
 
 #### Playful through characters
 - **What it means**: humour comes from a character with a want or a situation people recognise, not from jokey copy.
-- **How it shows up**: one light character line where it helps ("The ghosts are shy."), hooks that show the joke ("Every ghost wants to be alone."), never a pun in every sentence.
+- **How it shows up**: one light character line where it helps ("The ghosts are shy."), hooks that show the joke ("Every ghost wants to be alone."), never a pun in every sentence. In store text, as much humour as comparable listings on the same portal carry (decision 3), never in the pitch's first words.
 - **What to avoid**: cutesy words, a nursery look described in words, emoji as decoration.
 - **Evidence**: `pebblit-game-craft` pillar 1 ("Face: the game has a *who* or a *joke*"); the Shy Ghosts brief §4.3 ("too shy to be seen, even by each other"); the social-trends report ("make our own meme-able cast").
 - **Confidence**: Medium (planned for the new games; Peek & Find has no character yet, and the creator profile lists "no humor or identity in the current game" as a weakness)
@@ -91,7 +92,7 @@ opens.
 - **Confidence**: High
 
 #### Global and inclusive
-- **What it means**: written for a general 13+ audience anywhere, in simple English.
+- **What it means**: written for a general 13+ audience anywhere, in simple US English (decision 2).
 - **How it shows up**: no idioms that need a native speaker, genre terms that translate, text-free gameplay.
 - **What to avoid**: words aimed at a young audience, third-party names, region-only slang.
 - **Evidence**: `CLAUDE.md` rule 8 in both game repositories (13+, banned words, no third-party IP); the listing's localisation note.
@@ -166,23 +167,23 @@ Voice is constant. Tone flexes by context.
 #### Store listing
 - **Overall tone**: plain and friendly, like a short note on the box.
 - **Opening approach**: the action the player repeats, then the browsing facts.
-- **Do's**: three-line description (how to play, variety, session length and the return reason); five genre tags; a shorter pitch ready for small fields.
-- **Don'ts**: exclamation marks, superlatives, age cues, third-party brand or character names, "endless puzzles".
+- **Do's**: three-line description (how to play, variety, session length and the return reason); five genre tags; a shorter pitch ready for small fields; US spelling; humour at the level of comparable listings on the same portal (decision 3).
+- **Don'ts**: exclamation marks, superlatives, age cues, third-party brand or character names, "endless puzzles", emoji (decision 7).
 - **Example**: "Find the icon in the picture, tap it, next scene. No reading, no timer, one finger." (Peek & Find)
 
 #### Clip hooks
 - **Overall tone**: curious, light, true.
 - **Opening approach**: movement in the first second; the payoff shown first; a hook line only when it adds.
-- **Do's**: questions the clip answers ("What was under the snack?"); our own characters; numbers that are true as stated (say "about" when a figure is rounded).
+- **Do's**: questions the clip answers ("What was under the snack?"); our own characters; numbers that are true as stated (say "about" when a figure is rounded); in captions, emoji as comparable game accounts use them, at most one that carries meaning (decision 7).
 - **Don'ts**: "99 % fail" bait, borrowed sounds or characters, reaction-face thumbnails, links in Shorts descriptions (not clickable since 31 Aug 2023, launch plan §4).
 - **Example**: "Every ghost wants to be alone."
 
 #### Platform and support e-mails
 - **Overall tone**: polite, direct, organised.
 - **Opening approach**: one line on who we are and what is live, then the questions.
-- **Do's**: numbered questions; give the facts we already have; one decision per question.
+- **Do's**: speak as "we" and sign as Pebblit Games (decision 4); numbered questions; give the facts we already have; one decision per question.
 - **Don'ts**: long backstory, pressure, vague asks.
-- **Example**: "I'm Hasan from Pebblit Games (developer account since 18 Oct 2026; Peek & Find is in the sandbox). Before we release more games, could you help with a few questions?" (Playgama draft, `reports/2026-10-20-launch-pebblit.md`; "Pebblit Games" is the account name, see Open Question 1)
+- **Example**: "We're Pebblit Games (developer account since 18 Oct 2026; Peek & Find is in the sandbox). Before we release more games, could you help with a few questions?" (Playgama draft, `reports/2026-10-20-launch-pebblit.md`)
 
 #### Publisher pitch
 - **Overall tone**: precise and modest; the numbers speak.
@@ -194,7 +195,7 @@ Voice is constant. Tone flexes by context.
 #### Community posts and devlogs
 - **Overall tone**: open and practical, maker to makers and players.
 - **Opening approach**: what we made or changed, one picture or clip, one question.
-- **Do's**: share what we learned, including what did not work; credit tools and assets.
+- **Do's**: share what we learned, including what did not work; credit tools and assets; emoji as in clip captions (decision 7).
 - **Don'ts**: disguised ads, posting where self-promotion is not allowed.
 - **Example (illustrative, not yet published)**: "We make small text-free puzzle games. Here is the first house of Shy Ghosts. Does the rule read without any text?"
 
@@ -212,10 +213,14 @@ Voice is constant. Tone flexes by context.
 ### Must-Use Terms
 | Term | Usage | Instead Of | Example |
 |------|-------|------------|---------|
-| Pebblit | the studio in public copy | "Pebblit Studio", "we at Pebblit Games" (exception: "Pebblit Games" where an account or legal name requires it, such as the Playgama developer account) | "A Pebblit game." |
+| Pebblit Games | the studio's name in all player-facing text (decision 1) | "Pebblit", "Pebblit Studio" | "Peek & Find, by Pebblit Games." |
+| we | the studio's voice in all copy, e-mails included, signed as Pebblit Games (decision 4) | "I", "I'm Hasan" | "We make small text-free puzzle games." |
+| US spelling | all public copy (decision 2); internal documents keep their spelling | "colour", "organisation", "favourite" | "color sort" |
 | Peek & Find | with the ampersand | "Peek and Find", "Peek&Find" | "Peek & Find is in the sandbox." |
 | scene, level, house | the unit of play: Peek & Find plays in scenes and counts progress in levels ("from level 30"); Munch Pixels plays levels; Shy Ghosts plays houses | mixing units within one game | "A scene takes seconds." |
 | one finger, no reading, no timer | the browsing facts, where true | "easy controls" | "No reading, no timer, one finger." |
+
+The cairn mark carries no text and stays as it is. The studio wordmark and the YouTube display name still read "Pebblit" (Open Question 1).
 
 ### Preferred Terms
 | Term | Usage | Example |
@@ -279,47 +284,36 @@ What is off-brand: hype and capitals, "addictive", a banned audience word, an of
 | Messaging Framework | Medium | one listing in the sandbox plus hooks and briefs for unreleased games | 6 |
 | Tone Matrix | High for store copy; Medium for clips and e-mails; Low for publisher pitches, community posts and player replies | one reviewed listing, a video script and one e-mail draft; nothing published yet in the other contexts | 6 |
 | Context Guidelines | as the Tone Matrix | the same sources; the publisher pitch and the reply are a template and an illustration | 6 |
-| Terminology | High for never-use terms (tested); Medium for preferred terms | enforced by the store test and the project rules; preferred terms from one listing | 5 |
+| Terminology | High for never-use terms (tested) and for name, voice and spelling (the owner's decisions); Medium for preferred terms | the store test, the project rules and the owner's decisions; preferred terms from one listing | 6 |
 | Content Examples | High for the Peek & Find listing; Medium for the hooks; Low for illustrative lines | the listing passed a copy review and the store test; the hooks are drafts; illustrative lines are marked | 4 |
-| Open Questions | Medium | each question rests on a conflict or a gap found in the sources | 7 |
+| Decisions and Open Questions | High for the seven decisions (the owner's answers); Medium for the open question | `docs/questions.md` (2026-10-20); the open question concerns assets the decisions do not yet cover | 3 |
 
 ---
+
+## Decisions (the owner, 2026-10-20)
+
+The seven open questions of version 1.1, answered by Hasan and recorded in `docs/questions.md`.
+
+| # | Question | Decision | Applied in |
+|---|----------|----------|------------|
+| 1 | "Pebblit" or "Pebblit Games" in public copy? | "Pebblit Games" in all player-facing text | Terminology; `docs/store/listing.md`; GDD header |
+| 2 | US or UK spelling? | US English in all public copy; internal documents keep their spelling | Terminology; Global and inclusive |
+| 3 | How much humour in store text? | As much as comparable listings on the same portal carry; the pitch still opens with the action | Playful through characters; Store listing |
+| 4 | "We" or Hasan? | "We", in all copy; e-mails sign as Pebblit Games | Terminology; Platform e-mails; the Playgama draft |
+| 5 | Fallback title "Find 3!" | "Find 3", without the exclamation mark | `docs/store/listing.md`; GDD header |
+| 6 | Wording of the bot win-rate hook | "About 1 % of random players beat this level." | Honest; launch plan §4 |
+| 7 | Emoji on social? | None in store copy; captions follow comparable game accounts, at most one emoji that carries meaning | Clip hooks; Community posts |
 
 ## Open Questions for Team Discussion
 
 ### High Priority (blocks guideline completion)
-1. **"Pebblit" or "Pebblit Games" in public copy?**
-   - What was found: the listing ("Studio: Pebblit"), the wordmark and the YouTube channel say "Pebblit"; the Playgama account and the e-mail draft say "Pebblit Games".
-   - Agent recommendation: "Pebblit" everywhere players see it; "Pebblit Games" only where an account or legal name is required.
-   - Need from you: confirm or override.
-2. **US or UK spelling?**
-   - What was found: internal documents mostly use UK spelling ("colour", "monetisation", "localisation"), the GDD also uses "color", and portals and search use US terms ("color sort").
-   - Agent recommendation: US English in all public copy; internal documents stay as they are.
-   - Need from you: confirm or override.
+None.
 
 ### Medium Priority (improves quality)
-3. **How much humour in store text?**
-   - What was found: the Peek & Find listing is plain; the house method wants a face and a joke.
-   - Agent recommendation: one light character line in the description's second line; never in the pitch's first words, which state the action.
-   - Need from you: confirm.
-4. **Whose voice speaks: "we" or Hasan?**
-   - What was found: the Playgama e-mail draft opens in the first person ("I'm Hasan…", "I live in Türkiye"), uses "we" for the studio's games and plans, and signs "Hasan, Pebblit Games".
-   - Agent recommendation: "we" for the studio, "I" only for personal facts, signed with Hasan's first name; no personal details beyond that.
-   - Need from you: confirm you are comfortable being the visible face.
-5. **Fallback title "Find 3!"**
-   - What was found: `docs/store/listing.md` keeps "Find 3!" and "Hidden Hunt" as fallback titles in case "Peek & Find" is taken; the copy rules ban exclamation marks.
-   - Agent recommendation: drop the mark ("Find 3"), or make "Hidden Hunt" the first fallback; if the mark is meant as part of a name, record it as the one exception.
-   - Need from you: pick one.
-
-### Low Priority (nice to have)
-6. **Wording of the bot win-rate hook**
-   - What was found: the launch plan's hook says "Only 1 % of random players beat this level."; the figure behind it is ≈ 1 % for random play.
-   - Agent recommendation: "About 1 % of random players beat this level."
-   - Need from you: confirm, then the launch plan's hook gets the same words.
-7. **Emoji on social?**
-   - What was found: no guidance; clips are mostly text-free.
-   - Agent recommendation: none in store copy; at most one in a social caption when it carries meaning (a ghost for Shy Ghosts).
-   - Need from you: confirm.
+1. **Studio wordmark and YouTube display name**
+   - What was found: decision 1 puts "Pebblit Games" in all player-facing text, but the studio wordmark (`docs/store/brand/pebblit-wordmark-*.png` and the banners) and the YouTube channel's display name still read "Pebblit"; the channel handle is already @pebblitgames.
+   - Agent recommendation: rename both to "Pebblit Games": regenerate the wordmark and the banners with `npm run brand`, then Hasan changes the display name and uploads the new banner; the cairn mark stays as it is.
+   - Need from you: confirm, or keep "Pebblit" as the logo's short form.
 
 ---
 
@@ -330,6 +324,7 @@ What is off-brand: hype and capitals, "addictive", a banned audience word, an of
 - [ ] No publisher pitch exists: write the first one when a game passes Playgama's review gate (100 plays and 5:00 average play time, launch plan §2), and add it here as the example.
 - [ ] The Munch Pixels and Shy Ghosts listings are not written: draft them with these guidelines and `design:ux-copy`, then promote the best lines to Content Examples.
 - [ ] The launch plan's ad table (§5) does not carry the Shy Ghosts gates from the brief (§7: 5:00 of play before the first interstitial, never before house 4, never before or during the daily house); align it when Shy Ghosts ships.
+- [ ] Decisions 3 and 7 ("as comparable listings and accounts do") need a look at five comparable listings per portal and five comparable game accounts; their pages could not be opened in this session (network policy).
 - [ ] Copy in languages other than English is out of scope (an English listing for a global audience); add a section only if a channel in another language opens.
 
 ---
@@ -342,7 +337,7 @@ What is off-brand: hype and capitals, "addictive", a banned audience word, an of
 | 2 | `tests/store.test.ts` | this repo | AUTHORITATIVE (test) | 2026-10 | banned words, pitch ≤ 90 characters, three description lines, five tags | High |
 | 3 | `docs/store/brand/philosophy.md` ("Field & Signal") | this repo | AUTHORITATIVE (visual identity) | 2026-10-18 | calm voice, no taglines, craft | High |
 | 4 | `docs/store/brand/README.md` and `critique.md` | this repo | AUTHORITATIVE | 2026-10-18 | mark meaning, palette | Medium |
-| 5 | `docs/questions.md` (brand decisions) | this repo | OPERATIONAL | 2026-10 | the cairn ("small stones stacked with care") | Medium |
+| 5 | `docs/questions.md` (brand decisions) | this repo | OPERATIONAL | 2026-10 | the cairn ("small stones stacked with care"); the owner's answers on name, spelling, humour, voice, fallback title, hook wording and emoji (2026-10-20) | High |
 | 6 | `CLAUDE.md` of peek-and-find and munch-pixels (rule 8) | this repo and the munch-pixels repo | AUTHORITATIVE (policy) | 2026-10 | banned words, 13+, no IP, text-free | High |
 | 7 | `docs/store/video-script.md` | this repo | OPERATIONAL | 2026-10-18 | clips: no voice, no text, the first second shows the game | Medium |
 | 8 | `GDD.md` | this repo | AUTHORITATIVE (design) | 2026-10 | scene and level as units (twists from level 30, a heart every 20th level) | Medium |
