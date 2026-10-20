@@ -92,7 +92,10 @@ advertised Pro and Max usage limits assume ordinary, individual use of Claude Co
 SDK; subscription sign-in is meant for ordinary use of Claude Code and Anthropic's own apps, and
 products built on the Agent SDK should use API keys; `claude setup-token` makes a one-year
 subscription token for scripts and CI that can only make model requests (no claude.ai connectors,
-no Remote Control).
+no Remote Control). Pro and Max have a rolling five-hour limit and a weekly limit, shared across
+Claude and Claude Code, with no published numbers (support article "Using Claude Code with your
+Pro or Max plan"; claude.com/pricing); usage credits are billed at API rates. A `claude -p` or
+Agent SDK run does not wait for a limit to reset (workflows page).
 
 **Playgama Developer Console MCP** (README v1.8.0, github.com/Playgama/developer-cabinet-mcp):
 - OAuth 2.1 at `https://developer.playgama.com/api/mcp`; connected agents can be revoked at
@@ -144,7 +147,10 @@ How many players the sandbox brings with no boost at all is unknown.
   top-list domains and has no connectors; the analyst uses the Playgama connector's read tools.
 - **One run, one thin orchestrator:** the main session follows `factory/NIGHT.md`, and
   `factory/DAY.md` after the pick, and starts subagents whose tools are limited in
-  `.claude/agents/*.md`. Agents talk only through files that match JSON schemas.
+  `.claude/agents/*.md`. Agents talk only through files that match JSON schemas. Phase 2 decides
+  whether the orchestration stays a prompt or becomes a Claude Code workflow script with fixed
+  phases (three demos in parallel, then three quick passes), whichever is more reliable in the
+  dry run.
 - **State lives in the repository:** every stage commits and pushes `games/<date>/state.json` and
   its outputs, because a cloud container is reclaimed after inactivity and a continued session
   may start in a new one.
@@ -153,12 +159,24 @@ How many players the sandbox brings with no boost at all is unknown.
   so three of them fit the session's disk allowance and can be built in parallel.
 - **Guardrails as code** (`.claude/settings.json`, which cloud sessions load from the repository):
   PreToolUse hooks block the Playgama tools the factory must never call (§4.4) and destructive
-  shell commands; only the deployer's tool list contains Playgama tools.
+  shell commands; only the deployer's tool list contains Playgama tools; every subagent has a
+  `maxTurns` cap, and the environment caps subagent depth and concurrency
+  (`CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH`, `CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS`).
+- **Protected paths:** factory agents can never edit `.claude/**`, `.mcp.json` or `factory/**`
+  (deny rules plus a hook), and the orchestrator refuses to push a commit that touches them. A new
+  run loads the repository's hooks and MCP servers without asking, so a planted change would
+  otherwise be trusted the next night. Only an interactive session with Hasan changes them.
 - **Plan B, only if a check in phase 0 or 3 fails:** the same repository runs on the PC, as a
   Desktop scheduled task or with headless `claude -p` driven by a small runner. It applies when
   the Playgama connector cannot be added on claude.ai (then only the deploy step runs on the PC),
   or when the subscription's limits do not carry the factory and Hasan chooses metered billing
-  with an API key.
+  with an API key. Notes for that case (headless, MCP, authentication, setup and sandboxing
+  pages): the Playgama sign-in happens once in an interactive session, because `claude -p` and
+  the Agent SDK cannot run the OAuth flow; `--bare` never reads OAuth credentials, so the
+  deployer loads its server with `--strict-mcp-config` instead; an `ANTHROPIC_API_KEY` in the
+  environment always wins in `-p` runs, so it is set only when API billing is intended; the
+  command sandbox runs in WSL2, not on native Windows; a Desktop task needs the app open and
+  "Keep computer awake" on.
 
 ### State per day
 
@@ -236,6 +254,10 @@ model to save usage [D7].
 - **Calibration before the pilot:** it plays Peek & Find, Munch Pixels and a build with five
   planted bugs (it must find at least four, and two runs must agree on the verdict). Every week
   its demo scores are compared with Hasan's picks and with the sandbox numbers.
+- **Screenshots and sessions:** the harness starts and stops the local game server itself;
+  decisions use small screenshots (540×960) and evidence never exceeds 2000 px on the long edge,
+  because a request with more than 20 images applies a stricter size limit to all of them
+  (vision docs); each round runs in a fresh subagent so screenshots do not pile up.
 - **Tools:** browser and its own `playtests/` folder; no code edits, no Playgama write tools.
 
 ### 4.4 Deployer
@@ -322,8 +344,15 @@ GitHub Pages (unlisted links, but public), or clips only.
 ## 8. Usage and cost
 
 - **Bill:** on the subscription, scheduled tasks add no separate bill unless usage credits are
-  turned on. They draw down the same usage as interactive sessions, so the factory and our Munch
-  Pixels work share one limit.
+  turned on (then billed at API rates). They draw down the same usage as interactive sessions, so
+  the factory and our Munch Pixels work share the same five-hour and weekly limits. The night run
+  uses a five-hour window while Hasan sleeps; the weekly limit is the one to watch.
+- **Terms:** Anthropic's terms say Pro and Max limits assume ordinary, individual use and give no
+  number for it. The factory stays on Anthropic's own scheduled-task feature, which is built for
+  unattended runs on a subscription, at one game a day; if its usage grows beyond one person's
+  work, an API key is the clean route.
+- **A run that hits a limit stops.** Its state is already pushed, so the next run or Hasan's
+  morning message resumes it after the reset, and the report says what was lost.
 - **Load estimate** (API-price equivalent at the default model's prices, only to judge whether the
   plan's limits fit; the pilot measures the real share at claude.ai/settings/usage): three demos
   with quick passes ≈ 15–30 USD a night, one finish with audit and fixes ≈ 15–30 USD, the weekly
@@ -423,6 +452,7 @@ events; the `listing.json` schema with a test that bans age cues and brand names
 | Hasan does not reply | no deploy that day; nothing breaks; the demos wait on the shelf |
 | The AI gamer approves boring games | Hasan's daily pick; weekly calibration against his picks and the numbers |
 | Prompt injection from scraped pages | the scout is a separate task with no connectors and writes schema-checked data only |
+| A factory agent changes `.claude/` or adds `.mcp.json`, and the next run trusts it | protected paths: deny rules, a hook and a push check; only interactive sessions with Hasan change them |
 | Playgama MCP changes | `get_launch_steps` drives the deployer; errors stop the deploy and go into the report |
 
 ---
